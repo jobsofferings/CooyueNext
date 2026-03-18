@@ -42,5 +42,5 @@ export function middleware(request: NextRequest) {
 
 // 配置中间件的匹配规则
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'], // 排除 API 请求和静态文件
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|assets).*)',], 
 }

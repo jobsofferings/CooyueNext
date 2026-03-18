@@ -1,0 +1,205 @@
+@font-face {
+  font-family: 'icomoon';
+  src: url('fonts/icomoon.eot?orkqwr');
+  src: url('fonts/icomoon.eot?orkqwr#iefix') format('embedded-opentype'),
+    url('fonts/icomoon.ttf?orkqwr') format('truetype'),
+    url('fonts/icomoon.woff?orkqwr') format('woff'),
+    url('fonts/icomoon.svg?orkqwr#icomoon') format('svg');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+[class^="icon-"],
+[class*=" icon-"] {
+  /* use !important to prevent issues with browser extensions that change fonts */
+  font-family: 'icomoon' !important;
+  speak: never;
+  font-style: normal;
+  font-weight: normal;
+  font-variant: normal;
+  text-transform: none;
+  line-height: 1;
+
+  /* Better Font Rendering =========== */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+
+
+
+
+
+
+.icon-telephone:before {
+  content: "\e900";
+}
+
+.icon-right-arrow:before {
+  content: "\e901";
+}
+
+.icon-up-arrow:before {
+  content: "\e902";
+}
+
+.icon-down-arrow:before {
+  content: "\e903";
+}
+
+.icon-left-arrow:before {
+  content: "\e904";
+}
+
+.icon-certificate:before {
+  content: "\e905";
+}
+
+.icon-pie-chart:before {
+  content: "\e906";
+}
+
+.icon-insurance:before {
+  content: "\e907";
+}
+
+.icon-money-bag:before {
+  content: "\e908";
+}
+
+.icon-experience:before {
+  content: "\e909";
+}
+
+.icon-profile:before {
+  content: "\e90a";
+}
+
+.icon-consumer-behavior:before {
+  content: "\e90b";
+}
+
+.icon-checking:before {
+  content: "\e90c";
+}
+
+.icon-recommend:before {
+  content: "\e90d";
+}
+
+.icon-telephone-1:before {
+  content: "\e90e";
+}
+
+.icon-consulting:before {
+  content: "\e90f";
+}
+
+.icon-magnifying-glass:before {
+  content: "\e910";
+}
+
+.icon-email:before {
+  content: "\e911";
+}
+
+.icon-pin:before {
+  content: "\e912";
+}
+
+.icon-team:before {
+  content: "\e913";
+}
+
+.icon-reading-book:before {
+  content: "\e914";
+}
+
+.icon-growth:before {
+  content: "\e915";
+}
+
+.icon-project-management:before {
+  content: "\e916";
+}
+
+.icon-seo:before {
+  content: "\e917";
+}
+
+.icon-growth-1:before {
+  content: "\e918";
+}
+
+.icon-targeted-marketing:before {
+  content: "\e919";
+}
+
+.icon-cooperation:before {
+  content: "\e91a";
+}
+
+.icon-growth-2:before {
+  content: "\e91b";
+}
+
+.icon-increment:before {
+  content: "\e91c";
+}
+
+.icon-strategy:before {
+  content: "\e91d";
+}
+
+.icon-planning:before {
+  content: "\e91e";
+}
+
+.icon-conversation:before {
+  content: "\e91f";
+}
+
+.icon-handshake:before {
+  content: "\e920";
+}
+
+.icon-coins:before {
+  content: "\e921";
+}
+
+.icon-bonus:before {
+  content: "\e922";
+}
+
+.icon-entrepreneur:before {
+  content: "\e923";
+}
+
+.icon-account:before {
+  content: "\e924";
+}
+
+.icon-fingerprint-scan:before {
+  content: "\e925";
+}
+
+.icon-mortgage-loan:before {
+  content: "\e926";
+}
+
+.icon-income:before {
+  content: "\e927";
+}
+
+.icon-writer:before {
+  content: "\e928";
+}
+
+.icon-consultant:before {
+  content: "\e929";
+}
+
+.icon-data-analysis:before {
+  content: "\e92a";
+}
