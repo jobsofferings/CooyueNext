@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
-import { Header, Footer, MobileNav, SearchPopup } from '@/components/layout'
+import { Header, Footer, MobileNav, SearchPopup, ScriptInitializer } from '@/components/layout'
 
 export const metadata: Metadata = {
   title: 'Sinace - Financial Consulting',
@@ -74,6 +74,7 @@ export default function RootLayout({
         <a href="#" data-target="html" className="scroll-to-target scroll-to-top">
           <i className="icon-right-arrow"></i>
         </a>
+        <ScriptInitializer />
 
         <Script src="/assets/vendors/jquery/jquery-3.6.4.min.js" strategy="beforeInteractive" />
         <Script src="/assets/vendors/bootstrap/js/bootstrap.bundle.min.js" strategy="afterInteractive" />
