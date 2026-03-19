@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { ServiceCard } from '@/components/ui'
 
@@ -54,7 +55,7 @@ const services = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Services - Sinace',
+  title: siteConfig.seo.titleTemplate('Services'),
   description: 'Our professional services',
 }
 

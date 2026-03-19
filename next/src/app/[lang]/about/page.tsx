@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TeamCard, TestimonialCard } from '@/components/ui'
+import { siteConfig } from '@/config/site.config'
 
 const team = [
   { name: 'Kevin Martin', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
@@ -14,7 +15,7 @@ const testimonials = [
 ]
 
 export const metadata: Metadata = {
-  title: 'About - Sinace',
+  title: siteConfig.seo.titleTemplate('About'),
   description: 'Learn more about our company',
 }
 
@@ -175,7 +176,7 @@ export default function AboutPage() {
         <div className="container">
           <SectionTitle
             tagline="our testimonials"
-            title="What They're Talking About Company"
+            title={`What They're Talking About ${siteConfig.company.name}`}
             highlight="Company"
             align="center"
           />

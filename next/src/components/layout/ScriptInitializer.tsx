@@ -93,8 +93,9 @@ export default function ScriptInitializer() {
         const jq = win.$ as unknown as {
           (selector: string): { circleType?: () => void }
         }
-        if (jq('.curved-circle--item').circleType) {
-          jq('.curved-circle--item').circleType()
+        const circleEl = jq('.curved-circle--item')
+        if (circleEl.circleType) {
+          circleEl.circleType()
         }
       }
 
@@ -125,41 +126,13 @@ export default function ScriptInitializer() {
         })
       })
 
-      const scrollTargets = document.querySelectorAll('.scroll-to-target')
-      scrollTargets.forEach((target) => {
-        target.removeEventListener('click', handleScrollToTarget)
-        target.addEventListener('click', handleScrollToTarget)
-      })
-
-      function handleScrollToTarget(this: Element, e: Event) {
-        e.preventDefault()
-        const targetAttr = this.getAttribute('data-target')
-        if (targetAttr === 'html' || targetAttr === 'body') {
-          window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-          })
-        } else if (targetAttr) {
-          const targetEl = document.querySelector(targetAttr)
-          if (targetEl) {
-            window.scrollTo({
-              top: (targetEl as HTMLElement).offsetTop,
-              behavior: 'smooth'
-            })
-          }
-        }
-      }
-
       const handleScroll = () => {
         const stickyHeader = document.querySelector('.stricky-header')
-        const scrollToTop = document.querySelector('.scroll-to-top')
         if (stickyHeader) {
           if (window.scrollY > 100) {
             stickyHeader.classList.add('stricky-fixed')
-            scrollToTop?.classList.add('show')
           } else {
             stickyHeader.classList.remove('stricky-fixed')
-            scrollToTop?.classList.remove('show')
           }
         }
       }

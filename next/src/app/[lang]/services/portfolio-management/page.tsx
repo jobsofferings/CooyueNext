@@ -1,9 +1,10 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { ServiceSidebar } from '@/components/ui'
 
 export const metadata: Metadata = {
-  title: 'Portfolio Management - Sinace',
+  title: siteConfig.seo.titleTemplate('Portfolio Management'),
   description: 'Portfolio management consulting services',
 }
 

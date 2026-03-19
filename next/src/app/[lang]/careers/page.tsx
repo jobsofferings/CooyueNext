@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
@@ -12,7 +13,7 @@ const jobs = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Careers - Sinace',
+  title: siteConfig.seo.titleTemplate('Careers'),
   description: 'Join our team',
 }
 

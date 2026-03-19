@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 
 export default async function Home({
   params: { lang },
@@ -356,7 +357,7 @@ export default async function Home({
                 </div>
               </a>
             </div>
-            <h3 className="video-one__title">Sinace Envision &amp; Transofrm <br /> Your Business</h3>
+            <h3 className="video-one__title">{siteConfig.company.name} Envision &amp; Transform <br /> Your Business</h3>
             <div className="video-one__btn-box">
               <Link href={`/${lang}/about`} className="video-one__btn thm-btn">Discover More</Link>
             </div>
@@ -707,7 +708,7 @@ export default async function Home({
             <div className="counter-one__bottom-inner">
               <p className="counter-one__bottom-text">Need best business consultation solutions &amp; services? <Link href={`/${lang}/contact`}>Send a Request</Link></p>
               <div className="counter-one__call-box">
-                <p>Call Free <a href="tel:+920000-9850">+92 (0000)-9850</a></p>
+                <p>Call Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></p>
                 <div className="counter-one__call-icon">
                   <span className="icon-telephone-1"></span>
                 </div>
@@ -768,7 +769,7 @@ export default async function Home({
                     </div>
                     <div className="text">
                       <p>Have any question?</p>
-                      <h3>Free <a href="tel:+23000-9850">+23 (000)-9850</a></h3>
+                      <h3>Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></h3>
                     </div>
                   </li>
                   <li>
@@ -777,7 +778,7 @@ export default async function Home({
                     </div>
                     <div className="text">
                       <p>Send Email</p>
-                      <h3><a href="mailto:needhelp@company.com">needhelp@company.com</a></h3>
+                      <h3><a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a></h3>
                     </div>
                   </li>
                   <li>
@@ -786,7 +787,7 @@ export default async function Home({
                     </div>
                     <div className="text">
                       <p>Visit anytime</p>
-                      <h3>30 broklyn golden street. New York</h3>
+                      <h3>{siteConfig.contact.address.en}</h3>
                     </div>
                   </li>
                 </ul>
@@ -847,7 +848,7 @@ export async function generateMetadata({
   params: { lang: Locale }
 }): Promise<Metadata> {
   return {
-    title: 'Sinace - Business Consulting',
-    description: 'Professional business consulting services',
+    title: siteConfig.seo.defaultTitle,
+    description: siteConfig.seo.defaultDescription,
   }
 }

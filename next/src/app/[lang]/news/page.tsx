@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { NewsCard } from '@/components/ui'
 
@@ -12,7 +13,7 @@ const news = [
 ]
 
 export const metadata: Metadata = {
-  title: 'News - Sinace',
+  title: siteConfig.seo.titleTemplate('News'),
   description: 'Latest news and updates',
 }
 

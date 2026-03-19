@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TestimonialCard } from '@/components/ui'
 
@@ -10,7 +11,7 @@ const testimonials = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Testimonials - Sinace',
+  title: siteConfig.seo.titleTemplate('Testimonials'),
   description: 'What our clients say about us',
 }
 

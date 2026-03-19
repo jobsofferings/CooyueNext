@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Script from 'next/script'
-import { Header, Footer, MobileNav, SearchPopup, ScriptInitializer } from '@/components/layout'
+import { Header, Footer, MobileNav, SearchPopup, ScriptInitializer, ScrollToTop } from '@/components/layout'
+import { siteConfig } from '@/config/site.config'
 
 export const metadata: Metadata = {
-  title: 'Sinace - Financial Consulting',
-  description: 'Professional financial consulting services',
+  title: siteConfig.seo.defaultTitle,
+  description: siteConfig.seo.defaultDescription,
 }
 
 export default function RootLayout({
@@ -71,9 +72,7 @@ export default function RootLayout({
         </div>
         <MobileNav />
         <SearchPopup />
-        <a href="#" data-target="html" className="scroll-to-target scroll-to-top">
-          <i className="icon-right-arrow"></i>
-        </a>
+        <ScrollToTop />
         <ScriptInitializer />
 
         <Script src="/assets/vendors/jquery/jquery-3.6.4.min.js" strategy="beforeInteractive" />

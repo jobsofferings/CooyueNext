@@ -1,9 +1,10 @@
 import { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
+import { siteConfig } from '@/config/site.config'
 
 export const metadata: Metadata = {
-  title: 'Contact - Sinace',
+  title: siteConfig.seo.titleTemplate('Contact'),
   description: 'Get in touch with us',
 }
 
@@ -65,7 +66,7 @@ export default function ContactPage() {
                     <div className="text">
                       <p>Have any question?</p>
                       <h3>
-                        Free <a href="tel:+23000-9850">+23 (000)-9850</a>
+                        Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                       </h3>
                     </div>
                   </li>
@@ -76,7 +77,7 @@ export default function ContactPage() {
                     <div className="text">
                       <p>Send Email</p>
                       <h3>
-                        <a href="mailto:needhelp@company.com">needhelp@company.com</a>
+                        <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
                       </h3>
                     </div>
                   </li>
@@ -86,7 +87,7 @@ export default function ContactPage() {
                     </div>
                     <div className="text">
                       <p>Visit anytime</p>
-                      <h3>66 road, broklyn street new york</h3>
+                      <h3>{siteConfig.contact.address.en}</h3>
                     </div>
                   </li>
                 </ul>
@@ -98,7 +99,7 @@ export default function ContactPage() {
 
       <section className="contact-page-google-map">
         <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4562.753041141002!2d-118.80123790098536!3d34.152323469614075!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80e82469c2162619%3A0xba03efb7998571f6!2s21%20Hart%20Cir%2C%20Thousand%20Oaks%2C%20CA%2091360%2C%20USA!5e0!3m2!1sen!2sbd!4v1621135638282!5m2!1sen!2sbd"
+          src={siteConfig.map.embedUrl}
           className="contact-page-google-map__box"
           allowFullScreen
         ></iframe>

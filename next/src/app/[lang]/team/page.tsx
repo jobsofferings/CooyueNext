@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TeamCard } from '@/components/ui'
 
@@ -12,7 +13,7 @@ const team = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Our Team - Sinace',
+  title: siteConfig.seo.titleTemplate('Our Team'),
   description: 'Meet our professional team',
 }
 

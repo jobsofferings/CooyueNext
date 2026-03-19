@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { siteConfig } from '@/config/site.config'
 
 export default function Footer() {
   const params = useParams()
@@ -73,7 +74,7 @@ export default function Footer() {
                       <span className="fas fa-envelope"></span>
                     </div>
                     <div className="text">
-                      <a href="mailto:needhelp@company.com">needhelp@company.com</a>
+                      <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
                     </div>
                   </li>
                   <li>
@@ -81,7 +82,7 @@ export default function Footer() {
                       <span className="fas fa-phone-square"></span>
                     </div>
                     <div className="text">
-                      <a href="tel:+926668880000">+92 (666) 888 0000</a>
+                      <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                     </div>
                   </li>
                 </ul>
@@ -118,7 +119,7 @@ export default function Footer() {
             <div className="col-xl-12">
               <div className="site-footer__bottom-inner">
                 <p className="site-footer__bottom-text">
-                  © Copyright {new Date().getFullYear()} Sinace. All Rights Reserved.
+                  © Copyright {siteConfig.copyright.year} {siteConfig.company.name}. {siteConfig.copyright.text}
                 </p>
               </div>
             </div>

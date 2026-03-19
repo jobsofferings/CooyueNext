@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { siteConfig } from '@/config/site.config'
 
 export default function MobileNav() {
   const params = useParams()
@@ -25,11 +26,11 @@ export default function MobileNav() {
         <ul className="mobile-nav__contact list-unstyled">
           <li>
             <i className="fa fa-envelope"></i>
-            <a href="mailto:needhelp@sinace.com">needhelp@sinace.com</a>
+            <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
           </li>
           <li>
             <i className="fa fa-phone-alt"></i>
-            <a href="tel:6668880000">666 888 0000</a>
+            <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
           </li>
         </ul>
         <div className="mobile-nav__top">

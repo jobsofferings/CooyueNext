@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 
@@ -7,7 +8,7 @@ interface PortfolioDetailPageProps {
 }
 
 export const metadata: Metadata = {
-  title: 'Portfolio Details - Sinace',
+  title: siteConfig.seo.titleTemplate('Portfolio Details'),
   description: 'Project details',
 }
 

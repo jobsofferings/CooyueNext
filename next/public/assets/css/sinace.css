@@ -1,6 +1,6 @@
 /*--------------------------------------------------------------
 >>> TABLE OF CONTENTS:
- * ¸ü¶àÏÂÔØ£ºhttp://www.bootstrapmb.com
+ * ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½http://www.bootstrapmb.com
 ----------------------------------------------------------------
 # Common
 # Custom Cursor
@@ -483,6 +483,7 @@ ul {
   transition: all 0.4s ease;
   display: none;
   border-radius: 50%;
+  border: none;
 }
 
 .scroll-to-top i {

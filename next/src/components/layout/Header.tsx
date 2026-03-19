@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { siteConfig } from '@/config/site.config'
 
 interface NavItem {
   label: string
@@ -86,7 +87,7 @@ export default function Header() {
               <div className="main-menu__call-content">
                 <p className="main-menu__call-sub-title">Call Anytime</p>
                 <h5 className="main-menu__call-number">
-                  <a href="tel:+928800-9850">+92 (8800)-9850</a>
+                  <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                 </h5>
               </div>
             </div>
@@ -101,7 +102,7 @@ export default function Header() {
                         </div>
                         <div className="text">
                           <p>
-                            <a href="mailto:needhelp@company.com">needhelp@company.com</a>
+                            <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
                           </p>
                         </div>
                       </li>
@@ -110,7 +111,7 @@ export default function Header() {
                           <i className="fas fa-map-marker"></i>
                         </div>
                         <div className="text">
-                          <p>30 Broklyn Golden Street. New York</p>
+                          <p>{siteConfig.contact.address.en}</p>
                         </div>
                       </li>
                     </ul>
@@ -118,7 +119,6 @@ export default function Header() {
                   <div className="main-menu__top-right">
                     <ul className="list-unstyled main-menu__top-menu">
                       <li><Link href={getLocalizedHref('/about')}>About</Link></li>
-                      <li><Link href={getLocalizedHref('/about')}>Help</Link></li>
                       <li><Link href={getLocalizedHref('/contact')}>Contact</Link></li>
                     </ul>
                     <div className="main-menu__social">

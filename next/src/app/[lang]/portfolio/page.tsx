@@ -1,4 +1,5 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { PortfolioCard } from '@/components/ui'
 
@@ -12,7 +13,7 @@ const portfolios = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Portfolio - Sinace',
+  title: siteConfig.seo.titleTemplate('Portfolio'),
   description: 'Our project portfolio',
 }
 

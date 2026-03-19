@@ -1,9 +1,10 @@
 import { Metadata } from 'next'
+import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { ServiceSidebar } from '@/components/ui'
 
 export const metadata: Metadata = {
-  title: 'Capital Market - Sinace',
+  title: siteConfig.seo.titleTemplate('Capital Market'),
   description: 'Capital market consulting services',
 }
 

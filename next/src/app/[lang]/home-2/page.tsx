@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
 import { SectionTitle, ServiceCard, TeamCard } from '@/components/ui'
+import { siteConfig } from '@/config/site.config'
 
 const services = [
   {
@@ -31,7 +32,7 @@ const services = [
 ]
 
 export const metadata: Metadata = {
-  title: 'Home Two - Sinace',
+  title: siteConfig.seo.titleTemplate('Home Two'),
   description: 'Business consulting services - Home Two',
 }
 
@@ -49,7 +50,7 @@ export default async function HomeTwo({
         ></div>
         <div className="container">
           <div className="main-slider-two__content">
-            <p className="main-slider-two__sub-title">Welcome to sinace</p>
+            <p className="main-slider-two__sub-title">Welcome to {siteConfig.company.name}</p>
             <h2 className="main-slider-two__title">
               Best Financial <span>Solutions</span>
               <br /> for Your Business
