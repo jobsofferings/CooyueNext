@@ -38,6 +38,12 @@ export const siteConfig = {
     defaultDescription: "Professional business consulting services",
     titleTemplate: (page: string) => `${page} - Cooyue`,
   },
+
+  deployment: {
+    version: "1.0.0",
+    environment: "production",
+    lastUpdated: new Date().toISOString(),
+  },
 };
 
 export type SiteConfig = typeof siteConfig;
