@@ -23,7 +23,6 @@ git pull
 
 echo ""
 echo "[3/4] 使用 Docker Compose 构建和启动服务..."
-cd "$PROJECT_ROOT"
 docker compose up -d --build
 
 echo ""
