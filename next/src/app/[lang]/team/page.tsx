@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
-import { SectionTitle, TeamCard } from '@/components/ui'
+import { TeamCard } from '@/components/ui'
 
 const team = [
   { name: 'Kevin Martin', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },

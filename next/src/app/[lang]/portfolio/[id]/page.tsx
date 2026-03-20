@@ -1,18 +1,13 @@
 import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
-import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
-
-interface PortfolioDetailPageProps {
-  params: { lang: string; id: string }
-}
 
 export const metadata: Metadata = {
   title: siteConfig.seo.titleTemplate('Portfolio Details'),
   description: 'Project details',
 }
 
-export default function PortfolioDetailPage({ params }: PortfolioDetailPageProps) {
+export default function PortfolioDetailPage() {
   return (
     <>
       <PageHeader

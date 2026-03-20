@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
-import { SectionTitle, ServiceCard, TeamCard } from '@/components/ui'
+import { SectionTitle, ServiceCard } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
 
 const services = [

@@ -842,11 +842,7 @@ export default async function Home({
   )
 }
 
-export async function generateMetadata({
-  params: { lang },
-}: {
-  params: { lang: Locale }
-}): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   return {
     title: siteConfig.seo.defaultTitle,
     description: siteConfig.seo.defaultDescription,
