@@ -7,8 +7,8 @@ export const siteConfig = {
 
   contact: {
     email: "cooyue@gmail.com",
-    phone: "+8614797992769",
-    phoneDisplay: "+86 147-9799-2769",
+    phone: "+8614797992768",
+    phoneDisplay: "+86 147-9799-2768",
     address: {
       cn: "湖南省长沙市岳麓区",
       en: "Yuelu District, Changsha, Hunan Province, China",
