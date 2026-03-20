@@ -210,10 +210,10 @@ app.post('/webhook', (req, res) => {
 });
 
 /**
- * POST /webhook/github
+ * POST /webhook
  * GitHub 专用端点 (便于区分来源)
  */
-app.post('/webhook/github', (req, res) => {
+app.post('/webhook', (req, res) => {
   req.headers['x-github-event'] = req.headers['x-github-event'] || 'push';
   return app._router.handle(req, res, () => {});
 });
