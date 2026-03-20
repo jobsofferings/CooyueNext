@@ -40,7 +40,7 @@ export const siteConfig = {
   },
 
   deployment: {
-    version: "1.0.0",
+    version: "1.0.1",
     environment: "production",
     lastUpdated: new Date().toISOString(),
   },
