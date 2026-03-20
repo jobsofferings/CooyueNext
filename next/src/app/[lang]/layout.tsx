@@ -18,6 +18,8 @@ export default function RootLayout({
   return (
     <html lang={params.lang}>
       <head>
+        <link rel="icon" href="/assets/images/icon/video-one-icon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/assets/images/icon/video-one-icon.png" />
         <link
           rel="preconnect"
           href="https://fonts.googleapis.com"
