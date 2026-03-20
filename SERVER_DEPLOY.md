@@ -39,21 +39,98 @@
 
 ---
 
+## 项目结构
+
+```
+CooyueNext/
+├── .env                        # 环境变量配置
+├── .env.example                # 环境变量模板
+├── docker-compose.yml          # Docker Compose 编排配置
+├── SERVER_DEPLOY.md            # 本部署文档
+│
+├── next/                       # Next.js 应用
+│   ├── docker/
+│   │   └── Dockerfile          # Next.js 镜像构建配置
+│   ├── src/                    # 源代码
+│   ├── package.json
+│   └── ...
+│
+└── web_hooks/                  # Webhook 自动部署服务
+    ├── Dockerfile              # Webhook 镜像构建配置
+    ├── server.js               # Webhook 服务主程序
+    ├── deploy.sh               # 自动部署脚本
+    ├── package.json
+    ├── README.md               # Webhook 服务说明
+    ├── GITHUB_WEBHOOK_SETUP.md # GitHub 配置指南
+    └── logs/                   # 部署日志目录
+```
+
+---
+
+## Docker 镜像说明
+
+### Next.js 应用镜像
+
+**文件位置：** `next/docker/Dockerfile`
+
+**构建阶段：**
+1. **deps** - 安装依赖
+2. **builder** - 构建应用 (yarn build)
+3. **runner** - 生产运行时 (standalone 模式)
+
+**特点：**
+- 多阶段构建，最终镜像体积小
+- 使用 Alpine 基础镜像
+- 非 root 用户运行，更安全
+- standalone 输出，无需完整 node_modules
+
+```bash
+# 单独构建 Next.js 镜像
+docker build -t cooyue-next:latest ./next -f ./next/docker/Dockerfile
+```
+
+### Webhook 服务镜像
+
+**文件位置：** `web_hooks/Dockerfile`
+
+**包含组件：**
+- Node.js 22 (Alpine)
+- Git (拉取代码)
+- Docker CLI (构建镜像)
+- Docker Compose (管理服务)
+
+**特点：**
+- 挂载 docker.sock 实现容器内操作 Docker
+- 挂载项目目录实现代码更新
+- 日志持久化存储
+
+```bash
+# 单独构建 Webhook 镜像
+docker build -t cooyue-webhook:latest ./web_hooks
+```
+
+---
+
 ## 前置条件
 
 - [x] 服务器已安装 Docker
 - [x] 服务器已安装 Docker Compose
 - [x] 服务器已安装 Git
-- [x] 服务器可以访问外网（拉取代码、下载镜像）
+- [x] 服务器可以访问外网
 
-### 检查 Docker 环境
+### 检查环境
 
 ```bash
-# 检查 Docker 版本
+# 检查 Docker
 docker --version
+# Docker version 24.0.x 或更高
 
-# 检查 Docker Compose 版本
+# 检查 Docker Compose
 docker compose version
+# Docker Compose version v2.x.x
+
+# 检查 Git
+git --version
 
 # 检查 Docker 服务状态
 sudo systemctl status docker
@@ -63,16 +140,16 @@ sudo systemctl status docker
 
 ## 部署步骤
 
-### Step 1: 克隆代码到服务器
+### Step 1: 克隆代码
 
 ```bash
-# 进入你想存放项目的目录
+# 进入部署目录
 cd /home/your-user
 
 # 克隆仓库
 git clone https://github.com/your-username/CooyueNext.git
 
-# 进入项目目录
+# 进入项目
 cd CooyueNext
 ```
 
@@ -81,27 +158,27 @@ cd CooyueNext
 ### Step 2: 配置环境变量
 
 ```bash
-# 复制环境变量模板
+# 复制模板
 cp .env.example .env
 
-# 编辑环境变量
+# 编辑配置
 vim .env
 ```
 
-**配置内容：**
+**.env 内容：**
 
 ```bash
-# Webhook 密钥（必须与 GitHub Webhook 配置的 Secret 一致）
+# Webhook 签名密钥（必须与 GitHub 配置一致）
 WEBHOOK_SECRET=your-secure-secret-here
 
-# 触发部署的目标分支
+# 触发部署的分支
 TARGET_BRANCH=main
 
-# Webhook 服务端口（可选，默认 9000）
+# Webhook 端口（可选）
 # WEBHOOK_PORT=9000
 ```
 
-**生成安全的 Secret：**
+**生成随机密钥：**
 
 ```bash
 openssl rand -hex 32
@@ -109,109 +186,107 @@ openssl rand -hex 32
 
 ---
 
-### Step 3: 首次构建并启动所有服务
+### Step 3: 构建并启动服务
 
 ```bash
-# 构建并启动所有服务（后台运行）
+# 一键构建并启动（后台运行）
 docker compose up -d --build
 ```
 
-**这个命令会：**
-1. 构建 Next.js 应用镜像
-2. 构建 Webhook 服务镜像
-3. 创建 Docker 网络
-4. 启动两个容器
+**执行过程：**
 
-**预计耗时：** 首次构建约 3-5 分钟
+```
+[+] Building 180.5s (23/23) FINISHED
+ => [next-app] 构建 Next.js 镜像...
+ => [webhook] 构建 Webhook 镜像...
+[+] Running 3/3
+ ✔ Network cooyue-network    Created
+ ✔ Container cooyue-next-app Started
+ ✔ Container cooyue-webhook  Started
+```
+
+**首次构建耗时约 3-5 分钟**
 
 ---
 
-### Step 4: 验证服务状态
+### Step 4: 验证服务
 
 ```bash
-# 查看所有容器状态
+# 查看容器状态
 docker compose ps
-
-# 期望输出：
-# NAME                IMAGE                  STATUS
-# cooyue-next-app     cooyue-next:latest     Up (healthy)
-# cooyue-webhook      cooyue-webhook:latest  Up (healthy)
 ```
 
-```bash
-# 查看容器日志
-docker compose logs -f
+**期望输出：**
 
-# 单独查看 Next.js 日志
-docker compose logs -f next-app
-
-# 单独查看 Webhook 日志
-docker compose logs -f webhook
+```
+NAME                IMAGE                  STATUS              PORTS
+cooyue-next-app     cooyue-next:latest     Up (healthy)        0.0.0.0:3000->3000/tcp
+cooyue-webhook      cooyue-webhook:latest  Up (healthy)        0.0.0.0:9000->9000/tcp
 ```
 
----
-
-### Step 5: 测试服务
-
-**测试 Next.js 应用：**
+**测试服务：**
 
 ```bash
-curl http://localhost:3000
-# 或在浏览器访问 http://服务器IP:3000
-```
+# 测试 Next.js
+curl -I http://localhost:3000
+# HTTP/1.1 200 OK
 
-**测试 Webhook 服务：**
-
-```bash
-# 健康检查
+# 测试 Webhook
 curl http://localhost:9000/health
-# 期望输出: {"status":"ok","timestamp":"..."}
-
-# 模拟 webhook 请求
-curl -X POST http://localhost:9000/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-GitHub-Event: push" \
-  -d '{"ref": "refs/heads/main", "after": "test123"}'
+# {"status":"ok","timestamp":"..."}
 ```
 
 ---
 
-### Step 6: 配置防火墙
+### Step 5: 配置防火墙
 
-开放必要的端口：
+**Ubuntu/Debian (ufw):**
 
 ```bash
-# Ubuntu/Debian (ufw)
-sudo ufw allow 3000/tcp    # Next.js
-sudo ufw allow 9000/tcp    # Webhook
+sudo ufw allow 3000/tcp
+sudo ufw allow 9000/tcp
 sudo ufw reload
+sudo ufw status
+```
 
-# CentOS/RHEL (firewalld)
+**CentOS/RHEL (firewalld):**
+
+```bash
 sudo firewall-cmd --permanent --add-port=3000/tcp
 sudo firewall-cmd --permanent --add-port=9000/tcp
 sudo firewall-cmd --reload
 ```
 
-**云服务器安全组：** 记得在云控制台的安全组中也开放这两个端口。
+**云服务器：** 在云控制台安全组中开放 3000 和 9000 端口
 
 ---
 
-### Step 7: 配置 GitHub Webhook
+### Step 6: 配置 GitHub Webhook
 
-参考 `web_hooks/GITHUB_WEBHOOK_SETUP.md` 配置 GitHub Webhook：
+参考 `web_hooks/GITHUB_WEBHOOK_SETUP.md`
 
 | 配置项 | 值 |
 |--------|-----|
 | Payload URL | `http://服务器IP:9000/webhook` |
 | Content type | `application/json` |
-| Secret | 与 `.env` 中的 `WEBHOOK_SECRET` 一致 |
+| Secret | 与 `.env` 中 `WEBHOOK_SECRET` 一致 |
 | Events | Just the push event |
+| Active | ✅ |
+
+---
+
+## 服务端口
+
+| 服务 | 端口 | 用途 |
+|------|------|------|
+| Next.js | 3000 | Web 应用访问 |
+| Webhook | 9000 | GitHub webhook 接收 |
 
 ---
 
 ## 常用命令
 
-### 服务管理
+### 启动/停止
 
 ```bash
 # 启动所有服务
@@ -226,29 +301,43 @@ docker compose restart
 # 重启单个服务
 docker compose restart next-app
 docker compose restart webhook
-
-# 查看服务状态
-docker compose ps
-
-# 查看实时日志
-docker compose logs -f
 ```
 
-### 更新部署
+### 查看状态
 
 ```bash
-# 手动更新（如果 webhook 自动部署失败）
-git pull origin main
+# 容器状态
+docker compose ps
+
+# 实时日志
+docker compose logs -f
+
+# 单个服务日志
+docker compose logs -f next-app
+docker compose logs -f webhook
+```
+
+### 构建相关
+
+```bash
+# 重新构建并启动
+docker compose up -d --build
+
+# 只重建 Next.js
 docker compose up -d --build next-app
+
+# 强制重建（不使用缓存）
+docker compose build --no-cache
+docker compose up -d
 ```
 
 ### 清理
 
 ```bash
-# 清理未使用的镜像
+# 清理未使用镜像
 docker image prune -f
 
-# 清理所有未使用的资源
+# 清理所有未使用资源
 docker system prune -f
 
 # 查看磁盘使用
@@ -257,58 +346,40 @@ docker system df
 
 ---
 
-## 目录结构
-
-```
-/home/your-user/CooyueNext/
-├── .env                    # 环境变量配置
-├── docker-compose.yml      # Docker Compose 配置
-├── next/                   # Next.js 应用
-│   ├── docker/
-│   │   └── Dockerfile      # Next.js Docker 配置
-│   ├── src/
-│   └── ...
-└── web_hooks/              # Webhook 服务
-    ├── Dockerfile          # Webhook Docker 配置
-    ├── server.js           # Webhook 服务代码
-    ├── deploy.sh           # 自动部署脚本
-    └── logs/               # 部署日志
-```
-
----
-
-## 服务端口说明
-
-| 服务 | 容器内端口 | 映射到主机端口 | 用途 |
-|------|-----------|---------------|------|
-| Next.js | 3000 | 3000 | Web 应用 |
-| Webhook | 9000 | 9000 | 接收 GitHub webhook |
-
----
-
 ## 自动部署流程
 
-当你在本地执行 `git push` 后：
-
 ```
-1. GitHub 收到 push
-      │
-      ▼
-2. GitHub 发送 webhook 到服务器 :9000/webhook
-      │
-      ▼
-3. Webhook 服务验证签名
-      │
-      ▼
-4. 执行 deploy.sh 脚本
-      │
-      ├── git fetch && git reset --hard
-      ├── docker build (构建新镜像)
-      ├── docker compose up -d --force-recreate (重启服务)
-      └── docker image prune (清理旧镜像)
-      │
-      ▼
-5. 新版本上线完成
+┌──────────────┐
+│  git push    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│   GitHub     │
+│  Webhooks    │
+└──────┬───────┘
+       │ POST /webhook
+       ▼
+┌──────────────────────────────────────┐
+│         Webhook 容器 (:9000)         │
+│  1. 验证签名                         │
+│  2. 检查分支是否匹配                  │
+│  3. 调用 deploy.sh                   │
+└──────┬───────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────┐
+│           deploy.sh 脚本             │
+│  1. git fetch && git reset --hard    │
+│  2. docker build -t cooyue-next      │
+│  3. docker compose up -d next-app    │
+│  4. docker image prune               │
+└──────┬───────────────────────────────┘
+       │
+       ▼
+┌──────────────────────────────────────┐
+│    Next.js 容器重启，新版本上线       │
+└──────────────────────────────────────┘
 ```
 
 ---
@@ -316,14 +387,38 @@ docker system df
 ## 查看部署日志
 
 ```bash
-# 方法 1: 通过 API
+# 通过 API 查看日志列表
 curl http://localhost:9000/logs
 
-# 方法 2: 进入容器查看
-docker compose exec webhook ls /app/logs
+# 查看最新日志内容
+curl http://localhost:9000/logs/webhook-2026-03-20.log
 
-# 方法 3: 查看容器日志
-docker compose logs webhook | grep DEPLOY
+# 进入容器查看
+docker compose exec webhook cat /app/logs/webhook-2026-03-20.log
+
+# 从容器日志查看
+docker compose logs webhook | grep -A 20 "DEPLOY"
+```
+
+---
+
+## 手动部署
+
+如果自动部署失败，可以手动执行：
+
+```bash
+# 进入项目目录
+cd /home/your-user/CooyueNext
+
+# 拉取最新代码
+git pull origin main
+
+# 重新构建并启动 Next.js
+docker compose up -d --build next-app
+
+# 查看状态
+docker compose ps
+docker compose logs -f next-app
 ```
 
 ---
@@ -333,46 +428,55 @@ docker compose logs webhook | grep DEPLOY
 ### 容器无法启动
 
 ```bash
-# 查看详细错误
+# 查看错误日志
 docker compose logs next-app
 docker compose logs webhook
 
-# 检查容器状态
+# 查看所有容器（包括已停止的）
 docker compose ps -a
+
+# 检查镜像是否构建成功
+docker images | grep cooyue
 ```
 
-### Webhook 无法触发部署
+### Webhook 不触发
 
-1. 检查 GitHub Webhook 的 Recent Deliveries
-2. 检查服务器防火墙是否开放 9000 端口
-3. 检查 Secret 是否匹配
-4. 查看 webhook 日志: `docker compose logs webhook`
+1. 检查 GitHub → Settings → Webhooks → Recent Deliveries
+2. 确认防火墙开放 9000 端口
+3. 确认 Secret 配置一致
+4. 查看日志：`docker compose logs webhook`
 
 ### 构建失败
 
 ```bash
-# 清理缓存重新构建
+# 查看构建日志
+docker compose build next-app 2>&1 | tee build.log
+
+# 清理缓存重建
 docker compose build --no-cache
 
-# 检查 Dockerfile 语法
-docker build -t test ./next -f ./next/docker/Dockerfile
+# 检查磁盘空间
+df -h
+docker system df
 ```
 
-### 磁盘空间不足
+### 端口冲突
 
 ```bash
-# 查看 Docker 磁盘使用
-docker system df
+# 检查端口占用
+sudo lsof -i :3000
+sudo lsof -i :9000
 
-# 清理所有未使用的资源
-docker system prune -a -f
+# 修改端口（编辑 docker-compose.yml）
+ports:
+  - "3001:3000"  # 改为 3001
 ```
 
 ---
 
-## 生产环境建议
+## 生产环境配置
 
-### 1. 配置 Nginx 反向代理
+### Nginx 反向代理
 
 ```nginx
 # /etc/nginx/sites-available/cooyue
@@ -380,64 +484,79 @@ server {
     listen 80;
     server_name your-domain.com;
 
-    # Next.js 应用
     location / {
         proxy_pass http://127.0.0.1:3000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_cache_bypass $http_upgrade;
     }
 
-    # Webhook 服务
     location /webhook {
         proxy_pass http://127.0.0.1:9000;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Hub-Signature-256 $http_x_hub_signature_256;
+        proxy_set_header X-GitHub-Event $http_x_github_event;
     }
 }
 ```
 
-### 2. 配置 SSL 证书
-
 ```bash
-# 使用 certbot 自动配置 HTTPS
-sudo apt install certbot python3-certbot-nginx
-sudo certbot --nginx -d your-domain.com
+# 启用站点
+sudo ln -s /etc/nginx/sites-available/cooyue /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
 ```
 
-### 3. 设置开机自启
-
-Docker 默认会在系统启动时自动启动，容器设置了 `restart: unless-stopped` 也会自动重启。
-
-确认 Docker 服务开机自启：
+### 配置 HTTPS
 
 ```bash
+# 安装 certbot
+sudo apt install certbot python3-certbot-nginx
+
+# 自动配置 SSL
+sudo certbot --nginx -d your-domain.com
+
+# 自动续期（certbot 会自动添加定时任务）
+sudo certbot renew --dry-run
+```
+
+### 开机自启
+
+```bash
+# 确保 Docker 开机自启
 sudo systemctl enable docker
+
+# 容器配置了 restart: unless-stopped
+# 系统重启后会自动恢复运行
 ```
 
 ---
 
-## 快速命令参考
+## 快速参考
 
 ```bash
-# 一键部署
-docker compose up -d --build
+# ===== 部署 =====
+docker compose up -d --build         # 构建并启动
+docker compose down                   # 停止服务
 
-# 一键停止
-docker compose down
+# ===== 状态 =====
+docker compose ps                     # 查看状态
+docker compose logs -f                # 查看日志
 
-# 查看状态
-docker compose ps
+# ===== 更新 =====
+git pull && docker compose up -d --build next-app  # 手动更新
 
-# 查看日志
-docker compose logs -f
+# ===== 测试 =====
+curl http://localhost:3000            # 测试网站
+curl http://localhost:9000/health     # 测试 webhook
 
-# 手动重新部署 Next.js
-docker compose up -d --build --force-recreate next-app
-
-# 测试 webhook
-curl http://localhost:9000/health
+# ===== 清理 =====
+docker system prune -f                # 清理资源
 ```
