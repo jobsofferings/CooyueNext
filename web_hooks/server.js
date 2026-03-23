@@ -93,7 +93,8 @@ app.get('/health', (req, res) => {
  * - commits: 提交数组
  */
 app.post('/webhook', (req, res) => {
-  const shellStr = 'bash ../deploy.sh'; 
+  const deployScript = path.join(__dirname, '../deploy.sh');
+  const shellStr = `bash ${deployScript}`; 
   shell.exec(shellStr, { slient: false }, () => {
     shell.echo(`执行：${shellStr}，已经执行完毕`);
   });
