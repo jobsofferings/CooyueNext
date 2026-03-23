@@ -26,11 +26,7 @@ const shell = require('shelljs');
 const app = express();
 const PORT = process.env.WEBHOOK_PORT || 9000;
 const SECRET = process.env.WEBHOOK_SECRET || 'your-webhook-secret';
-const DEPLOY_SCRIPT = path.join(__dirname, '../../deploy.sh');
 const LOG_DIR = path.join(__dirname, 'logs');
-
-console.log(DEPLOY_SCRIPT, 'DEPLOY_SCRIPT')
-console.log('bash ' + DEPLOY_SCRIPT, 'SHELL')
 
 // 确保日志目录存在
 if (!fs.existsSync(LOG_DIR)) {
@@ -97,7 +93,7 @@ app.get('/health', (req, res) => {
  * - commits: 提交数组
  */
 app.post('/webhook', (req, res) => {
-  const shellStr = 'bash ' + DEPLOY_SCRIPT; 
+  const shellStr = 'bash ../deploy.sh'; 
   shell.exec(shellStr, { slient: false }, () => {
     shell.echo(`执行：${shellStr}，已经执行完毕`);
   });
