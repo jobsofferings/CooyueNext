@@ -116,96 +116,160 @@ app.get('/health', (req, res) => {
  * 请求体 (JSON):
  * - ref: 分支引用 (如 refs/heads/main)
  * - after: 提交 SHA
+ * - head_commit: 最新提交信息
+ * - commits: 提交数组
  */
 app.post('/webhook', (req, res) => {
-  // 获取签名和事件类型 (兼容 GitHub 和 GitLab)
   const signature = req.headers['x-hub-signature-256'] || req.headers['x-gitlab-token'];
   const event = req.headers['x-github-event'] || req.headers['x-gitlab-event'];
+  const deliveryId = req.headers['x-github-delivery'] || req.headers['x-gitlab-event-uuid'] || 'unknown';
   
-  log(`Received webhook event: ${event}`);
+  log(`\n${'='.repeat(80)}`);
+  log(`Webhook received - Event: ${event}, Delivery: ${deliveryId}`);
   
-  // 如果配置了有效的 secret，验证签名
   if (process.env.WEBHOOK_SECRET && process.env.WEBHOOK_SECRET !== 'your-webhook-secret') {
     if (!verifySignature(req.rawBody, signature, SECRET)) {
-      log('Invalid signature, rejecting request');
-      return res.status(401).json({ error: 'Invalid signature' });
+      log('❌ Signature verification failed');
+      return res.status(401).json({ 
+        error: 'Invalid signature',
+        delivery_id: deliveryId 
+      });
     }
-    log('Signature verified successfully');
+    log('✓ Signature verified');
   }
   
   const payload = req.body;
-  let branch = '';
-  let shouldDeploy = false;
   
-  // 从 ref 中提取分支名 (refs/heads/main -> main)
-  if (payload.ref) {
-    branch = payload.ref.replace('refs/heads/', '');
+  if (!payload.ref) {
+    log('⚠ Missing ref field in payload');
+    return res.status(400).json({ error: 'Missing ref field' });
   }
   
+  const branch = payload.ref.replace('refs/heads/', '');
   const targetBranch = process.env.TARGET_BRANCH || 'main';
+  const commitSha = payload.after || payload.checkout_sha || 'unknown';
   
-  // 只有 push 事件且分支匹配时才触发部署
-  if (event === 'push' || event === 'Push Hook') {
-    if (branch === targetBranch) {
-      shouldDeploy = true;
-      log(`Push to ${targetBranch} detected, triggering deployment`);
-    } else {
-      log(`Push to ${branch} ignored (target branch: ${targetBranch})`);
-    }
-  }
-  
-  // 如果不需要部署，返回成功但不执行部署
-  if (!shouldDeploy) {
+  if (payload.deleted) {
+    log(`Branch ${branch} was deleted, skipping deployment`);
     return res.json({ 
-      message: 'Webhook received but no deployment triggered',
+      message: 'Branch deleted, no deployment triggered',
       event,
       branch 
     });
   }
   
-  // 立即返回响应，避免 webhook 超时
+  if (event !== 'push' && event !== 'Push Hook') {
+    log(`Event ${event} is not a push event, skipping`);
+    return res.json({ 
+      message: 'Non-push event, no deployment triggered',
+      event,
+      branch 
+    });
+  }
+  
+  if (branch !== targetBranch) {
+    log(`Branch ${branch} != target ${targetBranch}, skipping`);
+    return res.json({ 
+      message: 'Webhook received but no deployment triggered',
+      event,
+      branch,
+      target_branch: targetBranch
+    });
+  }
+  
+  const repoName = payload.repository?.full_name || payload.repository?.name || 'unknown';
+  const pusher = payload.pusher?.name || payload.user_name || 'unknown';
+  const headCommit = payload.head_commit;
+  
+  log(`📦 Repository: ${repoName}`);
+  log(`👤 Pusher: ${pusher}`);
+  log(`🌿 Branch: ${branch}`);
+  log(`📝 Commit: ${commitSha.substring(0, 7)}`);
+  
+  if (headCommit) {
+    log(`💬 Message: ${headCommit.message}`);
+    log(`✍️  Author: ${headCommit.author?.name || 'unknown'}`);
+    
+    if (headCommit.modified?.length > 0) {
+      log(`📝 Modified: ${headCommit.modified.join(', ')}`);
+    }
+    if (headCommit.added?.length > 0) {
+      log(`➕ Added: ${headCommit.added.join(', ')}`);
+    }
+    if (headCommit.removed?.length > 0) {
+      log(`➖ Removed: ${headCommit.removed.join(', ')}`);
+    }
+  }
+  
+  if (payload.commits && Array.isArray(payload.commits)) {
+    log(`📊 Total commits in push: ${payload.commits.length}`);
+  }
+  
+  log(`🚀 Triggering deployment...`);
+  
   res.json({ 
     message: 'Deployment triggered',
     event,
-    branch 
+    branch,
+    commit: commitSha.substring(0, 7),
+    delivery_id: deliveryId
   });
   
-  // 异步执行部署脚本
   const deployProcess = spawn('bash', [DEPLOY_SCRIPT], {
     cwd: __dirname,
     env: {
       ...process.env,
       BRANCH: branch,
-      COMMIT: payload.after || payload.checkout_sha || 'unknown'
+      COMMIT: commitSha,
+      REPO_NAME: repoName,
+      PUSHER: pusher,
+      COMMIT_MESSAGE: headCommit?.message || ''
     }
   });
   
   let output = '';
+  const deployStartTime = Date.now();
   
-  // 收集标准输出
   deployProcess.stdout.on('data', (data) => {
     const line = data.toString();
     output += line;
     log(`[DEPLOY] ${line.trim()}`);
   });
   
-  // 收集错误输出
   deployProcess.stderr.on('data', (data) => {
     const line = data.toString();
     output += line;
     log(`[DEPLOY ERROR] ${line.trim()}`);
   });
   
-  // 部署完成后保存日志
   deployProcess.on('close', (code) => {
+    const duration = ((Date.now() - deployStartTime) / 1000).toFixed(2);
+    
     if (code === 0) {
-      log(`Deployment completed successfully`);
+      log(`✅ Deployment completed successfully (${duration}s)`);
     } else {
-      log(`Deployment failed with exit code ${code}`);
+      log(`❌ Deployment failed with exit code ${code} (${duration}s)`);
     }
     
     const deployLog = path.join(LOG_DIR, `deploy-${Date.now()}.log`);
-    fs.writeFileSync(deployLog, output);
+    const logContent = `Deployment Log
+Repository: ${repoName}
+Branch: ${branch}
+Commit: ${commitSha}
+Pusher: ${pusher}
+Started: ${new Date(deployStartTime).toISOString()}
+Duration: ${duration}s
+Exit Code: ${code}
+
+${output}`;
+    
+    fs.writeFileSync(deployLog, logContent);
+    log(`📄 Deploy log saved: ${path.basename(deployLog)}`);
+    log('='.repeat(80) + '\n');
+  });
+  
+  deployProcess.on('error', (err) => {
+    log(`❌ Failed to start deployment process: ${err.message}`);
   });
 });
 
