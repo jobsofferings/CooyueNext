@@ -18,6 +18,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
+const shell = require('shelljs');
 
 // ============================================
 // 配置常量
@@ -25,7 +26,7 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.WEBHOOK_PORT || 9000;
 const SECRET = process.env.WEBHOOK_SECRET || 'your-webhook-secret';
-const DEPLOY_SCRIPT = path.join(__dirname, 'deploy.sh');
+const DEPLOY_SCRIPT = path.join(__dirname, '../deploy.sh');
 const LOG_DIR = path.join(__dirname, 'logs');
 
 // 确保日志目录存在
@@ -120,13 +121,11 @@ app.get('/health', (req, res) => {
  * - commits: 提交数组
  */
 app.post('/webhook', (req, res) => {
-  console.log('did receive webhook')
-  spawn('bash', [DEPLOY_SCRIPT], {
-    cwd: __dirname,
-    env: {
-      ...process.env,
-    }
+  const shellStr = 'bash ' + DEPLOY_SCRIPT; 
+  shell.exec(shellStr, { slient: false }, () => {
+    shell.echo(`执行：${shellStr}，已经执行完毕`);
   });
+  res.json({ message: 'Webhook received' });
 });
 
 /**
