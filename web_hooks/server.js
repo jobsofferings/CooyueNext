@@ -8,7 +8,7 @@
  * - 记录所有 webhook 请求和部署日志
  * 
  * 环境变量:
- * - WEBHOOK_PORT: 服务监听端口 (默认: 9002)
+ * - WEBHOOK_PORT: 服务监听端口 (默认: 9000)
  * - WEBHOOK_SECRET: webhook 签名验证密钥
  * - TARGET_BRANCH: 触发部署的目标分支 (默认: main)
  */
@@ -23,7 +23,7 @@ const fs = require('fs');
 // 配置常量
 // ============================================
 const app = express();
-const PORT = process.env.WEBHOOK_PORT || 9002;
+const PORT = process.env.WEBHOOK_PORT || 9000;
 const SECRET = process.env.WEBHOOK_SECRET || 'your-webhook-secret';
 const DEPLOY_SCRIPT = path.join(__dirname, 'deploy.sh');
 const LOG_DIR = path.join(__dirname, 'logs');
