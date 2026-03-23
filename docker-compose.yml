@@ -21,32 +21,6 @@ services:
       retries: 3
       start_period: 40s
 
-  webhook:
-    build:
-      context: ./web_hooks
-      dockerfile: Dockerfile
-    image: cooyue-webhook:latest
-    container_name: cooyue-webhook
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-    environment:
-      - WEBHOOK_PORT=9000
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-your-webhook-secret}
-      - TARGET_BRANCH=${TARGET_BRANCH:-main}
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - .:/app/project
-      - webhook-logs:/app/logs
-    working_dir: /app
-    networks:
-      - cooyue-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
 networks:
   cooyue-network:
     driver: bridge
