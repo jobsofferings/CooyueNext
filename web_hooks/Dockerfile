@@ -40,10 +40,6 @@ RUN npm install --production
 # 复制应用文件
 # ================================
 COPY server.js ./
-COPY deploy.sh ./
-
-# 确保部署脚本有执行权限
-RUN chmod +x deploy.sh
 
 # 创建日志目录
 RUN mkdir -p logs
