@@ -2,7 +2,7 @@
 # 阶段 0: 基础镜像
 # 使用 Alpine 版本以减小镜像体积
 # ================================
-FROM node:22.22.0 AS base
+FROM node:22.22.0-alpine AS base
 
 # ================================
 # 阶段 1: 依赖安装
@@ -47,8 +47,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # 创建非 root 用户以提高安全性
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -u 1001 -S -G nodejs nextjs
 
 # 复制静态资源文件
 COPY --from=builder /app/public ./public
