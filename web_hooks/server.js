@@ -26,8 +26,11 @@ const shell = require('shelljs');
 const app = express();
 const PORT = process.env.WEBHOOK_PORT || 9000;
 const SECRET = process.env.WEBHOOK_SECRET || 'your-webhook-secret';
-const DEPLOY_SCRIPT = path.join(__dirname, '../deploy.sh');
+const DEPLOY_SCRIPT = path.join(__dirname, '../../deploy.sh');
 const LOG_DIR = path.join(__dirname, 'logs');
+
+console.log(DEPLOY_SCRIPT, 'DEPLOY_SCRIPT')
+console.log('bash ' + DEPLOY_SCRIPT, 'SHELL')
 
 // 确保日志目录存在
 if (!fs.existsSync(LOG_DIR)) {
@@ -49,33 +52,6 @@ function log(message) {
   
   const logFile = path.join(LOG_DIR, `webhook-${new Date().toISOString().split('T')[0]}.log`);
   fs.appendFileSync(logFile, logMessage + '\n');
-}
-
-/**
- * 验证 GitHub/GitLab webhook 签名
- * GitHub 使用 HMAC-SHA256 签名，格式为: sha256=<signature>
- * 
- * @param {string} payload - 原始请求体
- * @param {string} signature - 请求头中的签名
- * @param {string} secret - 配置的密钥
- * @returns {boolean} 签名是否有效
- */
-function verifySignature(payload, signature, secret) {
-  if (!signature) return false;
-  
-  // 移除 'sha256=' 前缀
-  const sig = signature.startsWith('sha256=') ? signature.slice(7) : signature;
-  
-  // 计算 HMAC-SHA256 签名
-  const hmac = crypto.createHmac('sha256', secret);
-  const digest = hmac.update(payload).digest('hex');
-  
-  // 使用 timing-safe 比较防止时序攻击
-  try {
-    return crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(digest));
-  } catch {
-    return false;
-  }
 }
 
 // ============================================
@@ -126,24 +102,6 @@ app.post('/webhook', (req, res) => {
     shell.echo(`执行：${shellStr}，已经执行完毕`);
   });
   res.json({ message: 'Webhook received' });
-});
-
-/**
- * POST /webhook
- * GitHub 专用端点 (便于区分来源)
- */
-app.post('/webhook', (req, res) => {
-  req.headers['x-github-event'] = req.headers['x-github-event'] || 'push';
-  return app._router.handle(req, res, () => {});
-});
-
-/**
- * POST /webhook/gitlab
- * GitLab 专用端点 (便于区分来源)
- */
-app.post('/webhook/gitlab', (req, res) => {
-  req.headers['x-gitlab-event'] = req.headers['x-gitlab-event'] || 'Push Hook';
-  return app._router.handle(req, res, () => {});
 });
 
 /**
