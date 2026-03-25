@@ -47,9 +47,7 @@ export default function Footer() {
                   <h3 className="footer-widget__title">Explore</h3>
                 </div>
                 <ul className="footer-widget__link-list list-unstyled">
-                  <li><Link href={getLocalizedHref('/services')}>Services</Link></li>
                   <li><Link href={getLocalizedHref('/about')}>About</Link></li>
-                  <li><Link href={getLocalizedHref('/portfolio')}>Latest Projects</Link></li>
                   <li><Link href={getLocalizedHref('/team')}>Our Team</Link></li>
                   <li><Link href={getLocalizedHref('/contact')}>Contact</Link></li>
                 </ul>

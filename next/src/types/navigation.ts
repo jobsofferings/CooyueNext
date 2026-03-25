@@ -35,27 +35,6 @@ export const navigationConfig: NavItem[] = [
     ],
   },
   {
-    label: 'Services',
-    href: '/services',
-    children: [
-      { label: 'Services', href: '/services' },
-      { label: 'Capital Market', href: '/services/capital-market' },
-      { label: 'Insurance', href: '/services/insurance' },
-      { label: 'Mutual Funds', href: '/services/mutual-funds' },
-      { label: 'Portfolio Management', href: '/services/portfolio-management' },
-      { label: 'Fixed Income', href: '/services/fixed-income' },
-      { label: 'Loans', href: '/services/loans' },
-    ],
-  },
-  {
-    label: 'Portfolio',
-    href: '/portfolio',
-    children: [
-      { label: 'Portfolio', href: '/portfolio' },
-      { label: 'Portfolio Details', href: '/portfolio/1' },
-    ],
-  },
-  {
     label: 'News',
     href: '/news',
     children: [

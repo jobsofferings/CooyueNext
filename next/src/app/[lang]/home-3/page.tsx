@@ -1,35 +1,8 @@
 import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
-import { SectionTitle, ServiceCard, TestimonialCard } from '@/components/ui'
+import { SectionTitle, TestimonialCard } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
-
-const services = [
-  {
-    title: 'Capital Market',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-pie-chart',
-    image: '/assets/images/services/services-1-1.jpg',
-    hoverImage: '/assets/images/services/services-1-1.jpg',
-    href: '/services/capital-market',
-  },
-  {
-    title: 'Insurance',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-insurance',
-    image: '/assets/images/services/services-1-2.jpg',
-    hoverImage: '/assets/images/services/services-1-2.jpg',
-    href: '/services/insurance',
-  },
-  {
-    title: 'Mutual Funds',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-money-bag',
-    image: '/assets/images/services/services-1-3.jpg',
-    hoverImage: '/assets/images/services/services-1-3.jpg',
-    href: '/services/mutual-funds',
-  },
-]
 
 const testimonials = [
   { name: 'Mike Hardson', role: 'CO Founder', content: 'Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure.', image: '/assets/images/testimonial/testimonial-2-1.jpg' },
@@ -108,24 +81,6 @@ export default async function HomeThree({
                 </p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="services-three">
-        <div className="container">
-          <SectionTitle
-            tagline="what we're offering"
-            title="Our Core Services"
-            highlight="Services"
-            align="center"
-          />
-          <div className="row">
-            {services.map((service, index) => (
-              <div key={index} className="col-xl-4 col-lg-6 col-md-6">
-                <ServiceCard {...service} />
-              </div>
-            ))}
           </div>
         </div>
       </section>

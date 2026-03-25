@@ -33,27 +33,6 @@ const navItems: NavItem[] = [
     ],
   },
   {
-    label: 'Services',
-    href: '#',
-    children: [
-      { label: 'Services', href: '/services' },
-      { label: 'Capital Market', href: '/services/capital-market' },
-      { label: 'Insurance', href: '/services/insurance' },
-      { label: 'Mutual Funds', href: '/services/mutual-funds' },
-      { label: 'Portfolio Management', href: '/services/portfolio-management' },
-      { label: 'Fixed Income', href: '/services/fixed-income' },
-      { label: 'Loans', href: '/services/loans' },
-    ],
-  },
-  {
-    label: 'Portfolio',
-    href: '#',
-    children: [
-      { label: 'Portfolio', href: '/portfolio' },
-      { label: 'Portfolio Details', href: '/portfolio/1' },
-    ],
-  },
-  {
     label: 'News',
     href: '#',
     children: [
@@ -117,10 +96,6 @@ export default function Header() {
                     </ul>
                   </div>
                   <div className="main-menu__top-right">
-                    <ul className="list-unstyled main-menu__top-menu">
-                      <li><Link href={getLocalizedHref('/about')}>About</Link></li>
-                      <li><Link href={getLocalizedHref('/contact')}>Contact</Link></li>
-                    </ul>
                     <div className="main-menu__social">
                       <a href="#"><i className="fab fa-twitter"></i></a>
                       <a href="#"><i className="fab fa-facebook"></i></a>

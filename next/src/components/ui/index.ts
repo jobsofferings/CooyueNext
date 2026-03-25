@@ -1,7 +1,4 @@
 export { default as SectionTitle } from './SectionTitle'
-export { default as ServiceCard } from './ServiceCard'
 export { default as TeamCard } from './TeamCard'
 export { default as NewsCard } from './NewsCard'
-export { default as PortfolioCard } from './PortfolioCard'
 export { default as TestimonialCard } from './TestimonialCard'
-export { default as ServiceSidebar } from './ServiceSidebar'

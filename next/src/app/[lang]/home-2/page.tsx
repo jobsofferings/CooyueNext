@@ -1,35 +1,8 @@
 import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
-import { SectionTitle, ServiceCard } from '@/components/ui'
+import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
-
-const services = [
-  {
-    title: 'Capital Market',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-pie-chart',
-    image: '/assets/images/services/services-1-1.jpg',
-    hoverImage: '/assets/images/services/services-1-1.jpg',
-    href: '/services/capital-market',
-  },
-  {
-    title: 'Insurance',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-insurance',
-    image: '/assets/images/services/services-1-2.jpg',
-    hoverImage: '/assets/images/services/services-1-2.jpg',
-    href: '/services/insurance',
-  },
-  {
-    title: 'Mutual Funds',
-    description: 'At vero eos et accusamus et iustoodio digni goikussimos ducimus qui blanp ditiis praesum voluum.',
-    icon: 'icon-money-bag',
-    image: '/assets/images/services/services-1-3.jpg',
-    hoverImage: '/assets/images/services/services-1-3.jpg',
-    href: '/services/mutual-funds',
-  },
-]
 
 export const metadata: Metadata = {
   title: siteConfig.seo.titleTemplate('Home Two'),
@@ -59,31 +32,10 @@ export default async function HomeTwo({
               Professional consulting services to help your business thrive.
             </p>
             <div className="main-slider-two__btn-box">
-              <Link href={`/${lang}/services`} className="thm-btn main-slider-two__btn">
-                Our Services
-              </Link>
-              <Link href={`/${lang}/about`} className="thm-btn main-slider-two__btn-two">
+              <Link href={`/${lang}/about`} className="thm-btn main-slider-two__btn">
                 Learn More
               </Link>
             </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="services-two">
-        <div className="container">
-          <SectionTitle
-            tagline="what we're offering"
-            title="Professional Services"
-            highlight="Services"
-            align="center"
-          />
-          <div className="row">
-            {services.map((service, index) => (
-              <div key={index} className="col-xl-4 col-lg-6 col-md-6">
-                <ServiceCard {...service} />
-              </div>
-            ))}
           </div>
         </div>
       </section>
