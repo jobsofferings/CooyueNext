@@ -13,18 +13,18 @@
 │                                                                 │
 │   ┌─────────────────┐         ┌─────────────────┐              │
 │   │   Next.js App   │         │  Webhook 服务   │              │
-│   │    (容器)       │         │    (容器)       │              │
+│   │   (Docker)      │         │   (PM2)         │              │
 │   │                 │         │                 │              │
 │   │   端口: 3000    │         │   端口: 9000    │              │
 │   └─────────────────┘         └────────┬────────┘              │
 │            │                           │                        │
-│            │                           │ 触发部署               │
+│            │                           │ 执行部署脚本           │
 │            │                           ▼                        │
 │            │                  ┌─────────────────┐              │
 │            │                  │  deploy.sh      │              │
 │            │                  │  - git pull     │              │
 │            │◄─────────────────│  - docker build │              │
-│            │   重启容器        │  - 重启服务     │              │
+│            │   重启容器        │  - pm2 restart  │              │
 │            │                  └─────────────────┘              │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
@@ -45,7 +45,8 @@
 CooyueNext/
 ├── .env                        # 环境变量配置
 ├── .env.example                # 环境变量模板
-├── docker-compose.yml          # Docker Compose 编排配置
+├── docker-compose.yml          # Docker Compose 编排配置（仅 Next.js）
+├── deploy.sh                   # 主部署脚本（根目录）
 ├── SERVER_DEPLOY.md            # 本部署文档
 │
 ├── next/                       # Next.js 应用
@@ -55,21 +56,18 @@ CooyueNext/
 │   ├── package.json
 │   └── ...
 │
-└── web_hooks/                  # Webhook 自动部署服务
-    ├── Dockerfile              # Webhook 镜像构建配置
+└── web_hooks/                  # Webhook 自动部署服务（PM2）
     ├── server.js               # Webhook 服务主程序
-    ├── deploy.sh               # 自动部署脚本
-    ├── package.json
+    ├── package.json            # Node.js 依赖
     ├── README.md               # Webhook 服务说明
-    ├── GITHUB_WEBHOOK_SETUP.md # GitHub 配置指南
     └── logs/                   # 部署日志目录
 ```
 
 ---
 
-## Docker 镜像说明
+## 服务说明
 
-### Next.js 应用镜像
+### Next.js 应用 (Docker)
 
 **文件位置：** `next/docker/Dockerfile`
 
@@ -89,25 +87,22 @@ CooyueNext/
 docker build -t cooyue-next:latest ./next -f ./next/docker/Dockerfile
 ```
 
-### Webhook 服务镜像
+### Webhook 服务 (PM2)
 
-**文件位置：** `web_hooks/Dockerfile`
+**文件位置：** `web_hooks/server.js`
 
-**包含组件：**
-- Node.js 22 (Alpine)
-- Git (拉取代码)
-- Docker CLI (构建镜像)
-- Docker Compose (管理服务)
+**运行方式：** 使用 PM2 进程管理器直接运行在宿主机上
 
 **特点：**
-- 挂载 docker.sock 实现容器内操作 Docker
-- 挂载项目目录实现代码更新
-- 日志持久化存储
+- 由 deploy.sh 自动管理启动/重启
+- 接收 GitHub/GitLab webhook 推送事件
+- 触发部署脚本完成自动化部署
+- 日志记录到 web_hooks/logs 目录
 
-```bash
-# 单独构建 Webhook 镜像
-docker build -t cooyue-webhook:latest ./web_hooks
-```
+**为什么用 PM2 而不是 Docker？**
+- Webhook 服务需要执行 deploy.sh 脚本
+- deploy.sh 需要在宿主机上操作 Docker 和 Git
+- 使用 PM2 可以更简单直接地访问宿主机资源
 
 ---
 
@@ -116,6 +111,7 @@ docker build -t cooyue-webhook:latest ./web_hooks
 - [x] 服务器已安装 Docker
 - [x] 服务器已安装 Docker Compose
 - [x] 服务器已安装 Git
+- [x] 服务器已安装 Node.js 和 PM2
 - [x] 服务器可以访问外网
 
 ### 检查环境
@@ -131,9 +127,15 @@ docker compose version
 
 # 检查 Git
 git --version
+# git version 2.x.x
 
-# 检查 Docker 服务状态
-sudo systemctl status docker
+# 检查 Node.js
+node --version
+# v22.x.x 或更高
+
+# 检查 PM2
+pm2 --version
+# 如果未安装，执行：npm install -g pm2
 ```
 
 ---
@@ -186,42 +188,69 @@ openssl rand -hex 32
 
 ---
 
-### Step 3: 构建并启动服务
+### Step 3: 一键部署
 
 ```bash
-# 一键构建并启动（后台运行）
-docker compose up -d --build
+# 执行部署脚本（自动完成所有部署步骤）
+bash deploy.sh
 ```
 
 **执行过程：**
 
 ```
-[+] Building 180.5s (23/23) FINISHED
- => [next-app] 构建 Next.js 镜像...
- => [webhook] 构建 Webhook 镜像...
-[+] Running 3/3
- ✔ Network cooyue-network    Created
- ✔ Container cooyue-next-app Started
- ✔ Container cooyue-webhook  Started
+========================================
+开始部署流程 Mon Mar 23 22:35:46 CST 2026
+========================================
+
+[1/4] 暂存本地更改...
+[2/4] 拉取最新代码...（支持超时重试，最多6次）
+[3/4] 使用 Docker Compose 构建和启动 Next.js...
+[4/5] 清理旧的 Docker 镜像...
+[5/5] 启动 Webhook 服务 (PM2)...
+
+========================================
+部署完成
+========================================
+
+Docker 服务:
+NAME               STATUS         PORTS
+cooyue-next-app   Up (healthy)   0.0.0.0:3000->3000/tcp
+
+PM2 服务:
+┌────┬───────────────┬─────────┬─────────┐
+│ id │ name          │ status  │ restart │
+├────┼───────────────┼─────────┼─────────┤
+│ 0  │ git-webhook   │ online  │ 0       │
+└────┴───────────────┴─────────┴─────────┘
 ```
 
-**首次构建耗时约 3-5 分钟**
+**首次部署耗时约 3-5 分钟**
 
 ---
 
 ### Step 4: 验证服务
 
 ```bash
-# 查看容器状态
+# 查看 Docker 容器状态
 docker compose ps
+
+# 查看 PM2 服务状态
+pm2 list
 ```
 
 **期望输出：**
 
 ```
+Docker 服务:
 NAME                IMAGE                  STATUS              PORTS
 cooyue-next-app     cooyue-next:latest     Up (healthy)        0.0.0.0:3000->3000/tcp
-cooyue-webhook      cooyue-webhook:latest  Up (healthy)        0.0.0.0:9000->9000/tcp
+
+PM2 服务:
+┌────┬───────────────┬─────────┬─────────┐
+│ id │ name          │ status  │ restart │
+├────┼───────────────┼─────────┼─────────┤
+│ 0  │ git-webhook   │ online  │ 0       │
+└────┴───────────────┴─────────┴─────────┘
 ```
 
 **测试服务：**
@@ -277,44 +306,82 @@ sudo firewall-cmd --reload
 
 ## 服务端口
 
-| 服务 | 端口 | 用途 |
-|------|------|------|
-| Next.js | 3000 | Web 应用访问 |
-| Webhook | 9000 | GitHub webhook 接收 |
+| 服务 | 端口 | 运行方式 | 用途 |
+|------|------|----------|------|
+| Next.js | 3000 | Docker | Web 应用访问 |
+| Webhook | 9000 | PM2 | GitHub webhook 接收 |
 
 ---
 
 ## 常用命令
 
-### 启动/停止
+### 一键部署
 
 ```bash
-# 启动所有服务
-docker compose up -d
+# 完整部署流程（推荐）
+bash deploy.sh
 
-# 停止所有服务
-docker compose down
-
-# 重启所有服务
-docker compose restart
-
-# 重启单个服务
-docker compose restart next-app
-docker compose restart webhook
+# 部署流程说明：
+# 1. 暂存本地更改 (git stash)
+# 2. 拉取最新代码 (git pull，10秒超时，最多重试6次)
+# 3. 构建并启动 Docker 服务 (docker compose up -d --build)
+# 4. 清理旧镜像
+# 5. 重启 PM2 webhook 服务
 ```
 
-### 查看状态
+### Docker 服务管理
 
 ```bash
-# 容器状态
+# 启动 Docker 服务
+docker compose up -d
+
+# 停止 Docker 服务
+docker compose down
+
+# 重启 Next.js 服务
+docker compose restart next-app
+
+# 重新构建 Next.js
+docker compose up -d --build next-app
+```
+
+### PM2 服务管理
+
+```bash
+# 查看 PM2 服务状态
+pm2 list
+
+# 查看 webhook 服务日志
+pm2 logs git-webhook
+
+# 手动重启 webhook 服务
+pm2 restart git-webhook
+
+# 停止 webhook 服务
+pm2 stop git-webhook
+
+# 启动 webhook 服务
+pm2 start web_hooks/server.js --name git-webhook
+
+# 查看 webhook 详细信息
+pm2 describe git-webhook
+```
+
+### 查看状态和日志
+
+```bash
+# Docker 服务状态
 docker compose ps
 
-# 实时日志
-docker compose logs -f
-
-# 单个服务日志
+# Docker 实时日志
 docker compose logs -f next-app
-docker compose logs -f webhook
+
+# PM2 实时日志
+pm2 logs git-webhook --lines 100
+
+# 查看 webhook 部署日志
+ls -lh web_hooks/logs/
+tail -f web_hooks/logs/webhook-$(date +%Y-%m-%d).log
 ```
 
 ### 构建相关
@@ -353,13 +420,13 @@ docker system df
 curl http://localhost:9000/logs
 
 # 查看最新日志内容
-curl http://localhost:9000/logs/webhook-2026-03-20.log
+curl http://localhost:9000/logs/webhook-2026-03-23.log
 
-# 进入容器查看
-docker compose exec webhook cat /app/logs/webhook-2026-03-20.log
+# 直接查看日志文件
+tail -f web_hooks/logs/webhook-$(date +%Y-%m-%d).log
 
-# 从容器日志查看
-docker compose logs webhook | grep -A 20 "DEPLOY"
+# 查看 PM2 日志
+pm2 logs git-webhook --lines 50
 ```
 
 ---
@@ -369,8 +436,11 @@ docker compose logs webhook | grep -A 20 "DEPLOY"
 如果自动部署失败，可以手动执行：
 
 ```bash
-# 进入项目目录
-cd /home/your-user/CooyueNext
+# 方法 1: 执行完整部署脚本
+bash deploy.sh
+
+# 方法 2: 分步执行
+cd /root/CooyueNext
 
 # 拉取最新代码
 git pull origin main
@@ -378,35 +448,78 @@ git pull origin main
 # 重新构建并启动 Next.js
 docker compose up -d --build next-app
 
+# 重启 webhook 服务
+pm2 restart git-webhook
+
 # 查看状态
 docker compose ps
-docker compose logs -f next-app
+pm2 list
 ```
 
 ---
 
 ## 故障排查
 
-### 容器无法启动
+### Next.js 容器无法启动
 
 ```bash
 # 查看错误日志
 docker compose logs next-app
-docker compose logs webhook
 
 # 查看所有容器（包括已停止的）
 docker compose ps -a
 
 # 检查镜像是否构建成功
 docker images | grep cooyue
+
+# 重新构建（不使用缓存）
+docker compose build --no-cache next-app
+docker compose up -d next-app
+```
+
+### Webhook 服务无法启动
+
+```bash
+# 查看 PM2 状态
+pm2 list
+
+# 查看错误日志
+pm2 logs git-webhook --err
+
+# 手动重启
+cd web_hooks
+pm2 stop git-webhook
+pm2 start server.js --name git-webhook
+
+# 检查端口占用
+lsof -i :9000
 ```
 
 ### Webhook 不触发
 
-1. 检查 GitHub → Settings → Webhooks → Recent Deliveries
-2. 确认防火墙开放 9000 端口
-3. 确认 Secret 配置一致
-4. 查看日志：`docker compose logs webhook`
+1. 检查 PM2 服务是否在线：`pm2 list`
+2. 检查 GitHub → Settings → Webhooks → Recent Deliveries
+3. 确认防火墙开放 9000 端口：`lsof -i :9000`
+4. 确认 Secret 配置一致
+5. 查看实时日志：`pm2 logs git-webhook`
+6. 查看日志文件：`tail -f web_hooks/logs/webhook-$(date +%Y-%m-%d).log`
+
+### Git Pull 超时
+
+deploy.sh 已内置重试机制：
+- 单次超时：10 秒
+- 最大重试：6 次
+- 重试间隔：2 秒
+
+如果仍然失败，检查：
+```bash
+# 检查网络连接
+ping github.com
+
+# 手动测试 git pull
+cd /root/CooyueNext
+timeout 10s git pull
+```
 
 ### 构建失败
 
@@ -415,7 +528,8 @@ docker images | grep cooyue
 docker compose build next-app 2>&1 | tee build.log
 
 # 清理缓存重建
-docker compose build --no-cache
+docker compose build --no-cache next-app
+docker compose up -d next-app
 
 # 检查磁盘空间
 df -h
@@ -426,12 +540,16 @@ docker system df
 
 ```bash
 # 检查端口占用
-sudo lsof -i :3000
-sudo lsof -i :9000
+lsof -i :3000   # Next.js
+lsof -i :9000   # Webhook
 
-# 修改端口（编辑 docker-compose.yml）
+# 修改 Next.js 端口（编辑 docker-compose.yml）
 ports:
   - "3001:3000"  # 改为 3001
+
+# 修改 Webhook 端口（编辑 .env）
+WEBHOOK_PORT=9001
+# 然后重启：pm2 restart git-webhook
 ```
 
 ---
@@ -492,11 +610,18 @@ sudo certbot renew --dry-run
 ### 开机自启
 
 ```bash
-# 确保 Docker 开机自启
+# 1. 确保 Docker 开机自启
 sudo systemctl enable docker
 
-# 容器配置了 restart: unless-stopped
-# 系统重启后会自动恢复运行
+# 2. Docker 容器自动重启（已配置 restart: unless-stopped）
+# 系统重启后 Next.js 容器会自动恢复运行
+
+# 3. PM2 开机自启
+pm2 startup
+# 按照输出的提示执行命令（通常是 sudo 开头的命令）
+
+pm2 save
+# 保存当前 PM2 进程列表，重启后自动恢复
 ```
 
 ---

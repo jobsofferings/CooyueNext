@@ -1,5 +1,5 @@
 export const i18n = {
-  defaultLocale: 'zh', // 默认为中文
+  defaultLocale: 'en', // 默认为英文
   locales: ['zh', 'en', 'ja'], // 支持中文、英文、日文
 } as const
 
