@@ -9,8 +9,6 @@ FROM node:22.22.0 AS base
 # 仅安装生产和开发依赖，利用 Docker 缓存层优化
 # ================================
 FROM base AS deps
-# Alpine 需要 libc6-compat 来兼容某些 Node.js 原生模块
-RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # 仅复制依赖声明文件，最大化利用缓存
