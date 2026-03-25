@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
+import { useDictionary } from '@/hooks/useDictionary'
 
 interface NavItem {
   label: string
@@ -10,9 +11,9 @@ interface NavItem {
   children?: NavItem[]
 }
 
-const navItems: NavItem[] = [
+const getNavItems = (dict: (key: string) => string): NavItem[] => [
   {
-    label: 'Home',
+    label: dict('home'),
     href: '/',
     children: [
       { label: 'Home One', href: '/' },
@@ -46,6 +47,8 @@ const navItems: NavItem[] = [
 export default function Header() {
   const params = useParams()
   const lang = params.lang as string
+  const dict = useDictionary()
+  const navItems = getNavItems(dict)
 
   const getLocalizedHref = (href: string) => `/${lang}${href}`
 

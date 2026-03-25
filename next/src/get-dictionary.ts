@@ -4,7 +4,6 @@ import { i18n, type Locale } from './i18n-config'
 const dictionaries = {
   zh: async () => import('./dictionaries/zh.json'),
   en: async () => import('./dictionaries/en.json'),
-  ja: async () => import('./dictionaries/ja.json'),
 }
 
 export const getDictionary = async (locale: Locale) => {
@@ -23,12 +22,14 @@ export const getDictionaryByOss = async (locale: Locale) => {
   if (!process.env.NEXT_PUBLIC_I18N_HOSTS) return;
   const url = `${process.env.NEXT_PUBLIC_I18N_HOSTS}/article/${locale}.json`
   try {
-    const res = await fetch(url)
+    const res = await fetch(url, {
+      next: { revalidate: 3600 }
+    })
     if (res.ok) {
       return await res.json()
     }
   } catch (error) {
-    console.log(error)
+    console.error('[I18N] Failed to fetch from OSS:', error)
   }
   return;
 }

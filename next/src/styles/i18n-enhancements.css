@@ -1,0 +1,27 @@
+.site-footer__bottom-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.site-footer__bottom-left {
+  flex: 1;
+}
+
+.site-footer__bottom-right {
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .site-footer__bottom-inner {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .site-footer__bottom-left,
+  .site-footer__bottom-right {
+    width: 100%;
+  }
+}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
+import { useDictionary } from '@/hooks/useDictionary'
 
 const faqs = [
   {
@@ -33,6 +34,7 @@ const faqs = [
 
 export default function FaqPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0)
+  const dict = useDictionary()
 
   const toggleFaq = (index: number) => {
     setOpenIndex(openIndex === index ? null : index)
@@ -42,7 +44,7 @@ export default function FaqPage() {
     <>
       <PageHeader
         title="FAQs"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'FAQs' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'FAQs' }]}
       />
 
       <section className="faq-page">

@@ -2,18 +2,26 @@ import { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 export const metadata: Metadata = {
   title: siteConfig.seo.titleTemplate('Contact'),
   description: 'Get in touch with us',
 }
 
-export default function ContactPage() {
+export default async function ContactPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+  
   return (
     <>
       <PageHeader
         title="Contact"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Contact' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'Contact' }]}
       />
 
       <section className="contact-page">

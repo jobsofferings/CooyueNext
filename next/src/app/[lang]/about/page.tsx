@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TeamCard, TestimonialCard } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 const team = [
   { name: 'Kevin Martin', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
@@ -19,12 +21,18 @@ export const metadata: Metadata = {
   description: 'Learn more about our company',
 }
 
-export default function AboutPage() {
+export default async function AboutPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+  
   return (
     <>
       <PageHeader
         title="About"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'About' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'About' }]}
       />
 
       <section className="about-four">

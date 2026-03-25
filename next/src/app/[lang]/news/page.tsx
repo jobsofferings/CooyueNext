@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { NewsCard } from '@/components/ui'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 const news = [
   { title: 'Discover 10 ways to solve your business problems', excerpt: 'Lorem ipsum dolor sit amet, consect etur adi pisicing elit.', image: '/assets/images/blog/news-1-1.jpg', date: '30 Mar, 2023', category: 'Business', comments: 2, href: '/news/1' },
@@ -17,12 +19,18 @@ export const metadata: Metadata = {
   description: 'Latest news and updates',
 }
 
-export default function NewsPage() {
+export default async function NewsPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+  
   return (
     <>
       <PageHeader
         title="News"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'News' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'News' }]}
       />
 
       <section className="news-page">

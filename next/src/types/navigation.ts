@@ -9,9 +9,9 @@ export interface BreadcrumbItem {
   href?: string
 }
 
-export const navigationConfig: NavItem[] = [
+export const getNavigationConfig = (dict: (key: string) => string): NavItem[] => [
   {
-    label: 'Home',
+    label: dict('home'),
     href: '/',
     children: [
       { label: 'Home One', href: '/' },

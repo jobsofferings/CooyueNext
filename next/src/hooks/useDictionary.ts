@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { i18n, Locale } from "@/i18n-config"
 import { usePathname } from "next/navigation"
 import ZH_CONFIG from '../dictionaries/zh.json'
 import EN_CONFIG from '../dictionaries/en.json'
-import JA_CONFIG from '../dictionaries/ja.json'
 
 export const useLocale = () => {
   const pathName = usePathname()
@@ -13,37 +12,57 @@ export const useLocale = () => {
 
 export const useDictionary = () => {
   const locale = useLocale()
-
   const ossResult = useDictionaryByOss();
-  if (ossResult) {
-    return createDictionaryFunction(ossResult);
-  }
 
-  if (i18n.locales.includes(locale)) {
-    const dict_map = {
-      'zh': ZH_CONFIG,
-      'en': EN_CONFIG,
-      'ja': JA_CONFIG,
+  return useMemo(() => {
+    if (ossResult) {
+      return createDictionaryFunction(ossResult);
     }
-    const dict = dict_map[locale] as Record<string, string>
-    return createDictionaryFunction(dict);
-  }
 
-  return createDictionaryFunction({});
+    if (i18n.locales.includes(locale)) {
+      const dict_map = {
+        'zh': ZH_CONFIG,
+        'en': EN_CONFIG,
+      }
+      const dict = dict_map[locale] as Record<string, string>
+      return createDictionaryFunction(dict);
+    }
+
+    return createDictionaryFunction({});
+  }, [locale, ossResult]);
 }
+
+const dictionaryCache = new Map<string, Record<string, string>>();
 
 const useDictionaryByOss = () => {
   const [result, setResult] = useState<Record<string, string> | null>(null)
   const locale = useLocale()
+
   useEffect(() => {
     if (!process.env.NEXT_PUBLIC_I18N_HOSTS) return;
-    console.log('fetch oss')
-    console.log(locale, 'locale')
-    const url = `${process.env.NEXT_PUBLIC_I18N_HOSTS}/article/${locale}.json?${Date.now()}`
-    fetch(url)
-      .then(res => res.json())
-      .then(setResult)
-      .catch(() => setResult(null))
+
+    if (dictionaryCache.has(locale)) {
+      setResult(dictionaryCache.get(locale)!);
+      return;
+    }
+
+    const url = `${process.env.NEXT_PUBLIC_I18N_HOSTS}/article/${locale}.json`
+    fetch(url, {
+      cache: 'force-cache',
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          dictionaryCache.set(locale, data);
+          setResult(data);
+        } else {
+          setResult(null);
+        }
+      })
+      .catch((error) => {
+        console.error('[I18N] Failed to fetch from OSS:', error);
+        setResult(null);
+      })
   }, [locale])
   return result
 }

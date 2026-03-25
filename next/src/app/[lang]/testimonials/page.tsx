@@ -2,6 +2,8 @@ import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TestimonialCard } from '@/components/ui'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 const testimonials = [
   { name: 'Mike Hardson', role: 'CO Founder', content: 'Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.', image: '/assets/images/testimonial/testimonial-2-1.jpg' },
@@ -15,12 +17,18 @@ export const metadata: Metadata = {
   description: 'What our clients say about us',
 }
 
-export default function TestimonialsPage() {
+export default async function TestimonialsPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+  
   return (
     <>
       <PageHeader
         title="Testimonials"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Testimonials' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'Testimonials' }]}
       />
 
       <section className="testimonial-page">

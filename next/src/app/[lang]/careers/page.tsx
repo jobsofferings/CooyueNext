@@ -3,6 +3,8 @@ import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 const jobs = [
   { title: 'Senior Business Analyst', location: 'New York', type: 'Full Time', department: 'Business' },
@@ -17,12 +19,18 @@ export const metadata: Metadata = {
   description: 'Join our team',
 }
 
-export default function CareersPage() {
+export default async function CareersPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+  
   return (
     <>
       <PageHeader
         title="Careers"
-        breadcrumbs={[{ label: 'Home', href: '/' }, { label: 'Careers' }]}
+        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'Careers' }]}
       />
 
       <section className="careers-page">

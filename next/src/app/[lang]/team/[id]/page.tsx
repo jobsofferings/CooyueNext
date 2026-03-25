@@ -2,9 +2,11 @@ import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
+import { getDictionary } from '@/get-dictionary'
+import { Locale } from '@/i18n-config'
 
 interface TeamDetailPageProps {
-  params: { lang: string; id: string }
+  params: { lang: Locale; id: string }
 }
 
 export const metadata: Metadata = {
@@ -12,13 +14,15 @@ export const metadata: Metadata = {
   description: 'Team member details',
 }
 
-export default function TeamDetailPage({ params }: TeamDetailPageProps) {
+export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
+  const dict = await getDictionary(params.lang)
+  
   return (
     <>
       <PageHeader
         title="Team Details"
         breadcrumbs={[
-          { label: 'Home', href: '/' },
+          { label: dict('home'), href: '/' },
           { label: 'Team', href: '/team' },
           { label: 'Team Details' },
         ]}
