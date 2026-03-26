@@ -6,12 +6,12 @@ import { SectionTitle } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { Locale } from '@/i18n-config'
 
-const jobs = [
-  { title: 'Senior Business Analyst', location: 'New York', type: 'Full Time', department: 'Business' },
-  { title: 'Financial Consultant', location: 'Los Angeles', type: 'Full Time', department: 'Finance' },
-  { title: 'Marketing Manager', location: 'Chicago', type: 'Full Time', department: 'Marketing' },
-  { title: 'Investment Advisor', location: 'Houston', type: 'Part Time', department: 'Investment' },
-  { title: 'HR Specialist', location: 'Phoenix', type: 'Full Time', department: 'Human Resources' },
+const getJobs = (dict: (key: string) => string) => [
+  { title: dict('Senior Business Analyst'), location: dict('New York'), type: dict('Full Time'), department: dict('Business') },
+  { title: dict('Financial Consultant'), location: dict('Los Angeles'), type: dict('Full Time'), department: dict('Finance') },
+  { title: dict('Marketing Manager'), location: dict('Chicago'), type: dict('Full Time'), department: dict('Marketing') },
+  { title: dict('Investment Advisor'), location: dict('Houston'), type: dict('Part Time'), department: dict('Investment') },
+  { title: dict('HR Specialist'), location: dict('Phoenix'), type: dict('Full Time'), department: dict('Human Resources') },
 ]
 
 export const metadata: Metadata = {
@@ -25,31 +25,32 @@ export default async function CareersPage({
   params: { lang: Locale }
 }) {
   const dict = await getDictionary(lang)
+  const jobs = getJobs(dict)
   
   return (
     <>
       <PageHeader
-        title="Careers"
-        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'Careers' }]}
+        title={dict('Careers')}
+        breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('Careers') }]}
       />
 
       <section className="careers-page">
         <div className="container">
           <SectionTitle
-            tagline="join our team"
-            title="Current Job Openings"
-            highlight="Openings"
+            tagline={dict('join our team')}
+            title={dict('Current Job Openings')}
+            highlight={dict('Openings')}
             align="center"
           />
           <div className="careers-page__table-box">
             <table className="careers-page__table">
               <thead>
                 <tr>
-                  <th>Job Title</th>
-                  <th>Location</th>
-                  <th>Job Type</th>
-                  <th>Department</th>
-                  <th>Action</th>
+                  <th>{dict('Job Title')}</th>
+                  <th>{dict('Location')}</th>
+                  <th>{dict('Job Type')}</th>
+                  <th>{dict('Department')}</th>
+                  <th>{dict('Action')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -60,8 +61,8 @@ export default async function CareersPage({
                     <td>{job.type}</td>
                     <td>{job.department}</td>
                     <td>
-                      <Link href="/contact" className="thm-btn careers-page__btn">
-                        Apply Now
+                      <Link href={`/${lang}/contact`} className="thm-btn careers-page__btn">
+                        {dict('Apply Now')}
                       </Link>
                     </td>
                   </tr>
@@ -78,13 +79,12 @@ export default async function CareersPage({
             <div className="col-xl-6">
               <div className="why-join-us__left">
                 <SectionTitle
-                  tagline="why join us"
-                  title="Benefits of Working With Us"
-                  highlight="Us"
+                  tagline={dict('why join us')}
+                  title={dict('Benefits of Working With Us')}
+                  highlight={dict('Us')}
                 />
                 <p className="why-join-us__text">
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor
-                  incididunt ut labore et dolore magna aliqua.
+                  {dict('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.')}
                 </p>
                 <ul className="why-join-us__list list-unstyled">
                   <li>
@@ -92,7 +92,7 @@ export default async function CareersPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Competitive salary and benefits</p>
+                      <p>{dict('Competitive salary and benefits')}</p>
                     </div>
                   </li>
                   <li>
@@ -100,7 +100,7 @@ export default async function CareersPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Flexible working hours</p>
+                      <p>{dict('Flexible working hours')}</p>
                     </div>
                   </li>
                   <li>
@@ -108,7 +108,7 @@ export default async function CareersPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Professional development opportunities</p>
+                      <p>{dict('Professional development opportunities')}</p>
                     </div>
                   </li>
                   <li>
@@ -116,7 +116,7 @@ export default async function CareersPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Health insurance coverage</p>
+                      <p>{dict('Health insurance coverage')}</p>
                     </div>
                   </li>
                 </ul>

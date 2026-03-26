@@ -11,39 +11,34 @@ export interface BreadcrumbItem {
 
 export const getNavigationConfig = (dict: (key: string) => string): NavItem[] => [
   {
-    label: dict('home'),
+    label: dict('Home'),
     href: '/',
-    children: [
-      { label: 'Home One', href: '/' },
-      { label: 'Home Two', href: '/home-2' },
-      { label: 'Home Three', href: '/home-3' },
-    ],
   },
   {
-    label: 'About',
+    label: dict('About'),
     href: '/about',
   },
   {
-    label: 'Pages',
+    label: dict('Pages'),
     href: '#',
     children: [
-      { label: 'Our Team', href: '/team' },
-      { label: 'Team Details', href: '/team/1' },
-      { label: 'Testimonials', href: '/testimonials' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'Faqs', href: '/faq' },
+      { label: dict('Our Team'), href: '/team' },
+      { label: dict('Team Details'), href: '/team/1' },
+      { label: dict('Testimonials'), href: '/testimonials' },
+      { label: dict('Careers'), href: '/careers' },
+      { label: dict('FAQs'), href: '/faq' },
     ],
   },
   {
-    label: 'News',
+    label: dict('News'),
     href: '/news',
     children: [
-      { label: 'News', href: '/news' },
-      { label: 'News Details', href: '/news/1' },
+      { label: dict('News'), href: '/news' },
+      { label: dict('News Details'), href: '/news/1' },
     ],
   },
   {
-    label: 'Contact',
+    label: dict('Contact'),
     href: '/contact',
   },
 ]

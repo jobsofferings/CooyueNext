@@ -2,12 +2,15 @@ import Link from 'next/link'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
+import { getDictionary } from '@/get-dictionary'
 
 export default async function Home({
   params: { lang },
 }: {
   params: { lang: Locale }
 }) {
+  const dict = await getDictionary(lang)
+  
   return (
     <main>
       <section className="main-slider">
@@ -35,10 +38,10 @@ export default async function Home({
             </div>
             <div className="container">
               <div className="main-slider__content">
-                <p className="main-slider__sub-title">Sustainable Solutions for you</p>
-                <h2 className="main-slider__title">Consulting <br />for the business</h2>
+                <p className="main-slider__sub-title">{dict('Sustainable Solutions for you')}</p>
+                <h2 className="main-slider__title">{dict('Consulting')} <br />{dict('for the business')}</h2>
                 <div className="main-slider__btn-box">
-                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">Discover More</Link>
+                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">{dict('Discover More')}</Link>
                 </div>
               </div>
             </div>
@@ -64,10 +67,10 @@ export default async function Home({
             </div>
             <div className="container">
               <div className="main-slider__content">
-                <p className="main-slider__sub-title">Sustainable Solutions for you</p>
-                <h2 className="main-slider__title">Consulting <br />for the business</h2>
+                <p className="main-slider__sub-title">{dict('Sustainable Solutions for you')}</p>
+                <h2 className="main-slider__title">{dict('Consulting')} <br />{dict('for the business')}</h2>
                 <div className="main-slider__btn-box">
-                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">Discover More</Link>
+                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">{dict('Discover More')}</Link>
                 </div>
               </div>
             </div>
@@ -93,10 +96,10 @@ export default async function Home({
             </div>
             <div className="container">
               <div className="main-slider__content">
-                <p className="main-slider__sub-title">Sustainable Solutions for you</p>
-                <h2 className="main-slider__title">Consulting <br />for the business</h2>
+                <p className="main-slider__sub-title">{dict('Sustainable Solutions for you')}</p>
+                <h2 className="main-slider__title">{dict('Consulting')} <br />{dict('for the business')}</h2>
                 <div className="main-slider__btn-box">
-                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">Discover More</Link>
+                  <Link href={`/${lang}/about`} className="main-slider__btn thm-btn">{dict('Discover More')}</Link>
                 </div>
               </div>
             </div>
@@ -129,31 +132,31 @@ export default async function Home({
               <div className="about-one__right">
                 <div className="section-title text-left">
                   <div className="section-title__tagline-box">
-                    <span className="section-title__tagline">Welcome to agency</span>
+                    <span className="section-title__tagline">{dict('Welcome to agency')}</span>
                   </div>
-                  <h2 className="section-title__title">Delivering the Best Consulting <span>Experience</span></h2>
+                  <h2 className="section-title__title">{dict('Delivering the Best Consulting')} <span>{dict('Experience')}</span></h2>
                 </div>
-                <p className="about-one__text">Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.</p>
+                <p className="about-one__text">{dict('Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.')}</p>
                 <div className="about-one__points-and-experience">
                   <div className="about-one__points-box">
                     <ul className="about-one__points-list list-unstyled">
                       <li>
                         <div className="icon"><span className="fa fa-check"></span></div>
-                        <div className="text"><p>Strategy &amp; Consulting</p></div>
+                        <div className="text"><p>{dict('Strategy & Consulting')}</p></div>
                       </li>
                       <li>
                         <div className="icon"><span className="fa fa-check"></span></div>
-                        <div className="text"><p>Business Process</p></div>
+                        <div className="text"><p>{dict('Business Process')}</p></div>
                       </li>
                     </ul>
                     <ul className="about-one__points-list list-unstyled">
                       <li>
                         <div className="icon"><span className="fa fa-check"></span></div>
-                        <div className="text"><p>Marketing Rules</p></div>
+                        <div className="text"><p>{dict('Marketing Rules')}</p></div>
                       </li>
                       <li>
                         <div className="icon"><span className="fa fa-check"></span></div>
-                        <div className="text"><p>Partnerships</p></div>
+                        <div className="text"><p>{dict('Partnerships')}</p></div>
                       </li>
                     </ul>
                   </div>
@@ -162,7 +165,7 @@ export default async function Home({
                       <span className="icon-certificate"></span>
                     </div>
                     <div className="about-one__experience-text">
-                      <p>10 Years of Consulting Experience</p>
+                      <p>{dict('10 Years of Consulting Experience')}</p>
                     </div>
                   </div>
                 </div>
@@ -170,7 +173,7 @@ export default async function Home({
                   <div className="about-one__shape-3 float-bob-x">
                     <img src="/assets/images/shapes/about-one-shape-3.png" alt="" />
                   </div>
-                  <Link href={`/${lang}/about`} className="about-one__btn thm-btn">Discover More</Link>
+                  <Link href={`/${lang}/about`} className="about-one__btn thm-btn">{dict('Discover More')}</Link>
                 </div>
               </div>
             </div>
@@ -187,27 +190,27 @@ export default async function Home({
                 <div className="grow-business__left">
                   <div className="section-title text-left">
                     <div className="section-title__tagline-box">
-                      <span className="section-title__tagline">Human resources</span>
+                      <span className="section-title__tagline">{dict('Human resources')}</span>
                     </div>
-                    <h2 className="section-title__title">Let&apos;s Grow Business with a New <span>Strategies</span></h2>
+                    <h2 className="section-title__title">{dict('Let\'s Grow Business with a New')} <span>{dict('Strategies')}</span></h2>
                   </div>
-                  <p className="grow-business__text">Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu convenient scheduling, account nulla pariatur.</p>
+                  <p className="grow-business__text">{dict('Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu convenient scheduling, account nulla pariatur.')}</p>
                   <ul className="grow-business__points list-unstyled">
                     <li>
                       <div className="icon"><span className="fa fa-check"></span></div>
-                      <div className="text"><p>Lorem ipsum is not simply random text</p></div>
+                      <div className="text"><p>{dict('Lorem ipsum is not simply random text')}</p></div>
                     </li>
                     <li>
                       <div className="icon"><span className="fa fa-check"></span></div>
-                      <div className="text"><p>Making this the first true generator on the Internet</p></div>
+                      <div className="text"><p>{dict('Making this the first true generator on the Internet')}</p></div>
                     </li>
                     <li>
                       <div className="icon"><span className="fa fa-check"></span></div>
-                      <div className="text"><p>Various versions have evolved over the years</p></div>
+                      <div className="text"><p>{dict('Various versions have evolved over the years')}</p></div>
                     </li>
                   </ul>
                   <div className="grow-business__progress">
-                    <h4 className="grow-business__progress-title">Consulting</h4>
+                    <h4 className="grow-business__progress-title">{dict('Consulting')}</h4>
                     <div className="bar">
                       <div className="bar-inner count-bar" data-percent="86%">
                         <div className="count-text">86%</div>
@@ -226,15 +229,15 @@ export default async function Home({
                       <div className="grow-business__right-points-icon">
                         <span className="icon-experience"></span>
                       </div>
-                      <h3 className="grow-business__right-points-title">Benefits by Investing <br /> your Money</h3>
-                      <p className="grow-business__right-points-text">Sed non odio non elit porttit sit tincidunt. <br /> Donec fermentum, elit sit amet</p>
+                      <h3 className="grow-business__right-points-title">{dict('Benefits by Investing')} <br /> {dict('your Money')}</h3>
+                      <p className="grow-business__right-points-text">{dict('Sed non odio non elit porttit sit tincidunt. Donec fermentum, elit sit amet')}</p>
                     </li>
                     <li>
                       <div className="grow-business__right-points-icon">
                         <span className="icon-consumer-behavior"></span>
                       </div>
-                      <h3 className="grow-business__right-points-title">The most Time-Consuming <br /> Components</h3>
-                      <p className="grow-business__right-points-text">Sed non odio non elit porttit sit tincidunt. <br /> Donec fermentum, elit sit amet</p>
+                      <h3 className="grow-business__right-points-title">{dict('The most Time-Consuming')} <br /> {dict('Components')}</h3>
+                      <p className="grow-business__right-points-text">{dict('Sed non odio non elit porttit sit tincidunt. Donec fermentum, elit sit amet')}</p>
                     </li>
                   </ul>
                 </div>
@@ -256,9 +259,9 @@ export default async function Home({
                 </div>
               </a>
             </div>
-            <h3 className="video-one__title">{siteConfig.company.name} Envision &amp; Transform <br /> Your Business</h3>
+            <h3 className="video-one__title">{siteConfig.company.name} {dict('Envision & Transform')} <br /> {dict('Your Business')}</h3>
             <div className="video-one__btn-box">
-              <Link href={`/${lang}/about`} className="video-one__btn thm-btn">Discover More</Link>
+              <Link href={`/${lang}/about`} className="video-one__btn thm-btn">{dict('Discover More')}</Link>
             </div>
           </div>
         </div>
@@ -272,15 +275,15 @@ export default async function Home({
               <div className="testimonial-one__left">
                 <div className="section-title text-left">
                   <div className="section-title__tagline-box">
-                    <span className="section-title__tagline">our feedbacks</span>
+                    <span className="section-title__tagline">{dict('our feedbacks')}</span>
                   </div>
-                  <h2 className="section-title__title">Clients are <span>Talking</span></h2>
+                  <h2 className="section-title__title">{dict('Clients are')} <span>{dict('Talking')}</span></h2>
                 </div>
-                <p className="testimonial-one__left-text">Lorem Ipsum. Proin gravida nibh vel velit auctor aliquet. Aenean solldin, lorem is simply.</p>
+                <p className="testimonial-one__left-text">{dict('Lorem Ipsum. Proin gravida nibh vel velit auctor aliquet. Aenean solldin, lorem is simply.')}</p>
                 <div className="testimonial-one__rounded-text">
                   <Link href={`/${lang}/testimonials`} className="testimonial-one__curved-circle-box">
                     <div className="curved-circle">
-                      <span className="curved-circle--item">380 satisfied clients</span>
+                      <span className="curved-circle--item">{dict('380 satisfied clients')}</span>
                     </div>
                     <div className="testimonial-one__icon">
                       <img src="/assets/images/icon/main-slider-two-rounded-icon.png" alt="" />
@@ -307,11 +310,11 @@ export default async function Home({
                           <span className="fa fa-star"></span>
                           <span className="fa fa-star"></span>
                         </div>
-                        <p className="testimonial-one__text">Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.</p>
+                        <p className="testimonial-one__text">{dict('Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.')}</p>
                       </div>
                       <div className="testimonial-one__client-info">
-                        <h3><Link href={`/${lang}/testimonials`}>Aleesha Brown</Link></h3>
-                        <p>Happy Client</p>
+                        <h3><Link href={`/${lang}/testimonials`}>{dict('Aleesha Brown')}</Link></h3>
+                        <p>{dict('Happy Client')}</p>
                       </div>
                     </div>
                   </div>
@@ -330,11 +333,11 @@ export default async function Home({
                           <span className="fa fa-star"></span>
                           <span className="fa fa-star"></span>
                         </div>
-                        <p className="testimonial-one__text">Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.</p>
+                        <p className="testimonial-one__text">{dict('Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.')}</p>
                       </div>
                       <div className="testimonial-one__client-info">
-                        <h3><Link href={`/${lang}/testimonials`}>Mike Hardson</Link></h3>
-                        <p>Happy Client</p>
+                        <h3><Link href={`/${lang}/testimonials`}>{dict('Mike Hardson')}</Link></h3>
+                        <p>{dict('Happy Client')}</p>
                       </div>
                     </div>
                   </div>
@@ -353,11 +356,11 @@ export default async function Home({
                           <span className="fa fa-star"></span>
                           <span className="fa fa-star"></span>
                         </div>
-                        <p className="testimonial-one__text">Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.</p>
+                        <p className="testimonial-one__text">{dict('Lorem ipsum is simply free text dolor not sit amet, notted adipisicing elit sed do eiusmod incididunt labore et dolore text.')}</p>
                       </div>
                       <div className="testimonial-one__client-info">
-                        <h3><Link href={`/${lang}/testimonials`}>Sarah Albert</Link></h3>
-                        <p>Happy Client</p>
+                        <h3><Link href={`/${lang}/testimonials`}>{dict('Sarah Albert')}</Link></h3>
+                        <p>{dict('Happy Client')}</p>
                       </div>
                     </div>
                   </div>
@@ -374,17 +377,17 @@ export default async function Home({
             <div className="row">
               <div className="col-xl-7 col-lg-6">
                 <div className="team-one__left">
-                  <div className="section-title text-left">
-                    <div className="section-title__tagline-box">
-                      <span className="section-title__tagline">meet our team</span>
-                    </div>
-                    <h2 className="section-title__title">Meet the People Behind <br /> the High <span>Success</span></h2>
+                <div className="section-title text-left">
+                  <div className="section-title__tagline-box">
+                    <span className="section-title__tagline">{dict('meet our team')}</span>
                   </div>
+                  <h2 className="section-title__title">{dict('Meet the People Behind')} <br /> {dict('the High')} <span>{dict('Success')}</span></h2>
+                </div>
                 </div>
               </div>
               <div className="col-xl-5 col-lg-6">
                 <div className="team-one__right">
-                  <p className="team-one__text">Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.</p>
+                  <p className="team-one__text">{dict('Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.')}</p>
                 </div>
               </div>
             </div>
@@ -407,17 +410,17 @@ export default async function Home({
                           <li><a href="#"><i className="fab fa-instagram"></i></a></li>
                         </ul>
                       </div>
-                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/1`}>Kevin Martin</Link></h3>
-                      <p className="team-one__hover-sub-title">Consultant</p>
-                      <p className="team-one__hover-text">There are many vartion of passages of available.</p>
+                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/1`}>{dict('Kevin Martin')}</Link></h3>
+                      <p className="team-one__hover-sub-title">{dict('Consultant')}</p>
+                      <p className="team-one__hover-text">{dict('There are many vartion of passages of available.')}</p>
                     </div>
                   </div>
                   <div className="team-one__content">
                     <div className="team-one__arrow-box">
                       <Link href={`/${lang}/team/1`} className="team-one__arrow"><span className="fas fa-share-alt"></span></Link>
                     </div>
-                    <h3 className="team-one__title"><Link href={`/${lang}/team/1`}>Kevin Martin</Link></h3>
-                    <p className="team-one__sub-title">Consultant</p>
+                    <h3 className="team-one__title"><Link href={`/${lang}/team/1`}>{dict('Kevin Martin')}</Link></h3>
+                    <p className="team-one__sub-title">{dict('Consultant')}</p>
                   </div>
                 </div>
               </div>
@@ -437,17 +440,17 @@ export default async function Home({
                           <li><a href="#"><i className="fab fa-instagram"></i></a></li>
                         </ul>
                       </div>
-                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/2`}>Jessica Brown</Link></h3>
-                      <p className="team-one__hover-sub-title">Consultant</p>
-                      <p className="team-one__hover-text">There are many vartion of passages of available.</p>
+                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/2`}>{dict('Jessica Brown')}</Link></h3>
+                      <p className="team-one__hover-sub-title">{dict('Consultant')}</p>
+                      <p className="team-one__hover-text">{dict('There are many vartion of passages of available.')}</p>
                     </div>
                   </div>
                   <div className="team-one__content">
                     <div className="team-one__arrow-box">
                       <Link href={`/${lang}/team/2`} className="team-one__arrow"><span className="fas fa-share-alt"></span></Link>
                     </div>
-                    <h3 className="team-one__title"><Link href={`/${lang}/team/2`}>Jessica Brown</Link></h3>
-                    <p className="team-one__sub-title">Consultant</p>
+                    <h3 className="team-one__title"><Link href={`/${lang}/team/2`}>{dict('Jessica Brown')}</Link></h3>
+                    <p className="team-one__sub-title">{dict('Consultant')}</p>
                   </div>
                 </div>
               </div>
@@ -467,17 +470,17 @@ export default async function Home({
                           <li><a href="#"><i className="fab fa-instagram"></i></a></li>
                         </ul>
                       </div>
-                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/3`}>Mike Hardson</Link></h3>
-                      <p className="team-one__hover-sub-title">Consultant</p>
-                      <p className="team-one__hover-text">There are many vartion of passages of available.</p>
+                      <h3 className="team-one__hover-title"><Link href={`/${lang}/team/3`}>{dict('Mike Hardson')}</Link></h3>
+                      <p className="team-one__hover-sub-title">{dict('Consultant')}</p>
+                      <p className="team-one__hover-text">{dict('There are many vartion of passages of available.')}</p>
                     </div>
                   </div>
                   <div className="team-one__content">
                     <div className="team-one__arrow-box">
                       <Link href={`/${lang}/team/3`} className="team-one__arrow"><span className="fas fa-share-alt"></span></Link>
                     </div>
-                    <h3 className="team-one__title"><Link href={`/${lang}/team/3`}>Mike Hardson</Link></h3>
-                    <p className="team-one__sub-title">Consultant</p>
+                    <h3 className="team-one__title"><Link href={`/${lang}/team/3`}>{dict('Mike Hardson')}</Link></h3>
+                    <p className="team-one__sub-title">{dict('Consultant')}</p>
                   </div>
                 </div>
               </div>
@@ -496,11 +499,11 @@ export default async function Home({
                 <div className="counter-one__left">
                   <div className="section-title text-left">
                     <div className="section-title__tagline-box">
-                      <span className="section-title__tagline">fun facts</span>
+                      <span className="section-title__tagline">{dict('fun facts')}</span>
                     </div>
-                    <h2 className="section-title__title">Consultancy Funfacts <br /> in Great <span>Numbers</span></h2>
+                    <h2 className="section-title__title">{dict('Consultancy Funfacts')} <br /> {dict('in Great')} <span>{dict('Numbers')}</span></h2>
                   </div>
-                  <p className="counter-one__text">Leverage agile frameworks to provide a robust synopsis for high level overviews. Iterative approaches to corporate strategy data foster to collaborative thinking.</p>
+                  <p className="counter-one__text">{dict('Leverage agile frameworks to provide a robust synopsis for high level overviews. Iterative approaches to corporate strategy data foster to collaborative thinking.')}</p>
                 </div>
               </div>
               <div className="col-xl-7 col-lg-7">
@@ -513,7 +516,7 @@ export default async function Home({
                       <div className="counter-one__count count-box">
                         <h3 className="count-text" data-stop="886" data-speed="1500">00</h3>
                       </div>
-                      <p className="counter-one__text">Projects Completed</p>
+                      <p className="counter-one__text">{dict('Projects Completed')}</p>
                     </li>
                     <li>
                       <div className="counter-one__icon">
@@ -522,7 +525,7 @@ export default async function Home({
                       <div className="counter-one__count count-box">
                         <h3 className="count-text" data-stop="600" data-speed="1500">00</h3>
                       </div>
-                      <p className="counter-one__text">Satisfied Customers</p>
+                      <p className="counter-one__text">{dict('Satisfied Customers')}</p>
                     </li>
                     <li>
                       <div className="counter-one__icon">
@@ -531,7 +534,7 @@ export default async function Home({
                       <div className="counter-one__count count-box">
                         <h3 className="count-text" data-stop="960" data-speed="1500">00</h3>
                       </div>
-                      <p className="counter-one__text">Expert Consultants</p>
+                      <p className="counter-one__text">{dict('Expert Consultants')}</p>
                     </li>
                   </ul>
                 </div>
@@ -542,9 +545,9 @@ export default async function Home({
         <div className="counter-one__bottom">
           <div className="container">
             <div className="counter-one__bottom-inner">
-              <p className="counter-one__bottom-text">Need best business consultation solutions &amp; services? <Link href={`/${lang}/contact`}>Send a Request</Link></p>
+              <p className="counter-one__bottom-text">{dict('Need best business consultation solutions & services?')} <Link href={`/${lang}/contact`}>{dict('Send a Request')}</Link></p>
               <div className="counter-one__call-box">
-                <p>Call Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></p>
+                <p>{dict('Call Free')} <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></p>
                 <div className="counter-one__call-icon">
                   <span className="icon-telephone-1"></span>
                 </div>
@@ -567,22 +570,22 @@ export default async function Home({
                   <div className="row">
                     <div className="col-xl-12">
                       <div className="contact-one__input-box">
-                        <input type="text" placeholder="Your name" name="name" />
+                        <input type="text" placeholder={dict('Your name')} name="name" />
                       </div>
                     </div>
                     <div className="col-xl-12">
                       <div className="contact-one__input-box">
-                        <input type="email" placeholder="Email address" name="email" />
+                        <input type="email" placeholder={dict('Email address')} name="email" />
                       </div>
                     </div>
                   </div>
                   <div className="row">
                     <div className="col-xl-12">
                       <div className="contact-one__input-box text-message-box">
-                        <textarea name="message" placeholder="Write message"></textarea>
+                        <textarea name="message" placeholder={dict('Write message')}></textarea>
                       </div>
                       <div className="contact-one__btn-box">
-                        <button type="submit" className="thm-btn contact-one__btn">Send a Message</button>
+                        <button type="submit" className="thm-btn contact-one__btn">{dict('Send a Message')}</button>
                       </div>
                     </div>
                   </div>
@@ -594,9 +597,9 @@ export default async function Home({
               <div className="contact-one__right">
                 <div className="section-title text-left">
                   <div className="section-title__tagline-box">
-                    <span className="section-title__tagline">contact us</span>
+                    <span className="section-title__tagline">{dict('contact us')}</span>
                   </div>
-                  <h2 className="section-title__title">Have Questions? Contact <br /> with us <span>Anytime</span></h2>
+                  <h2 className="section-title__title">{dict('Have Questions? Contact')} <br /> {dict('with us')} <span>{dict('Anytime')}</span></h2>
                 </div>
                 <ul className="contact-one__points list-unstyled">
                   <li>
@@ -604,8 +607,8 @@ export default async function Home({
                       <span className="icon-telephone-1"></span>
                     </div>
                     <div className="text">
-                      <p>Have any question?</p>
-                      <h3>Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></h3>
+                      <p>{dict('Have any question?')}</p>
+                      <h3>{dict('Free')} <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a></h3>
                     </div>
                   </li>
                   <li>
@@ -613,7 +616,7 @@ export default async function Home({
                       <span className="icon-email"></span>
                     </div>
                     <div className="text">
-                      <p>Send Email</p>
+                      <p>{dict('Send Email')}</p>
                       <h3><a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a></h3>
                     </div>
                   </li>
@@ -622,7 +625,7 @@ export default async function Home({
                       <span className="icon-pin"></span>
                     </div>
                     <div className="text">
-                      <p>Visit anytime</p>
+                      <p>{dict('Visit anytime')}</p>
                       <h3>{siteConfig.contact.address.en}</h3>
                     </div>
                   </li>

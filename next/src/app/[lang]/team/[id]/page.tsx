@@ -20,11 +20,11 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
   return (
     <>
       <PageHeader
-        title="Team Details"
+        title={dict('Team Details')}
         breadcrumbs={[
-          { label: dict('home'), href: '/' },
-          { label: 'Team', href: '/team' },
-          { label: 'Team Details' },
+          { label: dict('Home'), href: '/' },
+          { label: dict('Team'), href: '/team' },
+          { label: dict('Team Details') },
         ]}
       />
 
@@ -42,8 +42,8 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
               <div className="col-xl-6 col-lg-6">
                 <div className="team-details__right">
                   <div className="team-details__top-content">
-                    <h3 className="team-details__top-name">Jessica Brown</h3>
-                    <p className="team-details__top-sub-title">Co founder & CEO</p>
+                    <h3 className="team-details__top-name">{dict('Jessica Brown')}</h3>
+                    <p className="team-details__top-sub-title">{dict('Co founder & CEO')}</p>
                     <div className="team-details__social">
                       <a href="#">
                         <i className="fab fa-twitter"></i>
@@ -59,19 +59,17 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
                       </a>
                     </div>
                     <p className="team-details__top-text-1">
-                      I help my clients stand out and they help me grow.
+                      {dict('I help my clients stand out and they help me grow.')}
                     </p>
                     <p className="team-details__top-text-2">
-                      Lorem ipsum dolor sit amet, con adipiscing elit tiam convallis elit id impedie.
-                      Quisq commodo simply free ornare tortor.
+                      {dict('Lorem ipsum dolor sit amet, con adipiscing elit tiam convallis elit id impedie. Quisq commodo simply free ornare tortor.')}
                     </p>
                     <p className="team-details__top-text-3">
-                      If you are going to use a passage of Lorem Ipsum, you need to be sure there
-                      isn&apos;t anything embarrassing hidden in the middle of text.
+                      {dict('If you are going to use a passage of Lorem Ipsum, you need to be sure there isn\'t anything embarrassing hidden in the middle of text.')}
                     </p>
                     <div className="team-details__btn-box">
                       <Link href={`/${params.lang}/contact`} className="team-details__btn thm-btn">
-                        Contact With Me
+                        {dict('Contact With Me')}
                       </Link>
                     </div>
                   </div>
@@ -83,10 +81,9 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
             <div className="row">
               <div className="col-xl-6 col-lg-6">
                 <div className="team-details__bottom-left">
-                  <h4 className="team-details__bottom-left-title">Personal experience</h4>
+                  <h4 className="team-details__bottom-left-title">{dict('Personal experience')}</h4>
                   <p className="team-details__bottom-left-text">
-                    If you are going to use a passage of Lorem Ipsum, you need to be sure there
-                    isn&apos;t anything embarrassing hidden.
+                    {dict('If you are going to use a passage of Lorem Ipsum, you need to be sure there isn\'t anything embarrassing hidden.')}
                   </p>
                 </div>
               </div>
@@ -94,7 +91,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
                 <div className="team-details__bottom-right">
                   <div className="team-details__progress">
                     <div className="team-details__progress-single">
-                      <h4 className="team-details__progress-title">Consulting</h4>
+                      <h4 className="team-details__progress-title">{dict('Consulting')}</h4>
                       <div className="bar">
                         <div className="bar-inner count-bar" style={{ width: '86%' }}>
                           <div className="count-text">86%</div>
@@ -102,7 +99,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
                       </div>
                     </div>
                     <div className="team-details__progress-single">
-                      <h4 className="team-details__progress-title">Finance</h4>
+                      <h4 className="team-details__progress-title">{dict('Finance')}</h4>
                       <div className="bar">
                         <div className="bar-inner count-bar" style={{ width: '63%' }}>
                           <div className="count-text">63%</div>
@@ -110,7 +107,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
                       </div>
                     </div>
                     <div className="team-details__progress-single">
-                      <h4 className="team-details__progress-title">Marketing</h4>
+                      <h4 className="team-details__progress-title">{dict('Marketing')}</h4>
                       <div className="bar">
                         <div className="bar-inner count-bar" style={{ width: '79%' }}>
                           <div className="count-text">79%</div>

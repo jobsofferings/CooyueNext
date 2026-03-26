@@ -13,35 +13,30 @@ interface NavItem {
 
 const getNavItems = (dict: (key: string) => string): NavItem[] => [
   {
-    label: dict('home'),
-    href: '/',
-    children: [
-      { label: 'Home One', href: '/' },
-      { label: 'Home Two', href: '/home-2' },
-      { label: 'Home Three', href: '/home-3' },
-    ],
+    label: dict('Home'),
+    href: '/'
   },
-  { label: 'About', href: '/about' },
+  { label: dict('About'), href: '/about' },
   {
-    label: 'Pages',
+    label: dict('Pages'),
     href: '#',
     children: [
-      { label: 'Our Team', href: '/team' },
-      { label: 'Team Details', href: '/team/1' },
-      { label: 'Testimonials', href: '/testimonials' },
-      { label: 'Careers', href: '/careers' },
-      { label: 'FAQs', href: '/faq' },
+      { label: dict('Our Team'), href: '/team' },
+      { label: dict('Team Details'), href: '/team/1' },
+      { label: dict('Testimonials'), href: '/testimonials' },
+      { label: dict('Careers'), href: '/careers' },
+      { label: dict('FAQs'), href: '/faq' },
     ],
   },
   {
-    label: 'News',
+    label: dict('News'),
     href: '#',
     children: [
-      { label: 'News', href: '/news' },
-      { label: 'News Details', href: '/news/1' },
+      { label: dict('News'), href: '/news' },
+      { label: dict('News Details'), href: '/news/1' },
     ],
   },
-  { label: 'Contact', href: '/contact' },
+  { label: dict('Contact'), href: '/contact' },
 ]
 
 export default function Header() {
@@ -67,7 +62,7 @@ export default function Header() {
                 <span className="icon-telephone"></span>
               </div>
               <div className="main-menu__call-content">
-                <p className="main-menu__call-sub-title">Call Anytime</p>
+                <p className="main-menu__call-sub-title">{dict('Call Anytime')}</p>
                 <h5 className="main-menu__call-number">
                   <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                 </h5>
@@ -137,7 +132,7 @@ export default function Header() {
                     </div>
                     <div className="main-menu__btn-box">
                       <Link href={getLocalizedHref('/contact')} className="thm-btn main-menu__btn">
-                        Free Consultation
+                        {dict('Free Consultation')}
                       </Link>
                     </div>
                   </div>

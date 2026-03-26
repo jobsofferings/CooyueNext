@@ -20,8 +20,8 @@ export default async function ContactPage({
   return (
     <>
       <PageHeader
-        title="Contact"
-        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'Contact' }]}
+        title={dict('Contact')}
+        breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('Contact') }]}
       />
 
       <section className="contact-page">
@@ -34,23 +34,23 @@ export default async function ContactPage({
                     <div className="row">
                       <div className="col-xl-12">
                         <div className="contact-page__input-box">
-                          <input type="text" placeholder="Your name" name="name" />
+                          <input type="text" placeholder={dict('Your name')} name="name" />
                         </div>
                       </div>
                       <div className="col-xl-12">
                         <div className="contact-page__input-box">
-                          <input type="email" placeholder="Email address" name="email" />
+                          <input type="email" placeholder={dict('Email address')} name="email" />
                         </div>
                       </div>
                     </div>
                     <div className="row">
                       <div className="col-xl-12">
                         <div className="contact-page__input-box text-message-box">
-                          <textarea name="message" placeholder="Write message"></textarea>
+                          <textarea name="message" placeholder={dict('Write message')}></textarea>
                         </div>
                         <div className="contact-page__btn-box">
                           <button type="submit" className="thm-btn contact-page__btn">
-                            Send a Message
+                            {dict('Send a Message')}
                           </button>
                         </div>
                       </div>
@@ -62,9 +62,9 @@ export default async function ContactPage({
             <div className="col-xl-7 col-lg-6">
               <div className="contact-page__right">
                 <SectionTitle
-                  tagline="contact us"
-                  title="Have Questions? Contact with us Anytime"
-                  highlight="Anytime"
+                  tagline={dict('contact us')}
+                  title={dict('Have Questions? Contact')+' '+dict('with us')+' '+dict('Anytime')}
+                  highlight={dict('Anytime')}
                 />
                 <ul className="contact-page__points list-unstyled">
                   <li>
@@ -72,9 +72,9 @@ export default async function ContactPage({
                       <span className="icon-telephone-1"></span>
                     </div>
                     <div className="text">
-                      <p>Have any question?</p>
+                      <p>{dict('Have any question?')}</p>
                       <h3>
-                        Free <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
+                        {dict('Free')} <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                       </h3>
                     </div>
                   </li>
@@ -83,7 +83,7 @@ export default async function ContactPage({
                       <span className="icon-email"></span>
                     </div>
                     <div className="text">
-                      <p>Send Email</p>
+                      <p>{dict('Send Email')}</p>
                       <h3>
                         <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
                       </h3>
@@ -94,7 +94,7 @@ export default async function ContactPage({
                       <span className="icon-pin"></span>
                     </div>
                     <div className="text">
-                      <p>Visit anytime</p>
+                      <p>{dict('Visit anytime')}</p>
                       <h3>{siteConfig.contact.address.en}</h3>
                     </div>
                   </li>

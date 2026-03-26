@@ -5,15 +5,15 @@ import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { Locale } from '@/i18n-config'
 
-const team = [
-  { name: 'Kevin Martin', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
-  { name: 'Jessica Brown', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-2.jpg', href: '/team/2' },
-  { name: 'Mike Hardson', role: 'Consultant', description: 'There are many vartion of passages of available.', image: '/assets/images/team/team-1-3.jpg', href: '/team/3' },
+const getTeam = (dict: (key: string) => string) => [
+  { name: dict('Kevin Martin'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
+  { name: dict('Jessica Brown'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-2.jpg', href: '/team/2' },
+  { name: dict('Mike Hardson'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-3.jpg', href: '/team/3' },
 ]
 
-const testimonials = [
-  { name: 'Mike Hardson', role: 'CO Founder', content: 'Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.', image: '/assets/images/testimonial/testimonial-2-1.jpg' },
-  { name: 'Sarah Albert', role: 'CO Founder', content: 'Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.', image: '/assets/images/testimonial/testimonial-2-2.jpg' },
+const getTestimonials = (dict: (key: string) => string) => [
+  { name: dict('Mike Hardson'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-1.jpg' },
+  { name: dict('Sarah Albert'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-2.jpg' },
 ]
 
 export const metadata: Metadata = {
@@ -27,12 +27,14 @@ export default async function AboutPage({
   params: { lang: Locale }
 }) {
   const dict = await getDictionary(lang)
+  const team = getTeam(dict)
+  const testimonials = getTestimonials(dict)
   
   return (
     <>
       <PageHeader
-        title="About"
-        breadcrumbs={[{ label: dict('home'), href: '/' }, { label: 'About' }]}
+        title={dict('About')}
+        breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('About') }]}
       />
 
       <section className="about-four">
@@ -54,13 +56,12 @@ export default async function AboutPage({
             <div className="col-xl-6">
               <div className="about-four__right">
                 <SectionTitle
-                  tagline="Welcome to agency"
-                  title="Get to Know About Consultancy Company"
-                  highlight="Company"
+                  tagline={dict('Welcome to agency')}
+                  title={dict('Get to Know About Consultancy Company')}
+                  highlight={dict('Company')}
                 />
                 <p className="about-four__text">
-                  Lorem ipsum dolor sit am adipi we help you ensure everyone is in the right jobs
-                  sicing elit, sed do consulting firms Et leggings across the nation tempor.
+                  {dict('Lorem ipsum dolor sit am adipi we help you ensure everyone is in the right jobs sicing elit, sed do consulting firms Et leggings across the nation tempor.')}
                 </p>
                 <ul className="about-four__points list-unstyled">
                   <li>
@@ -68,7 +69,7 @@ export default async function AboutPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Suspe ndisse suscipit sagittis leo.</p>
+                      <p>{dict('Suspe ndisse suscipit sagittis leo.')}</p>
                     </div>
                   </li>
                   <li>
@@ -76,7 +77,7 @@ export default async function AboutPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Entum estibulum dignissim posuere.</p>
+                      <p>{dict('Entum estibulum dignissim posuere.')}</p>
                     </div>
                   </li>
                   <li>
@@ -84,7 +85,7 @@ export default async function AboutPage({
                       <span className="fa fa-check"></span>
                     </div>
                     <div className="text">
-                      <p>Lorem Ipsum gene on the tend to repeat.</p>
+                      <p>{dict('Lorem Ipsum gene on the tend to repeat.')}</p>
                     </div>
                   </li>
                 </ul>
@@ -100,9 +101,9 @@ export default async function AboutPage({
           style={{ backgroundImage: 'url(/assets/images/backgrounds/expectation-one-bg.jpg)' }}
         ></div>
         <SectionTitle
-          tagline="Recent work lists"
-          title="Consultancy Work that Meets Your Expectations"
-          highlight="Expectations"
+          tagline={dict('Recent work lists')}
+          title={dict('Consultancy Work that Meets Your Expectations')}
+          highlight={dict('Expectations')}
           align="center"
         />
         <div className="expectation-one__inner">
@@ -112,30 +113,27 @@ export default async function AboutPage({
                 <div className="icon">
                   <span className="icon-strategy"></span>
                 </div>
-                <h3 className="expectation-one__title">Saving and Strategy</h3>
+                <h3 className="expectation-one__title">{dict('Saving and Strategy')}</h3>
                 <p className="expectation-one__text">
-                  There are many variations of passages of available but the majority have suffered
-                  alteration in some form injected randomised words.
+                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
                 </p>
               </li>
               <li>
                 <div className="icon">
                   <span className="icon-conversation"></span>
                 </div>
-                <h3 className="expectation-one__title">HR Business Consulting</h3>
+                <h3 className="expectation-one__title">{dict('HR Business Consulting')}</h3>
                 <p className="expectation-one__text">
-                  There are many variations of passages of available but the majority have suffered
-                  alteration in some form injected randomised words.
+                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
                 </p>
               </li>
               <li>
                 <div className="icon">
                   <span className="icon-planning"></span>
                 </div>
-                <h3 className="expectation-one__title">Business Planning</h3>
+                <h3 className="expectation-one__title">{dict('Business Planning')}</h3>
                 <p className="expectation-one__text">
-                  There are many variations of passages of available but the majority have suffered
-                  alteration in some form injected randomised words.
+                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
                 </p>
               </li>
             </ul>
@@ -149,15 +147,14 @@ export default async function AboutPage({
             <div className="row">
               <div className="col-xl-7 col-lg-6">
                 <SectionTitle
-                  tagline="meet our team"
-                  title="Meet the People Behind the High Success"
-                  highlight="Success"
+                  tagline={dict('meet our team')}
+                  title={dict('Meet the People Behind')+' '+dict('the High')+' '+dict('Success')}
+                  highlight={dict('Success')}
                 />
               </div>
               <div className="col-xl-5 col-lg-6">
                 <p className="team-one__text">
-                  Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod
-                  tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.
+                  {dict('Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.')}
                 </p>
               </div>
             </div>
@@ -183,9 +180,9 @@ export default async function AboutPage({
         </div>
         <div className="container">
           <SectionTitle
-            tagline="our testimonials"
-            title={`What They're Talking About ${siteConfig.company.name}`}
-            highlight="Company"
+            tagline={dict('our testimonials')}
+            title={`${dict("What They're Talking About")} ${siteConfig.company.name}`}
+            highlight={siteConfig.company.name}
             align="center"
           />
           <div className="testimonial-two__bottom">

@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
 import LanguageSwitcher from '../LanguageSwitcher'
+import { useDictionary } from '@/hooks/useDictionary'
 
 export default function Footer() {
   const params = useParams()
   const lang = params.lang as string
+  const dict = useDictionary()
 
   const getLocalizedHref = (href: string) => `/${lang}${href}`
 
@@ -31,8 +33,7 @@ export default function Footer() {
                   </Link>
                 </div>
                 <p className="footer-widget__about-text">
-                  Lorem ipsum dolor sit amet, consect etur adi pisicing elit sed do eiusmod tempor
-                  incididunt ut labore.
+                  {dict('Lorem ipsum dolor sit amet, consect etur adi pisicing elit sed do eiusmod tempor incididunt ut labore.')}
                 </p>
                 <div className="site-footer__social">
                   <a href="#"><i className="fab fa-twitter"></i></a>
@@ -45,23 +46,23 @@ export default function Footer() {
             <div className="col-xl-3 col-lg-6 col-md-6">
               <div className="footer-widget__column footer-widget__link">
                 <div className="footer-widget__title-box">
-                  <h3 className="footer-widget__title">Explore</h3>
+                  <h3 className="footer-widget__title">{dict('Explore')}</h3>
                 </div>
                 <ul className="footer-widget__link-list list-unstyled">
-                  <li><Link href={getLocalizedHref('/about')}>About</Link></li>
-                  <li><Link href={getLocalizedHref('/team')}>Our Team</Link></li>
-                  <li><Link href={getLocalizedHref('/contact')}>Contact</Link></li>
+                  <li><Link href={getLocalizedHref('/about')}>{dict('About')}</Link></li>
+                  <li><Link href={getLocalizedHref('/team')}>{dict('Our Team')}</Link></li>
+                  <li><Link href={getLocalizedHref('/contact')}>{dict('Contact')}</Link></li>
                 </ul>
               </div>
             </div>
             <div className="col-xl-3 col-lg-6 col-md-6">
               <div className="footer-widget__column footer-widget__newsletter">
                 <div className="footer-widget__title-box">
-                  <h3 className="footer-widget__title">Newsletter</h3>
+                  <h3 className="footer-widget__title">{dict('Newsletter')}</h3>
                 </div>
                 <form className="footer-widget__newsletter-form">
                   <div className="footer-widget__newsletter-form-input-box">
-                    <input type="email" placeholder="Your email" name="EMAIL" />
+                    <input type="email" placeholder={dict('Your email')} name="EMAIL" />
                     <button type="submit" className="footer-widget__newsletter-btn">
                       <span className="fas fa-paper-plane"></span>
                     </button>
@@ -90,7 +91,7 @@ export default function Footer() {
             <div className="col-xl-3 col-lg-6 col-md-6">
               <div className="footer-widget__column footer-widget__portfolio">
                 <div className="footer-widget__title-box">
-                  <h3 className="footer-widget__title">Gallery</h3>
+                  <h3 className="footer-widget__title">{dict('Gallery')}</h3>
                 </div>
                 <ul className="footer-widget__portfolio-list list-unstyled clearfix">
                   {[1, 2, 3, 4, 5, 6].map((i) => (

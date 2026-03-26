@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useDictionary } from '@/hooks/useDictionary'
 
 interface NewsCardProps {
   title: string
@@ -24,6 +25,7 @@ export default function NewsCard({
 }: NewsCardProps) {
   const params = useParams()
   const lang = params.lang as string
+  const dict = useDictionary()
   const localizedHref = `/${lang}${href}`
 
   return (
@@ -55,7 +57,7 @@ export default function NewsCard({
               <span className="fas fa-comments"></span>
             </div>
             <div className="text">
-              <p>{comments} Comments</p>
+              <p>{comments} {dict('Comments')}</p>
             </div>
           </li>
         </ul>
@@ -73,7 +75,7 @@ export default function NewsCard({
         </div>
         <div className="news-one__hover-btn-box">
           <Link href={localizedHref}>
-            Read More<span className="icon-right-arrow"></span>
+            {dict('Read More')}<span className="icon-right-arrow"></span>
           </Link>
         </div>
       </div>
