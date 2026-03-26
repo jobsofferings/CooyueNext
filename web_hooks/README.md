@@ -2,34 +2,52 @@
 
 ## 功能
 
-- 接收 GitHub/GitLab 的 webhook 推送事件
+- 接收 Git 平台的 webhook 推送事件
 - 自动拉取最新代码
 - 自动构建 Docker 镜像
 - 自动重启 Docker Compose 服务
-- 记录部署日志
 
 ## 快速开始
 
-### 1. 配置环境变量
+### 1. 安装依赖
 
 ```bash
-cp .env.example .env
-# 编辑 .env 文件，设置你的 webhook secret
+yarn
 ```
 
 ### 2. 启动服务
 
-```bash
-# 首次启动（构建并启动所有服务）
-docker-compose up -d --build
+使用 PM2 管理服务进程：
 
-# 仅启动 webhook 服务
-docker-compose up -d webhook
+```bash
+# 首次启动
+pm2 start server.js --name git-webhook
+pm2 save
+
+# 重启服务
+pm2 restart git-webhook
+
+# 查看日志
+pm2 logs git-webhook
+```
+
+或者直接运行（不推荐生产环境）：
+
+```bash
+yarn start
+```
+
+### 3. 使用部署脚本
+
+项目根目录的 `deploy.sh` 可以手动触发完整部署流程：
+
+```bash
+bash deploy.sh
 ```
 
 ---
 
-## GitHub Webhook 配置指南
+## GitHub Webhook 配置
 
 进入你的 GitHub 仓库: **Settings** → **Webhooks** → **Add webhook**
 
@@ -37,14 +55,13 @@ docker-compose up -d webhook
 
 | 配置项 | 值 | 说明 |
 |--------|-----|------|
-| **Payload URL** | `http://你的服务器IP:9000/webhook` | webhook 接收地址。如果使用 Nginx 反向代理配置了 HTTPS，则使用 `https://your-domain.com/webhook` |
-| **Content type** | `application/json` | **必须选择 JSON 格式**，服务端只支持 JSON 解析 |
-| **Secret** | 与 `.env` 中的 `WEBHOOK_SECRET` 一致 | 用于验证请求来源，建议使用强随机密码 |
-| **SSL verification** | Enable SSL verification | 如果使用 HTTPS，保持启用；如果使用 HTTP，选择 Disable |
-| **Which events would you like to trigger this webhook?** | `Just the push event` | 只需要 push 事件触发部署 |
-| **Active** | ✅ 勾选 | 启用这个 webhook |
+| **Payload URL** | `http://你的服务器IP:9000/webhook` | webhook 接收地址 |
+| **Content type** | `application/json` | 必须选择 JSON 格式 |
+| **Secret** | 留空或随意填写 | 当前版本未实现签名验证 |
+| **Which events** | `Just the push event` | 选择 push 事件 |
+| **Active** | ✅ 勾选 | 启用 webhook |
 
-### 配置截图对照
+### 配置示意
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -61,17 +78,8 @@ docker-compose up -d webhook
 │ │ application/json                              ▼     │ │
 │ └─────────────────────────────────────────────────────┘ │
 │                                                         │
-│ Secret                                                  │
-│ ┌─────────────────────────────────────────────────────┐ │
-│ │ your-secure-webhook-secret                          │ │
-│ └─────────────────────────────────────────────────────┘ │
-│                                                         │
-│ SSL verification                                        │
-│ ○ Enable SSL verification  (推荐，需要 HTTPS)          │
-│ ○ Disable (not recommended) (仅 HTTP 时使用)           │
-│                                                         │
 │ Which events would you like to trigger this webhook?   │
-│ ● Just the push event.      ← 选择这个                  │
+│ ● Just the push event.                                  │
 │ ○ Send me everything.                                   │
 │ ○ Let me select individual events.                      │
 │                                                         │
@@ -80,20 +88,6 @@ docker-compose up -d webhook
 │ [Add webhook]                                           │
 └─────────────────────────────────────────────────────────┘
 ```
-
-### 生成安全的 Secret
-
-```bash
-# 方法1: 使用 openssl 生成随机字符串
-openssl rand -hex 32
-
-# 方法2: 使用 node 生成
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-```
-
-将生成的字符串同时填入:
-1. GitHub Webhook 配置的 **Secret** 字段
-2. 服务器 `.env` 文件的 **WEBHOOK_SECRET** 变量
 
 ---
 
@@ -104,7 +98,6 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | 配置项 | 值 |
 |--------|-----|
 | URL | `http://你的服务器IP:9000/webhook` |
-| Secret token | 与 `.env` 中的 `WEBHOOK_SECRET` 一致 |
 | Trigger | ✅ Push events |
 
 ---
@@ -113,99 +106,143 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/health` | GET | 健康检查 |
-| `/webhook` | POST | 主 webhook 端点 |
-| `/webhook/github` | POST | GitHub 专用端点 |
-| `/webhook/gitlab` | POST | GitLab 专用端点 |
-| `/logs` | GET | 获取日志文件列表 |
-| `/logs/:filename` | GET | 获取指定日志内容 |
+| `/health` | GET | 健康检查，返回服务状态和时间戳 |
+| `/webhook` | POST | Webhook 触发端点，接收后立即执行 deploy.sh |
+
+---
 
 ## 环境变量
 
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `WEBHOOK_PORT` | 9000 | 服务监听端口 |
-| `WEBHOOK_SECRET` | your-webhook-secret | Webhook 签名密钥 |
-| `TARGET_BRANCH` | main | 触发部署的目标分支 |
+
+---
 
 ## 部署流程
 
-当收到符合条件的 push 事件时，会执行以下步骤：
+当 webhook 端点接收到 POST 请求时，会自动执行 `deploy.sh` 脚本，流程如下：
 
-1. **验证签名** - 确保请求来自配置的 Git 平台
-2. **拉取代码** - `git fetch && git reset --hard`
-3. **构建镜像** - `docker build` 构建 Next.js 应用
-4. **标记版本** - 使用时间戳标记镜像版本
-5. **重启服务** - `docker-compose up -d --force-recreate`
-6. **清理旧镜像** - 自动清理过期镜像
+1. **暂存本地更改** - `git stash` 保存未提交的修改
+2. **拉取最新代码** - 带重试机制的 `git pull`（最多重试 6 次，每次超时 10 秒）
+3. **构建并启动服务** - `docker compose up -d --build` 重新构建镜像并启动容器
+4. **清理旧镜像** - `docker image prune -f --filter "until=24h"` 清理 24 小时前的镜像
+5. **启动 Webhook 服务** - 使用 PM2 启动或重启 `server.js`
 
-## 日志
+完成后会显示 Docker 和 PM2 的服务状态。
 
-日志存储在 `logs/` 目录下：
-- `webhook-YYYY-MM-DD.log`: 每日 webhook 请求日志
-- `deploy-*.log`: 每次部署的详细日志
+---
 
 ## 本地开发测试
 
 ```bash
 # 安装依赖
-npm install
+yarn
 
-# 启动服务 (如果 9000 端口被占用，可以指定其他端口)
-npm start
-# 或
-WEBHOOK_PORT=9001 npm start
+# 启动服务
+yarn start
+
+# 指定端口启动
+WEBHOOK_PORT=9001 yarn start
 
 # 测试健康检查
 curl http://localhost:9000/health
 
-# 模拟 GitHub push 事件 (非目标分支，不会触发部署)
+# 触发部署 (发送任意 POST 请求即可)
 curl -X POST http://localhost:9000/webhook \
   -H "Content-Type: application/json" \
-  -H "X-GitHub-Event: push" \
-  -d '{"ref": "refs/heads/develop", "after": "abc123"}'
-
-# 模拟 GitHub push 事件 (main 分支，会触发部署)
-curl -X POST http://localhost:9000/webhook \
-  -H "Content-Type: application/json" \
-  -H "X-GitHub-Event: push" \
-  -d '{"ref": "refs/heads/main", "after": "abc123"}'
-
-# 查看日志列表
-curl http://localhost:9000/logs
+  -d '{}'
 ```
+
+---
 
 ## 安全建议
 
-1. **始终设置强密码的 `WEBHOOK_SECRET`**
-2. **使用 HTTPS** - 建议通过 Nginx 反向代理配置 SSL
-3. **限制访问 IP** - 只允许 GitHub/GitLab 的 IP 段访问 webhook 端口
-4. **定期检查部署日志** - 监控异常部署行为
+⚠️ **当前版本未实现签名验证**，建议采取以下安全措施：
 
-### GitHub Webhook IP 白名单
+1. **使用防火墙限制访问** - 只允许 GitHub/GitLab 的 IP 段访问 9000 端口
+2. **使用 Nginx 反向代理** - 配置 HTTPS 和访问控制
+3. **监控服务日志** - 定期检查 PM2 日志以发现异常请求
 
-GitHub 的 webhook 请求来自特定 IP 段，可以通过防火墙限制:
+### GitHub Webhook IP 段
 
 ```bash
-# 获取 GitHub 的 IP 段
-curl -s https://api.github.com/meta | grep -A 100 '"hooks"'
+# 获取 GitHub 的 webhook IP 段
+curl https://api.github.com/meta | jq .hooks
 ```
+
+可以将这些 IP 添加到防火墙白名单（iptables/ufw）。
+
+### GitLab Webhook IP 段
+
+GitLab.com 的 webhook IP 可查看官方文档：
+https://docs.gitlab.com/ee/user/gitlab_com/#ip-range
+
+---
 
 ## 故障排查
 
 ### Webhook 未触发
 
-1. 检查 GitHub Webhook 配置的 **Recent Deliveries**
-2. 确认 Payload URL 可以从外网访问
-3. 确认 Content-type 设置为 `application/json`
-
-### 签名验证失败
-
-1. 确认 GitHub Secret 和服务器 `WEBHOOK_SECRET` 完全一致
-2. 检查是否有空格或换行符
+1. 检查 GitHub/GitLab 的 Webhook **Recent Deliveries** 查看请求状态
+2. 确认服务器防火墙已开放 9000 端口
+3. 确认 webhook 服务正在运行：`pm2 list`
+4. 查看服务日志：`pm2 logs git-webhook`
 
 ### 部署失败
 
-1. 查看日志: `curl http://your-server:9000/logs`
-2. 检查 Docker 是否正常运行
-3. 确认 git 仓库权限正确
+1. 查看 PM2 日志：`pm2 logs git-webhook`
+2. 手动执行部署脚本测试：`bash deploy.sh`
+3. 检查 Docker 服务状态：`docker compose ps`
+4. 确认 git 仓库权限和网络连接
+
+### Git Pull 失败
+
+如果遇到 git pull 超时或失败：
+- 脚本会自动重试 6 次，每次间隔 2 秒
+- 检查服务器到 Git 平台的网络连接
+- 确认 SSH 密钥或 HTTPS 凭证配置正确
+
+---
+
+## 生产环境部署建议
+
+### 使用 PM2 守护进程
+
+```bash
+# 启动并设置开机自启
+pm2 start server.js --name git-webhook
+pm2 save
+pm2 startup
+```
+
+### Nginx 反向代理配置
+
+```nginx
+server {
+    listen 80;
+    server_name webhook.yourdomain.com;
+
+    location /webhook {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
+
+---
+
+## 项目结构
+
+```
+web_hooks/
+├── server.js          # Express 服务器（webhook 接收端）
+├── package.json       # Node.js 依赖配置
+└── README.md          # 本文档
+
+../
+└── deploy.sh          # 部署脚本（拉取代码、构建、重启）
+```
