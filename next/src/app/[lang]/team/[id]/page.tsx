@@ -3,15 +3,25 @@ import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 interface TeamDetailPageProps {
   params: { lang: Locale; id: string }
 }
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('Team Details'),
-  description: 'Team member details',
+export async function generateMetadata({ params }: TeamDetailPageProps): Promise<Metadata> {
+  const dict = await getDictionary(params.lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('Team Details')),
+    description: dict('Team member details'),
+    alternates: {
+      canonical: `/${params.lang}/team/${params.id}`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/team/${params.id}`])
+      ),
+    },
+  }
 }
 
 export default async function TeamDetailPage({ params }: TeamDetailPageProps) {

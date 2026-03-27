@@ -3,7 +3,7 @@ import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { NewsCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 const getNews = (dict: (key: string) => string) => [
   { title: dict('Discover 10 ways to solve your business problems'), excerpt: dict('Lorem ipsum dolor sit amet, consect etur adi pisicing elit.'), image: '/assets/images/blog/news-1-1.jpg', date: dict('30 Mar, 2023'), category: dict('Business'), comments: 2, href: '/news/1' },
@@ -14,9 +14,23 @@ const getNews = (dict: (key: string) => string) => [
   { title: dict('Introducing the latest tech features for you'), excerpt: dict('Lorem ipsum dolor sit amet, consect etur adi pisicing elit.'), image: '/assets/images/blog/news-1-6.jpg', date: dict('30 Mar, 2023'), category: dict('Business'), comments: 2, href: '/news/6' },
 ]
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('News'),
-  description: 'Latest news and updates',
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('News')),
+    description: dict('Latest news and updates'),
+    alternates: {
+      canonical: `/${lang}/news`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/news`])
+      ),
+    },
+  }
 }
 
 export default async function NewsPage({

@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 const getJobs = (dict: (key: string) => string) => [
   { title: dict('Senior Business Analyst'), location: dict('New York'), type: dict('Full Time'), department: dict('Business') },
@@ -14,9 +14,23 @@ const getJobs = (dict: (key: string) => string) => [
   { title: dict('HR Specialist'), location: dict('Phoenix'), type: dict('Full Time'), department: dict('Human Resources') },
 ]
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('Careers'),
-  description: 'Join our team',
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('Careers')),
+    description: dict('join our team'),
+    alternates: {
+      canonical: `/${lang}/careers`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/careers`])
+      ),
+    },
+  }
 }
 
 export default async function CareersPage({

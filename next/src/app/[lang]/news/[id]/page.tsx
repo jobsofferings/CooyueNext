@@ -3,15 +3,25 @@ import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 interface NewsDetailPageProps {
   params: { lang: Locale; id: string }
 }
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('News Details'),
-  description: 'Read the full article',
+export async function generateMetadata({ params }: NewsDetailPageProps): Promise<Metadata> {
+  const dict = await getDictionary(params.lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('News Details')),
+    description: dict('Read the full article'),
+    alternates: {
+      canonical: `/${params.lang}/news/${params.id}`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/news/${params.id}`])
+      ),
+    },
+  }
 }
 
 export default async function NewsDetailPage({ params }: NewsDetailPageProps) {

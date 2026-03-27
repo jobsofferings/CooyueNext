@@ -2,11 +2,27 @@ import type { Metadata } from 'next'
 import Script from 'next/script'
 import { Header, Footer, MobileNav, SearchPopup, ScriptInitializer, ScrollToTop } from '@/components/layout'
 import { siteConfig } from '@/config/site.config'
+import { getDictionary } from '@/get-dictionary'
+import { i18n, Locale } from '@/i18n-config'
 import '@/styles/i18n-enhancements.css'
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.defaultTitle,
-  description: siteConfig.seo.defaultDescription,
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
+    description: dict('Professional business consulting services'),
+    alternates: {
+      canonical: `/${lang}`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}`])
+      ),
+    },
+  }
 }
 
 export default function RootLayout({
@@ -14,7 +30,7 @@ export default function RootLayout({
   params,
 }: {
   children: React.ReactNode
-  params: { lang: string }
+  params: { lang: Locale }
 }) {
   return (
     <html lang={params.lang}>

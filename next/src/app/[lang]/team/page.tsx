@@ -3,7 +3,7 @@ import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { TeamCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 const getTeam = (dict: (key: string) => string) => [
   { name: dict('Kevin Martin'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
@@ -14,9 +14,23 @@ const getTeam = (dict: (key: string) => string) => [
   { name: dict('David Cooper'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-6.jpg', href: '/team/6' },
 ]
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('Our Team'),
-  description: 'Meet our professional team',
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('Our Team')),
+    description: dict('Meet our professional team'),
+    alternates: {
+      canonical: `/${lang}/team`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/team`])
+      ),
+    },
+  }
 }
 
 export default async function TeamPage({

@@ -3,11 +3,25 @@ import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('Contact'),
-  description: 'Get in touch with us',
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('Contact')),
+    description: dict('Get in touch with us'),
+    alternates: {
+      canonical: `/${lang}/contact`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/contact`])
+      ),
+    },
+  }
 }
 
 export default async function ContactPage({

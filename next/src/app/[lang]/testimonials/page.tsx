@@ -3,7 +3,7 @@ import { siteConfig } from '@/config/site.config'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle, TestimonialCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
-import { Locale } from '@/i18n-config'
+import { i18n, Locale } from '@/i18n-config'
 
 const getTestimonials = (dict: (key: string) => string) => [
   { name: dict('Mike Hardson'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-1.jpg' },
@@ -12,9 +12,23 @@ const getTestimonials = (dict: (key: string) => string) => [
   { name: dict('Michale Robert'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-4.jpg' },
 ]
 
-export const metadata: Metadata = {
-  title: siteConfig.seo.titleTemplate('Testimonials'),
-  description: 'What our clients say about us',
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  return {
+    title: siteConfig.seo.titleTemplate(dict('Testimonials')),
+    description: dict('What our clients say about us'),
+    alternates: {
+      canonical: `/${lang}/testimonials`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/testimonials`])
+      ),
+    },
+  }
 }
 
 export default async function TestimonialsPage({

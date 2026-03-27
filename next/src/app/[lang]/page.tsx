@@ -3,6 +3,7 @@ import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
+import { i18n } from '@/i18n-config'
 
 export default async function Home({
   params: { lang },
@@ -681,9 +682,21 @@ export default async function Home({
   )
 }
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
   return {
-    title: siteConfig.seo.defaultTitle,
-    description: siteConfig.seo.defaultDescription,
+    title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
+    description: dict('Professional business consulting services'),
+    alternates: {
+      canonical: `/${lang}`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}`])
+      ),
+    },
   }
 }
