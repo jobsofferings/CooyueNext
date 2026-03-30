@@ -14,11 +14,11 @@ echo "========================================"
 cd "$PROJECT_ROOT"
 
 echo ""
-echo "[1/4] 暂存本地更改..."
+echo "[1/6] 暂存本地更改..."
 git stash
 
 echo ""
-echo "[2/4] 拉取最新代码..."
+echo "[2/6] 拉取最新代码..."
 MAX_RETRIES=6
 RETRY_COUNT=0
 GIT_PULL_SUCCESS=false
@@ -48,15 +48,23 @@ if [ "$GIT_PULL_SUCCESS" = false ]; then
 fi
 
 echo ""
-echo "[3/4] 使用 Docker Compose 构建和启动服务..."
+echo "[3/6] 使用 Docker Compose 构建和启动服务..."
 docker compose up -d --build
 
 echo ""
-echo "[4/5] 清理旧的 Docker 镜像..."
+echo "[4/6] 清理旧的 Docker 镜像..."
 docker image prune -f --filter "until=24h"
 
 echo ""
-echo "[5/5] 启动 Webhook 服务 (PM2)..."
+echo "[5/6] 验证服务健康状态..."
+sleep 5
+echo "Next.js 健康检查:"
+docker compose ps next-app
+echo "Server 健康检查:"
+docker compose ps server
+
+echo ""
+echo "[6/6] 启动 Webhook 服务 (PM2)..."
 cd "$WEB_HOOKS_DIR"
 
 if [ ! -d "node_modules" ]; then
@@ -84,6 +92,9 @@ echo "服务状态:"
 echo ""
 echo "Docker 服务:"
 docker compose ps
+echo ""
+echo "Next.js:   http://localhost:3000"
+echo "Server:    http://localhost:3001"
 echo ""
 echo "PM2 服务:"
 pm2 list
