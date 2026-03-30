@@ -21,6 +21,7 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN mkdir -p /app/static
 
 # ================================
 # Stage 3: Production runtime
@@ -35,11 +36,12 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -u 1001 -S -G nodejs cooyue-server
 
 COPY --from=builder /app/node_modules ./node_modules
+# Ensure static directory exists (even if empty)
+RUN mkdir -p /app/static
+
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/package.json ./package.json
-
-# Copy static files directory if it exists
-COPY --from=builder /app/static ./static 2>/dev/null || true
+COPY --from=builder /app/static ./static
 
 USER cooyue-server
 
