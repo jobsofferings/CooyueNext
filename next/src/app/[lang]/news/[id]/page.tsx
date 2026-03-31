@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getNewsItemSeo, extractSeoMeta } from '@/lib/seo-api'
 
 interface NewsDetailPageProps {
   params: { lang: Locale; id: string }
@@ -12,9 +13,20 @@ interface NewsDetailPageProps {
 export async function generateMetadata({ params }: NewsDetailPageProps): Promise<Metadata> {
   const dict = await getDictionary(params.lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据 (使用 news-{id} 作为 key)
+  const seoData = await getNewsItemSeo(params.lang, params.id)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('News Details')),
     description: dict('Read the full article'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${params.lang}/news/${params.id}`,
       languages: Object.fromEntries(

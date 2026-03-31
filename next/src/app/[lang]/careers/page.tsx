@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getCareersSeo, extractSeoMeta } from '@/lib/seo-api'
 
 const getJobs = (dict: (key: string) => string) => [
   { title: dict('Senior Business Analyst'), location: dict('New York'), type: dict('Full Time'), department: dict('Business') },
@@ -21,9 +22,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getCareersSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Careers')),
     description: dict('join our team'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${lang}/careers`,
       languages: Object.fromEntries(

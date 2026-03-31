@@ -4,6 +4,7 @@ import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n } from '@/i18n-config'
+import { getHomeSeo, extractSeoMeta } from '@/lib/seo-api'
 
 export default async function Home({
   params: { lang },
@@ -689,9 +690,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getHomeSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
     title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
     description: dict('Professional business consulting services'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${lang}`,
       languages: Object.fromEntries(

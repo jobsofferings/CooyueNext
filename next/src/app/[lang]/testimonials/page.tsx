@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout'
 import { SectionTitle, TestimonialCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getTestimonialsSeo, extractSeoMeta } from '@/lib/seo-api'
 
 const getTestimonials = (dict: (key: string) => string) => [
   { name: dict('Mike Hardson'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-1.jpg' },
@@ -19,9 +20,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getTestimonialsSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Testimonials')),
     description: dict('What our clients say about us'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${lang}/testimonials`,
       languages: Object.fromEntries(

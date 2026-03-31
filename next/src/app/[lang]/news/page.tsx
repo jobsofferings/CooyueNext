@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/layout'
 import { NewsCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getNewsSeo, extractSeoMeta } from '@/lib/seo-api'
 
 const getNews = (dict: (key: string) => string) => [
   { title: dict('Discover 10 ways to solve your business problems'), excerpt: dict('Lorem ipsum dolor sit amet, consect etur adi pisicing elit.'), image: '/assets/images/blog/news-1-1.jpg', date: dict('30 Mar, 2023'), category: dict('Business'), comments: 2, href: '/news/1' },
@@ -21,9 +22,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getNewsSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('News')),
     description: dict('Latest news and updates'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${lang}/news`,
       languages: Object.fromEntries(

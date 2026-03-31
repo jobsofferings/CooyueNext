@@ -4,6 +4,7 @@ import { SectionTitle, TeamCard, TestimonialCard } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getAboutSeo, extractSeoMeta } from '@/lib/seo-api'
 
 const getTeam = (dict: (key: string) => string) => [
   { name: dict('Kevin Martin'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
@@ -23,9 +24,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getAboutSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('About')),
     description: dict('Learn more about our company'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${lang}/about`,
       languages: Object.fromEntries(

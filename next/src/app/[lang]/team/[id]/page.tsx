@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getTeamMemberSeo, extractSeoMeta } from '@/lib/seo-api'
 
 interface TeamDetailPageProps {
   params: { lang: Locale; id: string }
@@ -12,9 +13,20 @@ interface TeamDetailPageProps {
 export async function generateMetadata({ params }: TeamDetailPageProps): Promise<Metadata> {
   const dict = await getDictionary(params.lang)
 
-  return {
+  // 尝试从数据库获取 SEO 数据 (使用 team-{id} 作为 key)
+  const seoData = await getTeamMemberSeo(params.lang, params.id)
+  const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Team Details')),
     description: dict('Team member details'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
     alternates: {
       canonical: `/${params.lang}/team/${params.id}`,
       languages: Object.fromEntries(

@@ -1,14 +1,48 @@
-'use client'
-
-import { useState } from 'react'
+import { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
-import { useDictionary } from '@/hooks/useDictionary'
+import { siteConfig } from '@/config/site.config'
+import { getDictionary } from '@/get-dictionary'
+import { i18n, Locale } from '@/i18n-config'
+import { getFaqSeo, extractSeoMeta } from '@/lib/seo-api'
 
-export default function FaqPage() {
-  const [openIndex, setOpenIndex] = useState<number | null>(0)
-  const dict = useDictionary()
-  
+export async function generateMetadata({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}): Promise<Metadata> {
+  const dict = await getDictionary(lang)
+
+  // 尝试从数据库获取 SEO 数据
+  const seoData = await getFaqSeo(lang)
+  const seoMeta = extractSeoMeta(seoData, {
+    title: siteConfig.seo.titleTemplate(dict('FAQs')),
+    description: dict('Frequently asked questions'),
+  })
+
+  return {
+    title: seoMeta.title,
+    description: seoMeta.description,
+    keywords: seoMeta.keywords,
+    openGraph: seoMeta.ogImage ? {
+      images: [seoMeta.ogImage],
+    } : undefined,
+    alternates: {
+      canonical: `/${lang}/faq`,
+      languages: Object.fromEntries(
+        i18n.locales.map((locale) => [locale, `/${locale}/faq`])
+      ),
+    },
+  }
+}
+
+export default async function FaqPage({
+  params: { lang },
+}: {
+  params: { lang: Locale }
+}) {
+  const dict = await getDictionary(lang)
+
   const faqs = [
     {
       question: dict('How can I get started with your consulting services?'),
@@ -36,10 +70,6 @@ export default function FaqPage() {
     },
   ]
 
-  const toggleFaq = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index)
-  }
-
   return (
     <>
       <PageHeader
@@ -60,22 +90,19 @@ export default function FaqPage() {
               {faqs.map((faq, index) => (
                 <div
                   key={index}
-                  className={`accrodion ${openIndex === index ? 'active' : ''}`}
-                  onClick={() => toggleFaq(index)}
+                  className="accrodion"
                 >
                   <div className="accrodion-title">
                     <h4>
                       {faq.question}
-                      <span className={`accrodion-icon ${openIndex === index ? 'active' : ''}`}></span>
+                      <span className="accrodion-icon"></span>
                     </h4>
                   </div>
-                  {openIndex === index && (
-                    <div className="accrodion-content">
-                      <div className="inner">
-                        <p>{faq.answer}</p>
-                      </div>
+                  <div className="accrodion-content">
+                    <div className="inner">
+                      <p>{faq.answer}</p>
                     </div>
-                  )}
+                  </div>
                 </div>
               ))}
             </div>
