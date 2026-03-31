@@ -96,3 +96,5 @@ docker compose logs server
 **Q: 迁移文件是否可以重复执行？**
 
 可以。`001_initial.sql` 中的 `CREATE TABLE` 对已存在的表会跳过（被 `db.js` 中的 safe-ignore 捕获），不会报错。
+
+#
