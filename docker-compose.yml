@@ -32,7 +32,6 @@ services:
       - "3001:3001"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/cooyue
     networks:
       - cooyue-network
     extra_hosts:
