@@ -55,6 +55,24 @@ app.get("/", (_req, res) => {
   });
 });
 
+// Debug endpoint - shows loaded env vars (remove in production)
+app.get("/api/debug/env", (_req, res) => {
+  res.json({
+    ok: true,
+    env: {
+      PORT: process.env.PORT,
+      DATABASE_URL: process.env.DATABASE_URL ? "(set)" : "(not set)",
+      PG_HOST: process.env.PG_HOST,
+      PG_PORT: process.env.PG_PORT,
+      PG_DATABASE: process.env.PG_DATABASE,
+      PG_USER: process.env.PG_USER,
+      PG_PASSWORD: process.env.PG_PASSWORD ? "(set)" : "(not set)",
+      SEO_WEBHOOK_SECRET: process.env.SEO_WEBHOOK_SECRET ? "(set)" : "(not set)",
+    },
+    cwd: process.cwd(),
+  });
+});
+
 // Health check
 app.use("/api/health", healthRouter);
 
