@@ -16,7 +16,7 @@
  */
 
 const express = require("express");
-const { query, getPool } = require("../../config/db");
+const { getSeoPool } = require("../../config/db");
 const seoQueries = require("./queries");
 
 const router = express.Router();
@@ -58,7 +58,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const { key } = req.params;
     const locale = validateQueryLocale(req.query.locale);
-    const pool = await getPool();
+    const pool = await getSeoPool();
 
     const result = await seoQueries.getSeo({ pool, key, locale });
 
@@ -91,7 +91,7 @@ router.get(
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const pool = await getPool();
+    const pool = await getSeoPool();
     const page     = Number(req.query.page)     || 1;
     const pageSize = Math.min(Number(req.query.pageSize) || 20, 100);
 
@@ -105,7 +105,7 @@ router.get(
 router.post(
   "/",
   asyncHandler(async (req, res) => {
-    const pool = await getPool();
+    const pool = await getSeoPool();
     const { key, targets = [] } = req.body;
 
     if (!key) return badRequest(res, '"key" is required');
@@ -120,7 +120,7 @@ router.post(
 router.delete(
   "/:key",
   asyncHandler(async (req, res) => {
-    const pool = await getPool();
+    const pool = await getSeoPool();
     const row = await seoQueries.deleteSeoKey({ pool, key: req.params.key });
     if (!row) return notFound(res, `SEO key "${req.params.key}" not found`);
     return ok(res, { deleted: row.key });
@@ -132,7 +132,7 @@ router.delete(
 router.get(
   "/records",
   asyncHandler(async (req, res) => {
-    const pool      = await getPool();
+    const pool      = await getSeoPool();
     const page      = Number(req.query.page)     || 1;
     const pageSize  = Math.min(Number(req.query.pageSize) || 50, 200);
     const locale    = req.query.locale    || null;
@@ -148,7 +148,7 @@ router.get(
 router.get(
   "/:key/detail",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getSeoPool();
     const locale = req.query.locale ? validateQueryLocale(req.query.locale) : null;
 
     const result = await seoQueries.getSeo({ pool, key: req.params.key, locale: locale || "en" });
@@ -163,7 +163,7 @@ router.get(
 router.put(
   "/:key",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getSeoPool();
     const { key: pathKey } = req.params;
     const { locale, ...data } = req.body;
 
@@ -179,7 +179,7 @@ router.put(
 router.delete(
   "/:key/:locale",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getSeoPool();
     const { key, locale } = req.params;
     const row = await seoQueries.deleteSeoRecord({ pool, key, locale });
     if (!row) return notFound(res, `No seo_record for key "${key}" locale "${locale}"`);
@@ -206,7 +206,7 @@ router.post(
       return badRequest(res, '"key", "locale" and "data" are required');
     }
 
-    const pool = await getPool();
+    const pool = await getSeoPool();
     const row  = await seoQueries.upsertSeoRecord({ pool, key, locale, data });
     return ok(res, { message: "SEO record updated via webhook", data: row });
   })

@@ -15,7 +15,7 @@
  */
 
 const express = require("express");
-const { getPool } = require("../../config/db");
+const { getProductsPool } = require("../../config/db");
 const productQueries = require("./queries");
 
 const router = express.Router();
@@ -59,7 +59,7 @@ function parseBool(value) {
 router.get(
   "/categories",
   asyncHandler(async (req, res) => {
-    const pool       = await getPool();
+    const pool = await getProductsPool();
     const locale     = validateQueryLocale(req.query.locale);
     const includeHidden = parseBool(req.query.includeHidden) ?? false;
 
@@ -72,7 +72,7 @@ router.get(
 router.get(
   "/categories/:slug",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const locale = validateQueryLocale(req.query.locale);
     const row    = await productQueries.getCategory({ pool, slug: req.params.slug, locale });
     if (!row) return notFound(res, `Category "${req.params.slug}" not found`);
@@ -84,7 +84,7 @@ router.get(
 router.post(
   "/categories",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const { slug, locale, data } = req.body;
     if (!slug)   return badRequest(res, '"slug" is required');
     if (!locale) return badRequest(res, '"locale" is required');
@@ -98,7 +98,7 @@ router.post(
 router.delete(
   "/categories/:slug",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const locale = req.query.locale || "en";
     const row    = await productQueries.deleteCategory({ pool, slug: req.params.slug, locale });
     if (!row) return notFound(res, `Category "${req.params.slug}" (locale: ${locale}) not found`);
@@ -114,7 +114,7 @@ router.delete(
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const pool      = await getPool();
+    const pool      = await getProductsPool();
     const locale    = validateQueryLocale(req.query.locale);
     const page      = Math.max(1, Number(req.query.page)     || 1);
     const pageSize  = Math.min(100, Number(req.query.pageSize) || 20);
@@ -141,7 +141,7 @@ router.get(
 router.get(
   "/:slug",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const locale = validateQueryLocale(req.query.locale);
 
     const row = await productQueries.getProduct({ pool, slug: req.params.slug, locale });
@@ -161,7 +161,7 @@ router.get(
 router.post(
   "/",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const { slug, locale, data } = req.body;
     if (!slug)   return badRequest(res, '"slug" is required');
     if (!locale) return badRequest(res, '"locale" is required');
@@ -175,7 +175,7 @@ router.post(
 router.delete(
   "/:slug",
   asyncHandler(async (req, res) => {
-    const pool   = await getPool();
+    const pool   = await getProductsPool();
     const locale = req.query.locale || "en";
     const row    = await productQueries.deleteProduct({ pool, slug: req.params.slug, locale });
     if (!row) return notFound(res, `Product "${req.params.slug}" (locale: ${locale}) not found`);

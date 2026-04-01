@@ -15,8 +15,8 @@ signals.forEach((sig) => {
     console.log(`\n[server] Received ${sig} – shutting down gracefully…`);
     server.close(async () => {
       try {
-        const { closePool } = require("./config/db");
-        await closePool();
+        const { closeAll } = require("./config/db");
+        await closeAll();
         console.log("[server] Pool closed. Goodbye.");
         process.exit(0);
       } catch (err) {

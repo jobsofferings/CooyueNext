@@ -1,27 +1,30 @@
 const express = require("express");
 
-const { pool } = require("../config/db");
+const { getProductsPool, getSeoPool } = require("../config/db");
 
 const router = express.Router();
 
-router.get("/", async (_req, res) => {
-  let database = "not configured";
-
-  if (process.env.DATABASE_URL) {
-    console.log(process.env.DATABASE_URL, 'process.env.DATABASE_URL')
-    try {
-      const a =await pool.query("SELECT 1");
-      console.log(a, 'a ')
-      database = "connected";
-    } catch (_error) {
-      console.log(_error)
-      database = "unavailable";
-    }
+async function checkPool(name, poolFn) {
+  try {
+    const pool = await poolFn();
+    await pool.query("SELECT 1");
+    return { name, status: "connected" };
+  } catch (_error) {
+    return { name, status: "unavailable", error: _error.message };
   }
+}
+
+router.get("/", async (_req, res) => {
+  const [products, seo] = await Promise.all([
+    checkPool("products", getProductsPool),
+    checkPool("seo",      getSeoPool),
+  ]);
+
+  const allUp = products.status === "connected" && seo.status === "connected";
 
   res.json({
-    ok: true,
-    database,
+    ok: allUp,
+    databases: { products, seo },
     timestamp: new Date().toISOString(),
   });
 });
