@@ -25,11 +25,23 @@ function createPool(envPrefix) {
   const config = connStr
     ? { connectionString: connStr }
     : {
-        host:     process.env[`${envPrefix}_PG_HOST`]     || "localhost",
-        port:     Number(process.env[`${envPrefix}_PG_PORT`])     || 5432,
+        // Support both module-scoped vars (PRODUCTS_*/SEO_*) and legacy shared PG_* vars.
+        host:
+          process.env[`${envPrefix}_PG_HOST`] ||
+          process.env.PG_HOST ||
+          "localhost",
+        port:
+          Number(process.env[`${envPrefix}_PG_PORT`] || process.env.PG_PORT) ||
+          5432,
         database: process.env[`${envPrefix}_PG_DATABASE`] || "cooyue",
-        user:     process.env[`${envPrefix}_PG_USER`]     || "postgres",
-        password: process.env[`${envPrefix}_PG_PASSWORD`] || "postgres",
+        user:
+          process.env[`${envPrefix}_PG_USER`] ||
+          process.env.PG_USER ||
+          "postgres",
+        password:
+          process.env[`${envPrefix}_PG_PASSWORD`] ||
+          process.env.PG_PASSWORD ||
+          "postgres",
       };
 
   return new Pool(config);
