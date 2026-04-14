@@ -18,7 +18,27 @@ let seoPool      = null;
  *   PRODUCTS_* → products module
  *   SEO_*      → seo module
  */
-function createPool(envPrefix) {
+function summarizeConnectionString(connStr) {
+  try {
+    const url = new URL(connStr);
+    return {
+      source: "connectionString",
+      host: url.hostname || undefined,
+      port: Number(url.port) || 5432,
+      database: url.pathname.replace(/^\//, "") || undefined,
+      user: url.username || undefined,
+      hasPassword: Boolean(url.password),
+      sslmode: url.searchParams.get("sslmode") || undefined,
+    };
+  } catch (_err) {
+    return {
+      source: "connectionString",
+      parseError: "Invalid database URL format",
+    };
+  }
+}
+
+function buildPoolConfig(envPrefix) {
   const urlKey  = `${envPrefix}_DATABASE_URL`;
   const connStr = process.env[urlKey];
 
@@ -44,7 +64,32 @@ function createPool(envPrefix) {
           "postgres",
       };
 
-  return new Pool(config);
+  const summary = connStr
+    ? summarizeConnectionString(connStr)
+    : {
+        source: "discreteEnv",
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+        hasPassword: Boolean(config.password),
+      };
+
+  return { config, summary };
+}
+
+function createPool(envPrefix) {
+  const { config, summary } = buildPoolConfig(envPrefix);
+  return { pool: new Pool(config), summary };
+}
+
+function createDbInitError(message, code, details, cause, status = 503) {
+  const err = new Error(message);
+  err.status = status;
+  err.code = code;
+  err.publicDetails = details;
+  err.cause = cause;
+  return err;
 }
 
 // ── Migration runner ───────────────────────────────────────────────────────────
@@ -96,30 +141,85 @@ async function probePool(pool, label) {
   }
 }
 
+async function initializeModulePool(envPrefix, moduleName, migrationsSubdir) {
+  const { pool, summary } = createPool(envPrefix);
+
+  pool.on("error", (err) => {
+    console.error(`[db:${moduleName}] Unexpected pool error`, {
+      error: err.message,
+      code: err.code,
+    });
+  });
+
+  console.log(`[db:${moduleName}] Initializing pool`, summary);
+
+  const probe = await probePool(pool, moduleName);
+  if (!probe.ok) {
+    console.error(`[db:${moduleName}] Connection probe failed`, {
+      ...summary,
+      latencyMs: probe.latencyMs,
+      error: probe.error,
+    });
+    await pool.end().catch(() => {});
+    throw createDbInitError(
+      `${moduleName} database connection failed`,
+      "DB_CONNECTION_FAILED",
+      {
+        module: moduleName,
+        db: summary,
+        probe: {
+          latencyMs: probe.latencyMs,
+          error: probe.error,
+        },
+      }
+    );
+  }
+
+  console.log(`[db:${moduleName}] Connected successfully`, {
+    ...summary,
+    latencyMs: probe.latencyMs,
+    serverTime: probe.ts,
+  });
+
+  const migrationsDir = path.join(__dirname, "..", "..", "migrations", migrationsSubdir);
+
+  try {
+    await runMigrations(pool, moduleName, migrationsDir);
+  } catch (err) {
+    console.error(`[db:${moduleName}] Migration bootstrap failed`, {
+      migrationsDir,
+      error: err.message,
+      code: err.code,
+    });
+    await pool.end().catch(() => {});
+    throw createDbInitError(
+      `${moduleName} database migration failed`,
+      "DB_MIGRATION_FAILED",
+      {
+        module: moduleName,
+        db: summary,
+        migrationsDir,
+        error: err.message,
+      },
+      err,
+      500
+    );
+  }
+
+  return pool;
+}
+
 // ── Module exports ─────────────────────────────────────────────────────────────
 
 /** Products pool – used by modules/products/* */
 async function getProductsPool() {
   if (!productsPool) {
-    productsPool = createPool("PRODUCTS");
-
-    productsPool.on("error", (err) => {
-      console.error(`[db:products] Unexpected pool error: ${err.message}`);
-    });
-
-    // Probe
-    const probe = await probePool(productsPool, "products");
-    if (probe.ok) {
-      console.log(
-        `[db:products] Connected successfully | latency=${probe.latencyMs}ms | server_time=${probe.ts}`
-      );
-    } else {
-      console.error(`[db:products] Connection FAILED: ${probe.error}`);
+    try {
+      productsPool = await initializeModulePool("PRODUCTS", "products", "products");
+    } catch (err) {
+      productsPool = null;
+      throw err;
     }
-
-    // Run migrations
-    const migrationsDir = path.join(__dirname, "..", "..", "migrations", "products");
-    await runMigrations(productsPool, "products", migrationsDir);
   }
   return productsPool;
 }
@@ -127,25 +227,12 @@ async function getProductsPool() {
 /** SEO pool – used by modules/seo/* */
 async function getSeoPool() {
   if (!seoPool) {
-    seoPool = createPool("SEO");
-
-    seoPool.on("error", (err) => {
-      console.error(`[db:seo] Unexpected pool error: ${err.message}`);
-    });
-
-    // Probe
-    const probe = await probePool(seoPool, "seo");
-    if (probe.ok) {
-      console.log(
-        `[db:seo] Connected successfully | latency=${probe.latencyMs}ms | server_time=${probe.ts}`
-      );
-    } else {
-      console.error(`[db:seo] Connection FAILED: ${probe.error}`);
+    try {
+      seoPool = await initializeModulePool("SEO", "seo", "seo");
+    } catch (err) {
+      seoPool = null;
+      throw err;
     }
-
-    // Run migrations
-    const migrationsDir = path.join(__dirname, "..", "..", "migrations", "seo");
-    await runMigrations(seoPool, "seo", migrationsDir);
   }
   return seoPool;
 }

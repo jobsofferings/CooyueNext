@@ -3,6 +3,7 @@ const cors    = require("cors");
 const helmet  = require("helmet");
 const rateLimit = require("express-rate-limit");
 const path    = require("path");
+const { randomUUID } = require("crypto");
 
 const healthRouter    = require("./routes/health");
 const seoRouter       = require("./modules/seo/routes");
@@ -10,6 +11,8 @@ const productsRouter  = require("./modules/products/routes");
 
 const app = express();
 const staticDir = path.join(__dirname, "..", "static");
+
+app.set("trust proxy", true);
 
 // ── Security & middleware ──────────────────────────────────────────────────
 
@@ -44,6 +47,35 @@ const limiter = rateLimit({
 
 // Apply only to API routes
 app.use("/api", limiter);
+
+app.use((req, res, next) => {
+  const startedAt = Date.now();
+  const requestId = req.headers["x-request-id"] || randomUUID();
+
+  req.id = requestId;
+  res.locals.requestId = requestId;
+  res.setHeader("x-request-id", requestId);
+
+  console.log("[request:start]", {
+    requestId,
+    method: req.method,
+    path: req.originalUrl,
+    ip: req.ip,
+    query: req.query,
+  });
+
+  res.on("finish", () => {
+    console.log("[request:end]", {
+      requestId,
+      method: req.method,
+      path: req.originalUrl,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt,
+    });
+  });
+
+  next();
+});
 
 // ── Routes ─────────────────────────────────────────────────────────────────
 
@@ -115,26 +147,47 @@ app.use("/api/products", productsRouter);
 
 // ── 404 fallback ───────────────────────────────────────────────────────────
 
-app.use((_req, res) => {
-  res.status(404).json({ ok: false, error: "Not found" });
+app.use((req, res) => {
+  res.status(404).json({
+    ok: false,
+    error: "Not found",
+    requestId: req.id || res.locals.requestId,
+  });
 });
 
 // ── Global error handler ────────────────────────────────────────────────────
 
 // eslint-disable-next-line no-unused-vars
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   const status = err.status || 500;
   const message = status === 500
     ? "Internal server error"
     : err.message || "Unknown error";
+  const details = {
+    ...(err.publicDetails || {}),
+    ...(err.code ? { code: err.code } : {}),
+    ...(err.detail ? { detail: err.detail } : {}),
+    ...(err.hint ? { hint: err.hint } : {}),
+  };
 
   console.error("[error]", {
+    requestId: req.id || res.locals.requestId,
     status,
     message: err.message,
+    method: req.method,
+    path: req.originalUrl,
+    query: req.query,
+    params: req.params,
+    details,
     stack: status === 500 ? err.stack : undefined,
   });
 
-  res.status(status).json({ ok: false, error: message });
+  res.status(status).json({
+    ok: false,
+    error: message,
+    requestId: req.id || res.locals.requestId,
+    ...(Object.keys(details).length ? { details } : {}),
+  });
 });
 
 module.exports = app;

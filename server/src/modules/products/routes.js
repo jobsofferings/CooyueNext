@@ -27,15 +27,27 @@ function asyncHandler(fn) {
 }
 
 function ok(res, data, status = 200) {
-  return res.status(status).json({ ok: true, ...data });
+  return res.status(status).json({
+    ok: true,
+    requestId: res.locals.requestId,
+    ...data,
+  });
 }
 
 function notFound(res, message = "Not found") {
-  return res.status(404).json({ ok: false, error: message });
+  return res.status(404).json({
+    ok: false,
+    error: message,
+    requestId: res.locals.requestId,
+  });
 }
 
 function badRequest(res, message) {
-  return res.status(400).json({ ok: false, error: message });
+  return res.status(400).json({
+    ok: false,
+    error: message,
+    requestId: res.locals.requestId,
+  });
 }
 
 function validateQueryLocale(locale) {
@@ -51,6 +63,11 @@ function parseBool(value) {
   return value === "true" || value === true;
 }
 
+function attachRouteDebug(err, debug) {
+  err.publicDetails = { ...(err.publicDetails || {}), ...debug };
+  return err;
+}
+
 // ════════════════════════════════════════════════════════════════════════════════
 //  CATEGORIES
 // ════════════════════════════════════════════════════════════════════════════════
@@ -59,12 +76,49 @@ function parseBool(value) {
 router.get(
   "/categories",
   asyncHandler(async (req, res) => {
-    const pool = await getProductsPool();
     const locale     = validateQueryLocale(req.query.locale);
     const includeHidden = parseBool(req.query.includeHidden) ?? false;
+    const requestMeta = {
+      requestId: req.id,
+      route: "GET /api/products/categories",
+      locale,
+      includeHidden,
+      query: req.query,
+    };
 
-    const rows = await productQueries.listCategories({ pool, locale, includeHidden });
-    return ok(res, { data: rows, total: rows.length });
+    console.log("[products.categories] request", requestMeta);
+
+    try {
+      const pool = await getProductsPool();
+      const rows = await productQueries.listCategories({ pool, locale, includeHidden });
+
+      console.log("[products.categories] success", {
+        ...requestMeta,
+        total: rows.length,
+      });
+
+      return ok(res, {
+        data: rows,
+        total: rows.length,
+        meta: {
+          locale,
+          includeHidden,
+        },
+      });
+    } catch (err) {
+      console.error("[products.categories] failed", {
+        ...requestMeta,
+        error: err.message,
+        code: err.code,
+        detail: err.detail,
+      });
+
+      throw attachRouteDebug(err, {
+        route: "GET /api/products/categories",
+        locale,
+        includeHidden,
+      });
+    }
   })
 );
 
