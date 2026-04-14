@@ -7,6 +7,11 @@ const path = require("path");
 let productsPool = null;
 let seoPool      = null;
 
+const DEFAULT_DATABASES = {
+  PRODUCTS: "products_key",
+  SEO: "seo_key",
+};
+
 // ── Pool factory ───────────────────────────────────────────────────────────────
 
 /**
@@ -41,6 +46,7 @@ function summarizeConnectionString(connStr) {
 function buildPoolConfig(envPrefix) {
   const urlKey  = `${envPrefix}_DATABASE_URL`;
   const connStr = process.env[urlKey];
+  const defaultDatabase = DEFAULT_DATABASES[envPrefix] || "postgres";
 
   const config = connStr
     ? { connectionString: connStr }
@@ -53,7 +59,10 @@ function buildPoolConfig(envPrefix) {
         port:
           Number(process.env[`${envPrefix}_PG_PORT`] || process.env.PG_PORT) ||
           5432,
-        database: process.env[`${envPrefix}_PG_DATABASE`] || "cooyue",
+        database:
+          process.env[`${envPrefix}_PG_DATABASE`] ||
+          process.env.PG_DATABASE ||
+          defaultDatabase,
         user:
           process.env[`${envPrefix}_PG_USER`] ||
           process.env.PG_USER ||
@@ -73,6 +82,7 @@ function buildPoolConfig(envPrefix) {
         database: config.database,
         user: config.user,
         hasPassword: Boolean(config.password),
+        defaultDatabase,
       };
 
   return { config, summary };

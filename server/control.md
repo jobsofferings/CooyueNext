@@ -35,7 +35,7 @@
 `docker-compose.yml` 已通过 `DATABASE_URL` 环境变量覆盖连接配置：
 
 ```
-postgresql://products_key:H3CNBKAM58SwREiy@host.docker.internal:5432/cooyue
+postgresql://products_key:H3CNBKAM58SwREiy@host.docker.internal:5432/products_key
 ```
 
 容器启动时会自动连接到你宿主机的 PostgreSQL 并执行迁移。
@@ -47,12 +47,13 @@ postgresql://products_key:H3CNBKAM58SwREiy@host.docker.internal:5432/cooyue
 ```
 PG_HOST=localhost
 PG_PORT=5432
-PG_DATABASE=cooyue
 PG_USER=products_key
 PG_PASSWORD=H3CNBKAM58SwREiy
+PRODUCTS_PG_DATABASE=products_key
+SEO_PG_DATABASE=seo_key
 ```
 
-> ⚠️ `DATABASE_URL` 留空即可，会自动使用上述单独参数。
+> ⚠️ `DATABASE_URL` 留空即可，会自动使用上述单独参数。若未显式设置数据库名，代码会默认使用 `products_key` 和 `seo_key`。
 
 ---
 
@@ -87,7 +88,7 @@ docker compose exec server node -e "require('./src/config/db').getPool()"
 docker compose logs server
 ```
 
-常见原因：PostgreSQL 未运行、密码错误、数据库 `cooyue` 不存在。确认后修复再重启即可。
+常见原因：PostgreSQL 未运行、密码错误、数据库 `products_key` / `seo_key` 不存在。确认后修复再重启即可。
 
 **Q: 如何添加新的表？**
 
