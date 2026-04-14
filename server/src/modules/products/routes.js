@@ -50,6 +50,22 @@ function badRequest(res, message) {
   });
 }
 
+async function writeProduct(req, res) {
+  const pool = await getProductsPool();
+  const pathSlug = req.params.slug;
+  const { slug: bodySlug, locale, data } = req.body;
+  const slug = pathSlug || bodySlug;
+
+  if (!slug)   return badRequest(res, '"slug" is required');
+  if (!locale) return badRequest(res, '"locale" is required');
+  if (pathSlug && bodySlug && pathSlug !== bodySlug) {
+    return badRequest(res, '"slug" in body must match URL path');
+  }
+
+  const row = await productQueries.upsertProduct({ pool, slug, locale, data });
+  return ok(res, { data: row }, req.method === "POST" ? 201 : 200);
+}
+
 function validateQueryLocale(locale) {
   if (!locale) return "en";
   if (!productQueries.VALID_LOCALES.includes(locale)) {
@@ -214,15 +230,13 @@ router.get(
 // POST /products
 router.post(
   "/",
-  asyncHandler(async (req, res) => {
-    const pool   = await getProductsPool();
-    const { slug, locale, data } = req.body;
-    if (!slug)   return badRequest(res, '"slug" is required');
-    if (!locale) return badRequest(res, '"locale" is required');
+  asyncHandler(writeProduct)
+);
 
-    const row = await productQueries.upsertProduct({ pool, slug, locale, data });
-    return ok(res, { data: row }, 201);
-  })
+// PUT /products/:slug
+router.put(
+  "/:slug",
+  asyncHandler(writeProduct)
 );
 
 // DELETE /products/:slug?locale=en

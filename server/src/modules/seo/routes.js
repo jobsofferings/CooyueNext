@@ -47,45 +47,6 @@ function validateQueryLocale(locale) {
   return locale;
 }
 
-// ── PUBLIC  GET /api/seo/:key ────────────────────────────────────────────────
-
-/**
- * Public-facing SEO endpoint consumed by Next.js pages.
- * Returns SEO metadata for a given key + locale, or 404 if nothing is published.
- */
-router.get(
-  "/:key",
-  asyncHandler(async (req, res) => {
-    const { key } = req.params;
-    const locale = validateQueryLocale(req.query.locale);
-    const pool = await getSeoPool();
-
-    const result = await seoQueries.getSeo({ pool, key, locale });
-
-    if (!result) {
-      return notFound(res, `SEO key "${key}" not found`);
-    }
-
-    // Only return published records on the public endpoint
-    const record = result.record;
-    if (!record || record.visibility !== "published") {
-      return notFound(res, `No published SEO record for key "${key}" (locale: ${locale})`);
-    }
-
-    return ok(res, {
-      key:   result.key.key,
-      locale,
-      title:       record.title,
-      description: record.description,
-      keywords:    record.keywords,
-      og_image:    record.og_image,
-      canonical:   record.canonical,
-      no_index:    record.no_index,
-      extra:       record.extra,
-    });
-  })
-);
-
 // ── ADMIN  GET /api/seo ─────────────────────────────────────────────────────
 
 router.get(
@@ -155,6 +116,45 @@ router.get(
     if (!result) return notFound(res, `SEO key "${req.params.key}" not found`);
 
     return ok(res, { data: result });
+  })
+);
+
+// ── PUBLIC  GET /api/seo/:key ────────────────────────────────────────────────
+
+/**
+ * Public-facing SEO endpoint consumed by Next.js pages.
+ * Keep this route after the static admin GET routes so "/records" and
+ * "/:key/detail" are not swallowed by the catch-all param route.
+ */
+router.get(
+  "/:key",
+  asyncHandler(async (req, res) => {
+    const { key } = req.params;
+    const locale = validateQueryLocale(req.query.locale);
+    const pool = await getSeoPool();
+
+    const result = await seoQueries.getSeo({ pool, key, locale });
+
+    if (!result) {
+      return notFound(res, `SEO key "${key}" not found`);
+    }
+
+    const record = result.record;
+    if (!record || record.visibility !== "published") {
+      return notFound(res, `No published SEO record for key "${key}" (locale: ${locale})`);
+    }
+
+    return ok(res, {
+      key: result.key.key,
+      locale,
+      title: record.title,
+      description: record.description,
+      keywords: record.keywords,
+      og_image: record.og_image,
+      canonical: record.canonical,
+      no_index: record.no_index,
+      extra: record.extra,
+    });
   })
 );
 

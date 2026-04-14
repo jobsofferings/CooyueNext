@@ -79,15 +79,16 @@ async function upsertCategory({ pool, slug, locale, data = {} } = {}) {
   const [row] = (
     await pool.query(
       `INSERT INTO product_categories
-         (slug, parent_slug, locale, name, description, display_order)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (slug, parent_slug, locale, name, description, display_order, visibility)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT (slug, locale) DO UPDATE SET
          name          = EXCLUDED.name,
          description   = EXCLUDED.description,
          parent_slug    = EXCLUDED.parent_slug,
-         display_order  = EXCLUDED.display_order
+         display_order  = EXCLUDED.display_order,
+         visibility     = EXCLUDED.visibility
        RETURNING *`,
-      [slug, parent_slug, locale, name, description, display_order]
+      [slug, parent_slug, locale, name, description, display_order, visibility]
     )
   ).rows;
 
