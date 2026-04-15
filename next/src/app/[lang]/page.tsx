@@ -4,7 +4,7 @@ import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n } from '@/i18n-config'
-import { getHomeSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 export default async function Home({
   params: { lang },
@@ -691,7 +691,7 @@ export async function generateMetadata({
   const dict = await getDictionary(lang)
 
   // 尝试从数据库获取 SEO 数据
-  const seoData = await getHomeSeo(lang)
+  const seoData = await getSeoByPath('/', lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
     description: dict('Professional business consulting services'),

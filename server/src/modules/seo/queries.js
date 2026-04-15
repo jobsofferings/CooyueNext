@@ -17,6 +17,21 @@ function validateLocale(locale) {
   }
 }
 
+function normalizeTargetPath(target) {
+  if (!target || typeof target !== "string") {
+    throw Object.assign(new Error("target path is required"), { status: 400 });
+  }
+
+  const normalized = target.trim();
+  if (!normalized) {
+    throw Object.assign(new Error("target path is required"), { status: 400 });
+  }
+
+  if (normalized === "/") return normalized;
+
+  return normalized.replace(/\/+$/, "");
+}
+
 // ── seo_keys ───────────────────────────────────────────────────────────────
 
 /** List all seo_keys (admin/internal use). */
@@ -97,6 +112,57 @@ async function getSeo({ pool, key, locale } = {}) {
   return {
     key:    metaResult.rows[0],
     record: recordResult.rows[0] || null,
+  };
+}
+
+/**
+ * Fetch SEO config by target route path + locale.
+ * Targets are stored in seo_keys.targets as normalized path strings.
+ */
+async function getSeoByTarget({ pool, target, locale } = {}) {
+  validateLocale(locale);
+  const normalizedTarget = normalizeTargetPath(target);
+
+  const { rows } = await pool.query(
+    `SELECT sk.key, sk.targets, sk.created_at AS key_created_at, sk.updated_at AS key_updated_at,
+            sr.id, sr.seo_key, sr.locale, sr.title, sr.description, sr.keywords, sr.og_image,
+            sr.canonical, sr.no_index, sr.visibility, sr.extra, sr.created_at, sr.updated_at
+     FROM   seo_keys sk
+     LEFT JOIN seo_records sr
+            ON sr.seo_key = sk.key AND sr.locale = $2
+     WHERE  sk.targets @> ARRAY[$1]::text[]
+     ORDER BY CASE WHEN sk.key = $1 THEN 0 ELSE 1 END, sk.updated_at DESC
+     LIMIT 1`,
+    [normalizedTarget, locale]
+  );
+
+  if (!rows.length) return null;
+
+  const row = rows[0];
+  return {
+    key: {
+      key: row.key,
+      targets: row.targets,
+      created_at: row.key_created_at,
+      updated_at: row.key_updated_at,
+    },
+    record: row.id
+      ? {
+          id: row.id,
+          seo_key: row.seo_key,
+          locale: row.locale,
+          title: row.title,
+          description: row.description,
+          keywords: row.keywords,
+          og_image: row.og_image,
+          canonical: row.canonical,
+          no_index: row.no_index,
+          visibility: row.visibility,
+          extra: row.extra,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+        }
+      : null,
   };
 }
 
@@ -227,10 +293,12 @@ async function deleteSeoRecord({ pool, key, locale } = {}) {
 module.exports = {
   VALID_LOCALES,
   validateLocale,
+  normalizeTargetPath,
   listSeoKeys,
   createSeoKey,
   deleteSeoKey,
   getSeo,
+  getSeoByTarget,
   upsertSeoRecord,
   listSeoRecords,
   deleteSeoRecord,

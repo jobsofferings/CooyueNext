@@ -4,7 +4,7 @@ import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
-import { getFaqSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 export async function generateMetadata({
   params: { lang },
@@ -14,7 +14,7 @@ export async function generateMetadata({
   const dict = await getDictionary(lang)
 
   // 尝试从数据库获取 SEO 数据
-  const seoData = await getFaqSeo(lang)
+  const seoData = await getSeoByPath('/faq', lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('FAQs')),
     description: dict('Frequently asked questions'),

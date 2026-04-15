@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
-import { getNewsItemSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 interface NewsDetailPageProps {
   params: { lang: Locale; id: string }
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: NewsDetailPageProps): Promise
   const dict = await getDictionary(params.lang)
 
   // 尝试从数据库获取 SEO 数据 (使用 news-{id} 作为 key)
-  const seoData = await getNewsItemSeo(params.lang, params.id)
+  const seoData = await getSeoByPath(`/news/${params.id}`, params.lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('News Details')),
     description: dict('Read the full article'),

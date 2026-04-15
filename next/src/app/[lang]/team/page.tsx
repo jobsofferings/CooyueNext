@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/layout'
 import { TeamCard } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
-import { getTeamSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 const getTeam = (dict: (key: string) => string) => [
   { name: dict('Kevin Martin'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
@@ -23,7 +23,7 @@ export async function generateMetadata({
   const dict = await getDictionary(lang)
 
   // 尝试从数据库获取 SEO 数据
-  const seoData = await getTeamSeo(lang)
+  const seoData = await getSeoByPath('/team', lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Our Team')),
     description: dict('Meet our professional team'),

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
-import { getCareersSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 const getJobs = (dict: (key: string) => string) => [
   { title: dict('Senior Business Analyst'), location: dict('New York'), type: dict('Full Time'), department: dict('Business') },
@@ -23,7 +23,7 @@ export async function generateMetadata({
   const dict = await getDictionary(lang)
 
   // 尝试从数据库获取 SEO 数据
-  const seoData = await getCareersSeo(lang)
+  const seoData = await getSeoByPath('/careers', lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Careers')),
     description: dict('join our team'),

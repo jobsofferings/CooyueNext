@@ -2,7 +2,7 @@
  * SEO HTTP handlers
  *
  * Public:
- *   GET  /api/seo/:key?locale=en    – page SEO  (next.js calls this)
+ *   GET  /api/seo/by-path?path=/about&locale=en  – page SEO (next.js calls this)
  *
  * Admin (prefix /api/admin/seo – swap the prefix in app.js to add auth):
  *   GET    /seo               – list seo_keys
@@ -104,6 +104,44 @@ router.get(
   })
 );
 
+// ── PUBLIC  GET /api/seo/by-path?path=/about&locale=en ──────────────────────
+
+router.get(
+  "/by-path",
+  asyncHandler(async (req, res) => {
+    const target = req.query.path;
+    const locale = validateQueryLocale(req.query.locale);
+    if (!target || typeof target !== "string") {
+      return badRequest(res, '"path" query param is required');
+    }
+
+    const pool = await getSeoPool();
+    const result = await seoQueries.getSeoByTarget({ pool, target, locale });
+
+    if (!result) {
+      return notFound(res, `SEO path "${target}" not found`);
+    }
+
+    const record = result.record;
+    if (!record || record.visibility !== "published") {
+      return notFound(res, `No published SEO record for path "${target}" (locale: ${locale})`);
+    }
+
+    return ok(res, {
+      key: result.key.key,
+      target,
+      locale,
+      title: record.title,
+      description: record.description,
+      keywords: record.keywords,
+      og_image: record.og_image,
+      canonical: record.canonical,
+      no_index: record.no_index,
+      extra: record.extra,
+    });
+  })
+);
+
 // ── ADMIN  GET /api/seo/:key (full key detail) ───────────────────────────────
 
 router.get(
@@ -116,45 +154,6 @@ router.get(
     if (!result) return notFound(res, `SEO key "${req.params.key}" not found`);
 
     return ok(res, { data: result });
-  })
-);
-
-// ── PUBLIC  GET /api/seo/:key ────────────────────────────────────────────────
-
-/**
- * Public-facing SEO endpoint consumed by Next.js pages.
- * Keep this route after the static admin GET routes so "/records" and
- * "/:key/detail" are not swallowed by the catch-all param route.
- */
-router.get(
-  "/:key",
-  asyncHandler(async (req, res) => {
-    const { key } = req.params;
-    const locale = validateQueryLocale(req.query.locale);
-    const pool = await getSeoPool();
-
-    const result = await seoQueries.getSeo({ pool, key, locale });
-
-    if (!result) {
-      return notFound(res, `SEO key "${key}" not found`);
-    }
-
-    const record = result.record;
-    if (!record || record.visibility !== "published") {
-      return notFound(res, `No published SEO record for key "${key}" (locale: ${locale})`);
-    }
-
-    return ok(res, {
-      key: result.key.key,
-      locale,
-      title: record.title,
-      description: record.description,
-      keywords: record.keywords,
-      og_image: record.og_image,
-      canonical: record.canonical,
-      no_index: record.no_index,
-      extra: record.extra,
-    });
   })
 );
 

@@ -112,7 +112,7 @@ app.use("/api/health", healthRouter);
  * SEO endpoints
  *
  * Public (no auth needed):
- *   GET /api/seo/:key?locale=en   – Next.js reads page SEO metadata here
+ *   GET /api/seo/by-path?path=/about&locale=en – Next.js reads page SEO metadata here
  *
  * Admin (add your auth middleware before these):
  *   GET    /api/seo              – list seo_keys

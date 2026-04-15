@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { PageHeader } from '@/components/layout'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
-import { getTeamMemberSeo, extractSeoMeta } from '@/lib/seo-api'
+import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 interface TeamDetailPageProps {
   params: { lang: Locale; id: string }
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: TeamDetailPageProps): Promise
   const dict = await getDictionary(params.lang)
 
   // 尝试从数据库获取 SEO 数据 (使用 team-{id} 作为 key)
-  const seoData = await getTeamMemberSeo(params.lang, params.id)
+  const seoData = await getSeoByPath(`/team/${params.id}`, params.lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Team Details')),
     description: dict('Team member details'),
