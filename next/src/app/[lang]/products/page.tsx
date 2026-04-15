@@ -17,6 +17,7 @@ type Family = {
 }
 
 type ProductCard = {
+  id: string
   model: string
   subtitle: string
   description: string
@@ -52,6 +53,7 @@ type ProductsContent = {
     tagline: string
     title: string
     highlight: string
+    viewLabel: string
     sections: FamilySection[]
   }
   cta: {
@@ -127,6 +129,7 @@ const productsContent: Record<Locale, ProductsContent> = {
       tagline: '核心产品',
       title: '按产品类型快速查看方案组合',
       highlight: '方案组合',
+      viewLabel: '查看详情',
       sections: [
         {
           id: 'cores',
@@ -134,18 +137,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: '面向整机集成、轻量化终端和行业定制方案的核心热像模组。',
           products: [
             {
+              id: 'cy-640m',
               model: 'CY-640M',
               subtitle: '高分辨率红外机芯',
               description: '适用于中远距离目标识别与高端双光云台项目。',
               specs: ['640x512 / 12um', '50Hz 实时输出', '支持视频与串口控制'],
             },
             {
+              id: 'cy-384s',
               model: 'CY-384S',
               subtitle: '紧凑型机芯',
               description: '在尺寸、功耗与成本之间保持平衡，适合批量整机产品。',
               specs: ['384x288 / 17um', '低功耗设计', '板级快速集成'],
             },
             {
+              id: 'cy-lwir-pro',
               model: 'CY-LWIR Pro',
               subtitle: '开发平台机芯',
               description: '预留丰富接口，适配算法验证、二开和行业设备对接。',
@@ -159,18 +165,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: '针对不同视场角和探测距离，提供稳定透过率与结构可靠性的镜头组合。',
           products: [
             {
+              id: 'ir-lens-9mm',
               model: 'IR Lens 9mm',
               subtitle: '广角监控镜头',
               description: '适合近距离大视场周界监控和辅助感知场景。',
               specs: ['大视场覆盖', '低畸变优化', '适配 12um 芯片'],
             },
             {
+              id: 'ir-lens-19mm',
               model: 'IR Lens 19mm',
               subtitle: '标准焦段镜头',
               description: '兼顾探测距离和画面范围，适配通用安防整机。',
               specs: ['均衡成像', 'F1.0 透过率', '紧凑结构'],
             },
             {
+              id: 'ir-lens-35mm',
               model: 'IR Lens 35mm',
               subtitle: '中长焦镜头',
               description: '面向中远距离识别任务，适合边防和制高点部署。',
@@ -184,18 +193,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: '提升观察舒适度和显示细节，服务于手持、瞄准与便携观测设备。',
           products: [
             {
+              id: 'eo-039',
               model: 'EO-0.39',
               subtitle: '轻量型热像目镜',
               description: '面向便携设备，兼顾重量控制与基础显示效果。',
               specs: ['紧凑结构', '舒适目距', '适配小型终端'],
             },
             {
+              id: 'eo-05-hd',
               model: 'EO-0.5 HD',
               subtitle: '高清显示目镜',
               description: '增强细节观察体验，适合高像质观察类产品。',
               specs: ['高清 OLED', '高对比显示', '长时佩戴舒适'],
             },
             {
+              id: 'eo-dual-view',
               model: 'EO-Dual View',
               subtitle: '双模式目镜组件',
               description: '支持观测和记录协同输出，提升现场使用效率。',
@@ -209,18 +221,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: '聚焦直接部署的红外整机设备，减少项目集成成本并提升交付效率。',
           products: [
             {
+              id: 'ptz-300',
               model: 'PTZ-300',
               subtitle: '双光云台摄像机',
               description: '集成红外与可见光模组，适合周界、园区和制高点监控。',
               specs: ['双光联动', '智能预置位', '全天候巡航'],
             },
             {
+              id: 'borderscope-x2',
               model: 'BorderScope X2',
               subtitle: '边海防监控终端',
               description: '面向复杂环境连续值守，强化夜间发现与告警能力。',
               specs: ['长距离探测', '告警联动', '低温稳定运行'],
             },
             {
+              id: 'vehiclecam-v5',
               model: 'VehicleCam V5',
               subtitle: '车载热像相机',
               description: '为移动平台提供稳定热视频与夜间辅助识别能力。',
@@ -301,6 +316,7 @@ const productsContent: Record<Locale, ProductsContent> = {
       tagline: 'Core Lines',
       title: 'Browse solution groups by product type',
       highlight: 'solution groups',
+      viewLabel: 'View Detail',
       sections: [
         {
           id: 'cores',
@@ -308,18 +324,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: 'Thermal imaging modules for integrators, compact devices, and industry-specific payload development.',
           products: [
             {
+              id: 'cy-640m',
               model: 'CY-640M',
               subtitle: 'High-resolution thermal core',
               description: 'Designed for mid-to-long range identification and premium dual-spectrum PTZ projects.',
               specs: ['640x512 / 12um', '50Hz live output', 'Video and serial control'],
             },
             {
+              id: 'cy-384s',
               model: 'CY-384S',
               subtitle: 'Compact thermal core',
               description: 'Balanced for size, power, and cost in volume-ready thermal camera platforms.',
               specs: ['384x288 / 17um', 'Low-power design', 'Board-level integration'],
             },
             {
+              id: 'cy-lwir-pro',
               model: 'CY-LWIR Pro',
               subtitle: 'Development platform core',
               description: 'Rich interfaces for algorithm validation, OEM customization, and rapid system bring-up.',
@@ -333,18 +352,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: 'Infrared lens options matched to field of view, target distance, and long-term structural reliability.',
           products: [
             {
+              id: 'ir-lens-9mm',
               model: 'IR Lens 9mm',
               subtitle: 'Wide-angle surveillance lens',
               description: 'Built for near-range perimeter coverage and wide-scene thermal awareness.',
               specs: ['Wide field coverage', 'Low distortion tuning', 'Compatible with 12um sensors'],
             },
             {
+              id: 'ir-lens-19mm',
               model: 'IR Lens 19mm',
               subtitle: 'Standard focal lens',
               description: 'A balanced choice for mainstream security deployments and general thermal imaging.',
               specs: ['Balanced imaging', 'F1.0 transmission', 'Compact package'],
             },
             {
+              id: 'ir-lens-35mm',
               model: 'IR Lens 35mm',
               subtitle: 'Mid-tele lens',
               description: 'Optimized for longer-range recognition in border and elevated surveillance positions.',
@@ -358,18 +380,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: 'Display-side assemblies focused on comfort and image clarity for handheld and observation devices.',
           products: [
             {
+              id: 'eo-039',
               model: 'EO-0.39',
               subtitle: 'Lightweight thermal eyepiece',
               description: 'Compact and efficient for portable thermal instruments and lightweight terminals.',
               specs: ['Compact assembly', 'Comfortable eye relief', 'Small-device ready'],
             },
             {
+              id: 'eo-05-hd',
               model: 'EO-0.5 HD',
               subtitle: 'High-definition eyepiece',
               description: 'Improves visual detail for products where observation quality is the primary priority.',
               specs: ['HD OLED', 'High contrast', 'Comfort for extended use'],
             },
             {
+              id: 'eo-dual-view',
               model: 'EO-Dual View',
               subtitle: 'Dual-mode eyepiece module',
               description: 'Supports observation and recording workflows in the same field-ready optical package.',
@@ -383,18 +408,21 @@ const productsContent: Record<Locale, ProductsContent> = {
           lead: 'Deployment-ready infrared systems that reduce integration effort and accelerate project delivery.',
           products: [
             {
+              id: 'ptz-300',
               model: 'PTZ-300',
               subtitle: 'Dual-spectrum PTZ camera',
               description: 'Combines thermal and visible modules for perimeter, campus, and high-point surveillance.',
               specs: ['Dual-spectrum fusion', 'Smart presets', 'All-weather patrol'],
             },
             {
+              id: 'borderscope-x2',
               model: 'BorderScope X2',
               subtitle: 'Border monitoring terminal',
               description: 'Built for continuous duty in harsh environments with stronger night discovery performance.',
               specs: ['Long-range detection', 'Alarm linkage', 'Low-temperature stability'],
             },
             {
+              id: 'vehiclecam-v5',
               model: 'VehicleCam V5',
               subtitle: 'Vehicle thermal camera',
               description: 'Delivers reliable thermal video and night assistance for mobile platforms.',
@@ -461,56 +489,6 @@ export default async function ProductsPage({
         title={dict('Products')}
         breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('Products') }]}
       />
-
-      <section className="services-one products-overview">
-        <div className="container">
-          <div className="services-one__top">
-            <div className="row">
-              <div className="col-xl-7 col-lg-7">
-                <SectionTitle
-                  tagline={content.overview.tagline}
-                  title={content.overview.title}
-                  highlight={content.overview.highlight}
-                />
-              </div>
-              <div className="col-xl-5 col-lg-5">
-                <div className="services-one__right">
-                  <p className="services-one__text products-overview__text">{content.hero.description}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="services-one__bottom">
-            <div className="row">
-              {content.overview.families.map((family) => (
-                <div key={family.id} className="col-xl-3 col-lg-6 col-md-6">
-                  <div className="products-overview__card">
-                    <div className="products-overview__image">
-                      <img src={family.image} alt={family.name} />
-                    </div>
-                    <div className="products-overview__content">
-                      <div className="products-overview__icon">
-                        <i className={family.icon}></i>
-                      </div>
-                      <h3 className="products-overview__title">{family.name}</h3>
-                      <p className="products-overview__summary">{family.summary}</p>
-                      <ul className="products-overview__badges list-unstyled">
-                        {family.badges.map((badge) => (
-                          <li key={badge}>{badge}</li>
-                        ))}
-                      </ul>
-                      <Link href={`/${lang}/products#${family.id}`} className="products-overview__link">
-                        {family.name}
-                        <span className="fa fa-angle-right"></span>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="grow-business products-capability">
         <div className="container">
@@ -581,7 +559,7 @@ export default async function ProductsPage({
                 <div className="row">
                   {section.products.map((product) => (
                     <div key={product.model} className="col-xl-4 col-lg-4 col-md-6">
-                      <div className="products-catalog__card">
+                      <Link href={`/${lang}/products/${product.id}`} className="products-catalog__card">
                         <span className="products-catalog__card-label">{section.name}</span>
                         <h4 className="products-catalog__card-model">{product.model}</h4>
                         <p className="products-catalog__card-subtitle">{product.subtitle}</p>
@@ -594,7 +572,11 @@ export default async function ProductsPage({
                             </li>
                           ))}
                         </ul>
-                      </div>
+                        <span className="products-catalog__detail-link">
+                          {content.catalog.viewLabel}
+                          <span className="fa fa-angle-right"></span>
+                        </span>
+                      </Link>
                     </div>
                   ))}
                 </div>
