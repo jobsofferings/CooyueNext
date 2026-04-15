@@ -14,6 +14,7 @@ export async function generateMetadata({
   const dict = await getDictionary(lang)
 
   return {
+    metadataBase: new URL(siteConfig.siteUrl),
     title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
     description: dict('Professional business consulting services'),
     alternates: {

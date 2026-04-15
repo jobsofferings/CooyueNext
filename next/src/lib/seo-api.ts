@@ -6,9 +6,8 @@
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-export interface SeoRecord {
-  id: number;
-  seo_key: string;
+export interface SeoData {
+  key: string;
   locale: string;
   title: string | null;
   description: string | null;
@@ -17,21 +16,9 @@ export interface SeoRecord {
   canonical: string | null;
   no_index: boolean;
   visibility: 'published' | 'draft';
-  extra: Record<string, unknown>;
   created_at: string;
   updated_at: string;
-}
-
-export interface SeoKey {
-  key: string;
-  targets: string[];
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SeoResponse {
-  key: SeoKey;
-  record: SeoRecord | null;
+  extra?: Record<string, unknown>;
 }
 
 /**
@@ -41,7 +28,7 @@ export interface SeoResponse {
  * @param locale - 语言代码 ('en' 或 'zh')
  * @returns SEO 记录或 null
  */
-export async function getSeoData(key: string, locale: string): Promise<SeoResponse | null> {
+export async function getSeoData(key: string, locale: string): Promise<SeoData | null> {
   try {
     const response = await fetch(
       `${API_BASE_URL}/api/seo/${key}?locale=${locale}`,
@@ -62,7 +49,7 @@ export async function getSeoData(key: string, locale: string): Promise<SeoRespon
       throw new Error(`SEO API error: ${response.status}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as SeoData;
     return data;
   } catch (error) {
     console.error(`[SEO API] Failed to fetch SEO data for key "${key}" and locale "${locale}":`, error);
@@ -74,19 +61,27 @@ export async function getSeoData(key: string, locale: string): Promise<SeoRespon
  * 提取 SEO 记录的 title 和 description
  * 返回安全默认值以防止 undefined
  */
-export function extractSeoMeta(seoResponse: SeoResponse | null, defaults: {
+export function extractSeoMeta(seoResponse: SeoData | null, defaults: {
   title?: string;
   description?: string;
-}): { title: string; description: string; keywords?: string[]; ogImage?: string } {
-  const record = seoResponse?.record;
-  
-  // 只有当记录存在且可见时才使用数据库值
+}): {
+  title: string;
+  description: string;
+  keywords?: string[];
+  ogImage?: string;
+  canonical?: string;
+  noIndex?: boolean;
+} {
+  const record = seoResponse;
+
   if (record && record.visibility === 'published') {
     return {
       title: record.title || defaults.title || '',
       description: record.description || defaults.description || '',
       keywords: record.keywords?.length > 0 ? record.keywords : undefined,
       ogImage: record.og_image || undefined,
+      canonical: record.canonical || undefined,
+      noIndex: record.no_index,
     };
   }
 

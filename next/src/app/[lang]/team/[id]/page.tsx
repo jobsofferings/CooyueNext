@@ -24,11 +24,15 @@ export async function generateMetadata({ params }: TeamDetailPageProps): Promise
     title: seoMeta.title,
     description: seoMeta.description,
     keywords: seoMeta.keywords,
-    openGraph: seoMeta.ogImage ? {
-      images: [seoMeta.ogImage],
-    } : undefined,
+    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
+    openGraph: {
+      title: seoMeta.title,
+      description: seoMeta.description,
+      url: seoMeta.canonical || `/${params.lang}/team/${params.id}`,
+      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
+    },
     alternates: {
-      canonical: `/${params.lang}/team/${params.id}`,
+      canonical: seoMeta.canonical || `/${params.lang}/team/${params.id}`,
       languages: Object.fromEntries(
         i18n.locales.map((locale) => [locale, `/${locale}/team/${params.id}`])
       ),

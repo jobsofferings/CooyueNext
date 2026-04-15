@@ -24,11 +24,15 @@ export async function generateMetadata({ params }: NewsDetailPageProps): Promise
     title: seoMeta.title,
     description: seoMeta.description,
     keywords: seoMeta.keywords,
-    openGraph: seoMeta.ogImage ? {
-      images: [seoMeta.ogImage],
-    } : undefined,
+    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
+    openGraph: {
+      title: seoMeta.title,
+      description: seoMeta.description,
+      url: seoMeta.canonical || `/${params.lang}/news/${params.id}`,
+      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
+    },
     alternates: {
-      canonical: `/${params.lang}/news/${params.id}`,
+      canonical: seoMeta.canonical || `/${params.lang}/news/${params.id}`,
       languages: Object.fromEntries(
         i18n.locales.map((locale) => [locale, `/${locale}/news/${params.id}`])
       ),

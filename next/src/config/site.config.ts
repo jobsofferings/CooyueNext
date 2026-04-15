@@ -1,4 +1,6 @@
 export const siteConfig = {
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://cooyue.com",
+
   company: {
     name: "Cooyue",
     tagline: "Business Consulting",

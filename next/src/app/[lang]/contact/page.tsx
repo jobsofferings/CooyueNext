@@ -24,11 +24,15 @@ export async function generateMetadata({
     title: seoMeta.title,
     description: seoMeta.description,
     keywords: seoMeta.keywords,
-    openGraph: seoMeta.ogImage ? {
-      images: [seoMeta.ogImage],
-    } : undefined,
+    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
+    openGraph: {
+      title: seoMeta.title,
+      description: seoMeta.description,
+      url: seoMeta.canonical || `/${lang}/contact`,
+      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
+    },
     alternates: {
-      canonical: `/${lang}/contact`,
+      canonical: seoMeta.canonical || `/${lang}/contact`,
       languages: Object.fromEntries(
         i18n.locales.map((locale) => [locale, `/${locale}/contact`])
       ),

@@ -24,6 +24,10 @@ RUN yarn install --frozen-lockfile
 # ================================
 FROM base AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://43.139.70.61:3001
+ARG NEXT_PUBLIC_SITE_URL=https://cooyue.com
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 # 从 deps 阶段复制已安装的依赖
 COPY --from=deps /app/node_modules ./node_modules
 # 复制项目源代码
@@ -41,10 +45,14 @@ RUN yarn build
 # ================================
 FROM base AS runner
 WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://43.139.70.61:3001
+ARG NEXT_PUBLIC_SITE_URL=https://cooyue.com
 
 # 设置生产环境
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 
 # 创建非 root 用户以提高安全性
 RUN addgroup -g 1001 -S nodejs && \

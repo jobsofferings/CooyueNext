@@ -35,11 +35,15 @@ export async function generateMetadata({
     title: seoMeta.title,
     description: seoMeta.description,
     keywords: seoMeta.keywords,
-    openGraph: seoMeta.ogImage ? {
-      images: [seoMeta.ogImage],
-    } : undefined,
+    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
+    openGraph: {
+      title: seoMeta.title,
+      description: seoMeta.description,
+      url: seoMeta.canonical || `/${lang}/about`,
+      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
+    },
     alternates: {
-      canonical: `/${lang}/about`,
+      canonical: seoMeta.canonical || `/${lang}/about`,
       languages: Object.fromEntries(
         i18n.locales.map((locale) => [locale, `/${locale}/about`])
       ),
