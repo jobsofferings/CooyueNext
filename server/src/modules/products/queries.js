@@ -38,7 +38,7 @@ async function listCategories({ pool, locale, includeHidden = false } = {}) {
 
   const { rows } = await pool.query(
     `SELECT slug, parent_slug, locale, name, description, display_order,
-            created_at, updated_at
+            visibility, created_at, updated_at
      FROM   product_categories
      ${where}
      ORDER BY display_order ASC, name ASC`,
@@ -55,7 +55,7 @@ async function getCategory({ pool, slug, locale } = {}) {
 
   const { rows } = await pool.query(
     `SELECT slug, parent_slug, locale, name, description, display_order,
-            created_at, updated_at
+            visibility, created_at, updated_at
      FROM   product_categories
      WHERE  slug = $1 AND locale = $2`,
     [slug, locale]
@@ -135,35 +135,35 @@ async function listProducts({
 
   if (locale) {
     validateLocale(locale);
-    conditions.push(`locale = $${idx++}`);
+    conditions.push(`p.locale = $${idx++}`);
     params.push(locale);
   }
   if (categorySlug) {
-    conditions.push(`category_slug = $${idx++}`);
+    conditions.push(`p.category_slug = $${idx++}`);
     params.push(categorySlug);
   }
   if (!includeHidden || visibility) {
     const v = visibility || "published";
-    conditions.push(`visibility = $${idx++}`);
+    conditions.push(`p.visibility = $${idx++}`);
     params.push(v);
   }
   if (minPrice !== null) {
-    conditions.push(`price >= $${idx++}`);
+    conditions.push(`p.price >= $${idx++}`);
     params.push(minPrice);
   }
   if (maxPrice !== null) {
-    conditions.push(`price <= $${idx++}`);
+    conditions.push(`p.price <= $${idx++}`);
     params.push(maxPrice);
   }
   if (search) {
     const s = `%${search}%`;
-    conditions.push(`(name ILIKE $${idx} OR short_description ILIKE $${idx})`);
+    conditions.push(`(p.name ILIKE $${idx} OR p.short_description ILIKE $${idx})`);
     idx++;
     params.push(s);
   }
   if (tags) {
     const tagArr = Array.isArray(tags) ? tags : tags.split(",").map((t) => t.trim());
-    conditions.push(`tags && $${idx++}`);
+    conditions.push(`p.tags && $${idx++}`);
     params.push(tagArr);
   }
 
@@ -174,13 +174,18 @@ async function listProducts({
   const dir     = sortDir === "DESC" ? "DESC" : "ASC";
 
   const [countResult, rows] = await Promise.all([
-    pool.query(`SELECT COUNT(*) AS total FROM products_key ${where}`, params),
+    pool.query(`SELECT COUNT(*) AS total FROM products_key p ${where}`, params),
     pool.query(
-      `SELECT slug, category_slug, locale, name, short_description,
-              price, original_price, currency, images, tags,
-              display_order, visibility, extra,
-              created_at, updated_at
-       FROM   products_key
+      `SELECT p.slug, p.category_slug, p.locale, p.name, p.short_description,
+              p.description, p.price, p.original_price, p.currency,
+              p.images, p.tags, p.specifications,
+              p.display_order, p.visibility, p.extra,
+              c.name AS category_name,
+              p.created_at, p.updated_at
+       FROM   products_key p
+       LEFT JOIN product_categories c
+         ON c.slug = p.category_slug
+        AND c.locale = p.locale
        ${where}
        ORDER BY ${col} ${dir}
        LIMIT  $${idx++} OFFSET $${idx}`,
@@ -209,6 +214,44 @@ async function getProduct({ pool, slug, locale } = {}) {
     [slug, locale]
   );
   return rows[0] || null;
+}
+
+async function listRelatedProducts({ pool, slug, locale, limit = 3, includeHidden = false } = {}) {
+  if (!slug)   throw Object.assign(new Error("slug is required"),   { status: 400 });
+  if (!locale) throw Object.assign(new Error("locale is required"), { status: 400 });
+  validateLocale(locale);
+
+  const visibilityClause = includeHidden ? "" : `AND p.visibility = 'published'`;
+
+  const { rows } = await pool.query(
+    `WITH current_product AS (
+       SELECT category_slug, locale
+       FROM   products_key
+       WHERE  slug = $1 AND locale = $2
+       LIMIT 1
+     )
+     SELECT p.slug, p.category_slug, p.locale, p.name, p.short_description,
+            p.description, p.price, p.original_price, p.currency,
+            p.images, p.tags, p.specifications,
+            p.display_order, p.visibility, p.extra,
+            c.name AS category_name,
+            p.created_at, p.updated_at
+     FROM   products_key p
+     JOIN   current_product cp
+       ON   cp.category_slug = p.category_slug
+      AND   cp.locale = p.locale
+     LEFT JOIN product_categories c
+       ON   c.slug = p.category_slug
+      AND   c.locale = p.locale
+     WHERE  p.slug <> $1
+       AND  p.locale = $2
+       ${visibilityClause}
+     ORDER BY p.display_order ASC, p.name ASC
+     LIMIT  $3`,
+    [slug, locale, Math.max(1, Number(limit) || 3)]
+  );
+
+  return rows;
 }
 
 /**
@@ -299,6 +342,7 @@ module.exports = {
   deleteCategory,
   listProducts,
   getProduct,
+  listRelatedProducts,
   upsertProduct,
   deleteProduct,
 };

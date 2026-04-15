@@ -6,6 +6,7 @@
  *   GET  /products/categories/:slug    – get one category
  *   GET  /products                      – list products_key
  *   GET  /products/:slug               – get one product
+ *   GET  /products/:slug/related       – list related products in same category
  *
  * Admin (secured later – currently open; see app.js prefix comment):
  *   POST      /products/categories           – upsert category
@@ -224,6 +225,43 @@ router.get(
     }
 
     return ok(res, { data: row });
+  })
+);
+
+// GET /products/:slug/related
+router.get(
+  "/:slug/related",
+  asyncHandler(async (req, res) => {
+    const pool   = await getProductsPool();
+    const locale = validateQueryLocale(req.query.locale);
+    const limit  = Math.min(12, Math.max(1, Number(req.query.limit) || 3));
+    const includeHidden = parseBool(req.query.includeHidden) ?? false;
+
+    const product = await productQueries.getProduct({ pool, slug: req.params.slug, locale });
+    if (!product) {
+      return notFound(res, `Product "${req.params.slug}" not found`);
+    }
+    if (!includeHidden && product.visibility !== "published") {
+      return notFound(res, `Product "${req.params.slug}" not found`);
+    }
+
+    const rows = await productQueries.listRelatedProducts({
+      pool,
+      slug: req.params.slug,
+      locale,
+      limit,
+      includeHidden,
+    });
+
+    return ok(res, {
+      data: rows,
+      total: rows.length,
+      meta: {
+        locale,
+        limit,
+        sourceSlug: req.params.slug,
+      },
+    });
   })
 );
 

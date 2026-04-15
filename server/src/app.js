@@ -136,6 +136,7 @@ app.use("/api/seo", seoRouter);
  *                                        tags, minPrice, maxPrice, search, sortBy,
  *                                        sortDir, page, pageSize)
  *   GET /api/products/:slug             – get one product
+ *   GET /api/products/:slug/related     – get related products in same category
  *
  * Admin (add your auth middleware before these):
  *   POST   /api/products/categories           – upsert category

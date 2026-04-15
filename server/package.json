@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "sync:infrared-products": "node scripts/sync-infrared-products.js"
   },
   "engines": {
     "node": ">=18"
