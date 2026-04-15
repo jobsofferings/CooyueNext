@@ -18,17 +18,17 @@ export const getNavigationConfig = (dict: (key: string) => string): NavItem[] =>
     label: dict('About'),
     href: '/about',
   },
-  {
-    label: dict('Pages'),
-    href: '#',
-    children: [
-      { label: dict('Our Team'), href: '/team' },
-      { label: dict('Team Details'), href: '/team/1' },
-      { label: dict('Testimonials'), href: '/testimonials' },
-      { label: dict('Careers'), href: '/careers' },
-      { label: dict('FAQs'), href: '/faq' },
-    ],
-  },
+  // {
+  //   label: dict('Pages'),
+  //   href: '#',
+  //   children: [
+  //     { label: dict('Our Team'), href: '/team' },
+  //     { label: dict('Team Details'), href: '/team/1' },
+  //     { label: dict('Testimonials'), href: '/testimonials' },
+  //     { label: dict('Careers'), href: '/careers' },
+  //     { label: dict('FAQs'), href: '/faq' },
+  //   ],
+  // },
   {
     label: dict('News'),
     href: '/news',

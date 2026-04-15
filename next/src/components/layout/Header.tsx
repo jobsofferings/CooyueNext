@@ -16,18 +16,27 @@ const getNavItems = (dict: (key: string) => string): NavItem[] => [
     label: dict('Home'),
     href: '/'
   },
-  { label: dict('About'), href: '/about' },
   {
-    label: dict('Pages'),
-    href: '#',
+    label: dict('Products'),
+    href: '/products',
     children: [
-      { label: dict('Our Team'), href: '/team' },
-      { label: dict('Team Details'), href: '/team/1' },
-      { label: dict('Testimonials'), href: '/testimonials' },
-      { label: dict('Careers'), href: '/careers' },
-      { label: dict('FAQs'), href: '/faq' },
+      { label: dict('Infrared Cores'), href: '/products#cores' },
+      { label: dict('Infrared Lenses'), href: '/products#lenses' },
+      { label: dict('Thermal Eyepieces'), href: '/products#eyepieces' },
+      { label: dict('Thermal Systems'), href: '/products#systems' },
     ],
   },
+  // {
+  //   label: dict('Pages'),
+  //   href: '#',
+  //   children: [
+  //     { label: dict('Our Team'), href: '/team' },
+  //     { label: dict('Team Details'), href: '/team/1' },
+  //     { label: dict('Testimonials'), href: '/testimonials' },
+  //     { label: dict('Careers'), href: '/careers' },
+  //     { label: dict('FAQs'), href: '/faq' },
+  //   ],
+  // },
   {
     label: dict('News'),
     href: '#',
@@ -36,6 +45,7 @@ const getNavItems = (dict: (key: string) => string): NavItem[] => [
       { label: dict('News Details'), href: '/news/1' },
     ],
   },
+  { label: dict('About'), href: '/about' },
   { label: dict('Contact'), href: '/contact' },
 ]
 

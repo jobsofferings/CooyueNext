@@ -4,7 +4,25 @@
  * 从后端获取 SEO 元数据，支持服务端渲染时使用
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getApiBaseUrl = (): string | null => {
+  const apiUrl = process.env.SEO_API_URL || process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) {
+    return null;
+  }
+
+  return apiUrl.replace(/\/+$/, '');
+};
+
+const loggedMessages = new Set<string>();
+
+function logSeoWarningOnce(message: string) {
+  if (loggedMessages.has(message)) {
+    return;
+  }
+
+  loggedMessages.add(message);
+  console.warn(message);
+}
 
 export interface SeoData {
   key: string;
@@ -33,10 +51,15 @@ function normalizeRoutePath(routePath: string): string {
  * routePath 不包含语言前缀，例如 "/", "/about", "/team/1"。
  */
 export async function getSeoByPath(routePath: string, locale: string): Promise<SeoData | null> {
+  const apiBaseUrl = getApiBaseUrl();
+  if (!apiBaseUrl) {
+    return null;
+  }
+
   try {
     const normalizedPath = normalizeRoutePath(routePath);
     const response = await fetch(
-      `${API_BASE_URL}/api/seo/by-path?path=${encodeURIComponent(normalizedPath)}&locale=${locale}`,
+      `${apiBaseUrl}/api/seo/by-path?path=${encodeURIComponent(normalizedPath)}&locale=${locale}`,
       {
         method: 'GET',
         headers: {
@@ -55,7 +78,9 @@ export async function getSeoByPath(routePath: string, locale: string): Promise<S
 
     return (await response.json()) as SeoData;
   } catch (error) {
-    console.error(`[SEO API] Failed to fetch SEO data for path "${routePath}" and locale "${locale}":`, error);
+    const message = `[SEO API] Falling back to local metadata for path "${routePath}" and locale "${locale}".`;
+    void error;
+    logSeoWarningOnce(message);
     return null;
   }
 }
