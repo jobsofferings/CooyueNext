@@ -39,7 +39,7 @@ export default function LanguageSwitcher() {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
 
-      if (!(target instanceof Node)) {
+      if (!(target instanceof Element)) {
         closeAllSwitchers()
         return
       }
