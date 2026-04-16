@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { i18n } from '@/i18n-config'
 import { useDictionary, useLocale } from '@/hooks/useDictionary'
+import type { MouseEvent } from 'react'
 
 const fallbackLocaleNames: Record<string, string> = {
   zh: '中文',
@@ -27,15 +28,26 @@ export default function LanguageSwitcher() {
   const currentLocale = useLocale()
   const dict = useDictionary()
 
-  useEffect(() => {
-    const closeAllSwitchers = () => {
-      document
-        .querySelectorAll<HTMLDetailsElement>('.language-switcher[open]')
-        .forEach((switcher) => {
-          switcher.open = false
-        })
+  const closeAllSwitchers = () => {
+    document
+      .querySelectorAll<HTMLDetailsElement>('.language-switcher[open]')
+      .forEach((switcher) => {
+        switcher.open = false
+      })
+  }
+
+  const showGlobalPreloader = () => {
+    const preloader = document.querySelector<HTMLElement>('.preloader')
+
+    if (!preloader) {
+      return
     }
 
+    preloader.style.display = 'flex'
+    preloader.style.opacity = '1'
+  }
+
+  useEffect(() => {
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
 
@@ -81,6 +93,28 @@ export default function LanguageSwitcher() {
 
   const activeLocale = locales.find(({ locale }) => locale === currentLocale) ?? locales[0]
 
+  const handleLocaleClick = (event: MouseEvent<HTMLAnchorElement>, locale: string) => {
+    closeAllSwitchers()
+
+    if (locale === currentLocale) {
+      event.preventDefault()
+      return
+    }
+
+    if (
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return
+    }
+
+    showGlobalPreloader()
+  }
+
   return (
     <details className="language-switcher">
       <summary className="language-switcher__trigger" aria-label={activeLocale.label}>
@@ -102,6 +136,8 @@ export default function LanguageSwitcher() {
               href={redirectedPathName(locale)}
               className={`language-switcher__item ${isActive ? 'language-switcher__item--active' : ''}`}
               aria-label={dict('Switch to {language}', { language: label })}
+              aria-current={isActive ? 'page' : undefined}
+              onClick={(event) => handleLocaleClick(event, locale)}
             >
               <span className="language-switcher__item-label">{label}</span>
               <span className="language-switcher__item-code">{code}</span>
