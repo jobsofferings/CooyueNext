@@ -70,7 +70,6 @@ export default function RootLayout({
         <link rel="stylesheet" href="/assets/vendors/jquery-ui/jquery-ui.css" />
         <link rel="stylesheet" href="/assets/vendors/timepicker/timePicker.css" />
         <link rel="stylesheet" href="/assets/css/sinace.css" />
-        <link rel="stylesheet" href="/assets/css/languageSwitcher.css" />
         <link rel="stylesheet" href="/assets/css/sinace-responsive.css" />
       </head>
       <body className="custom-cursor">

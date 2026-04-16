@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { siteConfig } from '@/config/site.config'
 import { useDictionary } from '@/hooks/useDictionary'
 
@@ -137,6 +138,9 @@ export default function Header() {
                     </ul>
                   </div>
                   <div className="main-menu__right">
+                    <div className="main-menu__lang-box">
+                      <LanguageSwitcher />
+                    </div>
                     <div className="main-menu__search-box">
                       <a href="#" className="main-menu__search search-toggler icon-magnifying-glass"></a>
                     </div>

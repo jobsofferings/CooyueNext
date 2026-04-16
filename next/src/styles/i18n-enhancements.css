@@ -1,28 +1,171 @@
-.site-footer__bottom-inner {
+.main-menu__lang-box {
+  position: relative;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  margin-right: 40px;
 }
 
-.site-footer__bottom-left {
-  flex: 1;
+.language-switcher {
+  position: relative;
 }
 
-.site-footer__bottom-right {
+.language-switcher summary {
+  list-style: none;
+}
+
+.language-switcher summary::-webkit-details-marker {
+  display: none;
+}
+
+.language-switcher__trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 126px;
+  padding: 12px 6px 10px;
+  border: 0;
+  /* border-bottom: 1px solid rgba(var(--sinace-white-rgb), 0.14); */
+  border-radius: 0;
+  background: transparent;
+  color: #7e8a9b;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.35s ease, background-color 0.35s ease, transform 0.35s ease;
+}
+
+.language-switcher__trigger:hover,
+.language-switcher[open] .language-switcher__trigger {
+  color: var(--sinace-white);
+  background: transparent;
+  text-shadow: 0.05px 0 0 rgb(255 255 255 / 80%);
+}
+
+.language-switcher__trigger:focus-visible {
+  outline: 2px solid rgba(var(--sinace-base-rgb), 0.7);
+  outline-offset: 3px;
+}
+
+.language-switcher__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(var(--sinace-base-rgb), 0.18);
+  color: var(--sinace-base);
+  font-size: 12px;
   flex-shrink: 0;
 }
 
-@media (max-width: 767px) {
-  .site-footer__bottom-inner {
-    flex-direction: column;
-    text-align: center;
+.language-switcher__value {
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.language-switcher__arrow {
+  color: inherit;
+  font-size: 12px;
+  line-height: 1;
+  transition: transform 0.3s ease;
+}
+
+.language-switcher[open] .language-switcher__arrow {
+  transform: rotate(180deg);
+}
+
+.language-switcher__menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  min-width: 172px;
+  padding: 8px;
+  border: 1px solid rgba(var(--sinace-white-rgb), 0.09);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(18, 33, 57, 0.98) 0%, rgba(11, 23, 42, 0.98) 100%);
+  box-shadow: 0 20px 45px rgba(5, 10, 18, 0.32);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, visibility 0.25s ease, transform 0.25s ease;
+}
+
+.language-switcher[open] .language-switcher__menu,
+.language-switcher:focus-within .language-switcher__menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.language-switcher__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: rgba(var(--sinace-white-rgb), 0.78);
+  transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+
+.language-switcher__item + .language-switcher__item {
+  margin-top: 4px;
+}
+
+.language-switcher__item:hover {
+  color: var(--sinace-white);
+  background: rgba(var(--sinace-white-rgb), 0.08);
+  transform: translateX(-2px);
+}
+
+.language-switcher__item--active {
+  color: var(--sinace-white);
+  background: linear-gradient(90deg, rgba(var(--sinace-base-rgb), 0.2) 0%, rgba(var(--sinace-base-rgb), 0.1) 100%);
+}
+
+.language-switcher__item-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.language-switcher__item-code {
+  flex-shrink: 0;
+  color: rgba(var(--sinace-white-rgb), 0.52);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+@media (max-width: 1199px) {
+  .main-menu__lang-box {
+    margin-right: 38px;
   }
-  
-  .site-footer__bottom-left,
-  .site-footer__bottom-right {
-    width: 100%;
+}
+
+@media (max-width: 767px) {
+  .main-menu__lang-box {
+    margin-right: 38px;
+  }
+
+  .language-switcher__trigger {
+    min-width: 112px;
+    padding: 11px 4px 9px;
+  }
+
+  .language-switcher__value {
+    font-size: 13px;
+  }
+
+  .language-switcher__menu {
+    right: -10px;
+    min-width: 164px;
   }
 }
 

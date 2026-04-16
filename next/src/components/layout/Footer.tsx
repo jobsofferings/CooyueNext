@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
-import LanguageSwitcher from '../LanguageSwitcher'
 import { useDictionary } from '@/hooks/useDictionary'
 
 export default function Footer() {
@@ -118,14 +117,9 @@ export default function Footer() {
           <div className="row">
             <div className="col-xl-12">
               <div className="site-footer__bottom-inner">
-                <div className="site-footer__bottom-left">
-                  <p className="site-footer__bottom-text">
-                    © Copyright {siteConfig.copyright.year} {siteConfig.company.name}. {siteConfig.copyright.text}
-                  </p>
-                </div>
-                <div className="site-footer__bottom-right">
-                  <LanguageSwitcher />
-                </div>
+                <p className="site-footer__bottom-text">
+                  © Copyright {siteConfig.copyright.year} {siteConfig.company.name}. {siteConfig.copyright.text}
+                </p>
               </div>
             </div>
           </div>
