@@ -1,6 +1,26 @@
 version: '3.8'
 
 services:
+  management-app:
+    build:
+      context: ./management
+      dockerfile: Dockerfile
+    image: cooyue-management:latest
+    container_name: cooyue-management-app
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    depends_on:
+      - server
+    networks:
+      - cooyue-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3003/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
   next-app:
     build:
       context: ./next

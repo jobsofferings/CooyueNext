@@ -8,6 +8,8 @@ const { randomUUID } = require("crypto");
 const healthRouter    = require("./routes/health");
 const seoRouter       = require("./modules/seo/routes");
 const productsRouter  = require("./modules/products/routes");
+const mailRouter      = require("./modules/mail/routes");
+const managementRouter = require("./modules/management/routes");
 
 const app = express();
 const staticDir = path.join(__dirname, "..", "static");
@@ -145,6 +147,8 @@ app.use("/api/seo", seoRouter);
  *   DELETE /api/products/:slug                – delete product
  */
 app.use("/api/products", productsRouter);
+app.use("/api/mail", mailRouter);
+app.use("/api/management", managementRouter);
 
 // ── 404 fallback ───────────────────────────────────────────────────────────
 

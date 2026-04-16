@@ -58,6 +58,8 @@ docker image prune -f --filter "until=24h"
 echo ""
 echo "[5/6] 验证服务健康状态..."
 sleep 5
+echo "Management 健康检查:"
+docker compose ps management-app
 echo "Next.js 健康检查:"
 docker compose ps next-app
 echo "Server 健康检查:"
@@ -93,6 +95,7 @@ echo ""
 echo "Docker 服务:"
 docker compose ps
 echo ""
+echo "Management: http://localhost:3003"
 echo "Next.js:   http://localhost:3000"
 echo "Server:    http://localhost:3001"
 echo ""
