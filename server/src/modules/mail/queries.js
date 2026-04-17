@@ -1,5 +1,9 @@
 const VALID_STATUSES = ["draft", "queued", "sent", "failed"];
 
+function isMissingMailTasksTableError(err) {
+  return err?.code === "42P01";
+}
+
 function validateStatus(status) {
   if (!VALID_STATUSES.includes(status)) {
     throw Object.assign(new Error(`Invalid status: "${status}"`), { status: 400 });
@@ -26,23 +30,41 @@ async function listMailTasks({ pool, status = null, search = null, page = 1, pag
   const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   const offset = (Math.max(1, page) - 1) * pageSize;
 
-  const [countResult, rowsResult] = await Promise.all([
-    pool.query(`SELECT COUNT(*) AS total FROM mail_tasks ${where}`, params),
-    pool.query(
-      `SELECT *
-       FROM mail_tasks
-       ${where}
-       ORDER BY updated_at DESC
-       LIMIT $${idx++} OFFSET $${idx}`,
-      [...params, pageSize, offset]
-    ),
-  ]);
+  let countResult;
+  let rowsResult;
+
+  try {
+    [countResult, rowsResult] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS total FROM mail_tasks ${where}`, params),
+      pool.query(
+        `SELECT *
+         FROM mail_tasks
+         ${where}
+         ORDER BY updated_at DESC
+         LIMIT $${idx++} OFFSET $${idx}`,
+        [...params, pageSize, offset]
+      ),
+    ]);
+  } catch (err) {
+    if (!isMissingMailTasksTableError(err)) {
+      throw err;
+    }
+
+    return {
+      data: [],
+      total: 0,
+      page,
+      pageSize,
+      available: false,
+    };
+  }
 
   return {
     data: rowsResult.rows,
     total: Number(countResult.rows[0].total),
     page,
     pageSize,
+    available: true,
   };
 }
 
@@ -167,6 +189,7 @@ async function setMailTaskStatus({ pool, id, status, last_error = null } = {}) {
 
 module.exports = {
   VALID_STATUSES,
+  isMissingMailTasksTableError,
   validateStatus,
   listMailTasks,
   createMailTask,
