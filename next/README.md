@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Next Frontend
 
-## Getting Started
-
-First, run the development server:
+### 本地启动
 
 ```bash
-npm run dev
-# or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+默认访问 `http://localhost:3000`。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### API 联调说明
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+这个前端支持两种本地开发方式：
 
-## Learn More
+1. 只启动前端
+2. 前后端联调
 
-To learn more about Next.js, take a look at the following resources:
+不配置 `NEXT_PUBLIC_API_URL` 或 `SEO_API_URL` 时，前端本地开发默认会走 `http://43.139.70.61:3001`。也就是说你访问 `http://localhost:3000/api/*` 时，Next 会代你转发到远端接口。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+如果需要联调后端，请配置下面任一环境变量：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001
+# 或
+SEO_API_URL=http://localhost:3001
+```
 
-## Deploy on Vercel
+配置后，`/api/*` 请求会自动转发到对应后端服务。
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 当前行为
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- 未配置后端地址：默认请求 `http://43.139.70.61:3001`
+- 已配置后端地址：保留原有 API 转发能力

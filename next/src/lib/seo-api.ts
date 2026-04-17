@@ -3,9 +3,10 @@
  * 
  * 从后端获取 SEO 元数据，支持服务端渲染时使用
  */
+const DEFAULT_API_URL = 'http://43.139.70.61:3001';
 
 const getApiBaseUrl = (): string | null => {
-  const apiUrl = process.env.SEO_API_URL || process.env.NEXT_PUBLIC_API_URL;
+  const apiUrl = process.env.SEO_API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
   if (!apiUrl) {
     return null;
   }

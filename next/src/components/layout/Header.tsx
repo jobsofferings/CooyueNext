@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState } from 'react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { siteConfig } from '@/config/site.config'
 import { useDictionary } from '@/hooks/useDictionary'
@@ -12,7 +13,15 @@ interface NavItem {
   children?: NavItem[]
 }
 
-const getNavItems = (dict: (key: string) => string): NavItem[] => [
+interface CategoryItem {
+  slug: string
+  name: string
+}
+
+const getNavItems = (
+  dict: (key: string) => string,
+  categories: CategoryItem[]
+): NavItem[] => [
   {
     label: dict('Home'),
     href: '/'
@@ -20,12 +29,10 @@ const getNavItems = (dict: (key: string) => string): NavItem[] => [
   {
     label: dict('Products'),
     href: '/products',
-    children: [
-      { label: dict('Infrared Cores'), href: '/products#cores' },
-      { label: dict('Infrared Lenses'), href: '/products#lenses' },
-      { label: dict('Thermal Eyepieces'), href: '/products#eyepieces' },
-      { label: dict('Thermal Systems'), href: '/products#systems' },
-    ],
+    children: categories.map((category) => ({
+      label: category.name,
+      href: `/products#${category.slug}`,
+    })),
   },
   // {
   //   label: dict('Pages'),
@@ -54,9 +61,38 @@ export default function Header() {
   const params = useParams()
   const lang = params.lang as string
   const dict = useDictionary()
-  const navItems = getNavItems(dict)
+  const [categories, setCategories] = useState<CategoryItem[]>([])
 
   const getLocalizedHref = (href: string) => `/${lang}${href}`
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch(`/api/products/categories?locale=${lang}`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load categories: ${response.status}`)
+        }
+        return response.json()
+      })
+      .then((payload) => {
+        if (!cancelled) {
+          setCategories(Array.isArray(payload.data) ? payload.data : [])
+        }
+      })
+      .catch((error) => {
+        console.error('[Header] Failed to load product categories:', error)
+        if (!cancelled) {
+          setCategories([])
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [lang])
+
+  const navItems = useMemo(() => getNavItems(dict, categories), [categories, dict])
 
   return (
     <header className="main-header">
