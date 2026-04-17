@@ -1,11 +1,14 @@
-#!/bin/bash
+#!/bin/sh
 
-set -e
+set -eu
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_ROOT="$SCRIPT_DIR"
-NEXT_DIR="$PROJECT_ROOT/next"
 WEB_HOOKS_DIR="$PROJECT_ROOT/web_hooks"
+
+MAX_RETRIES=6
+RETRY_DELAY=2
+GIT_PULL_TIMEOUT=10
 
 echo "========================================"
 echo "开始部署流程 $(date)"
@@ -15,35 +18,52 @@ cd "$PROJECT_ROOT"
 
 echo ""
 echo "[1/6] 暂存本地更改..."
-git stash
+git stash push -u -m "auto-stash before deploy $(date '+%Y-%m-%d %H:%M:%S')" >/dev/null 2>&1 || true
+echo "✓ 已执行 stash（如无改动，Git 会自动忽略）"
 
 echo ""
 echo "[2/6] 拉取最新代码..."
-MAX_RETRIES=6
-RETRY_COUNT=0
-GIT_PULL_SUCCESS=false
 
-while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$GIT_PULL_SUCCESS" = false ]; do
-    RETRY_COUNT=$((RETRY_COUNT + 1))
-    echo "尝试 git pull (第 $RETRY_COUNT/$MAX_RETRIES 次)..."
-    
-    timeout 10s git pull
-    EXIT_CODE=$?
-    
-    if [ $EXIT_CODE -eq 0 ]; then
-        GIT_PULL_SUCCESS=true
-        echo "✓ git pull 成功"
-    elif [ $EXIT_CODE -eq 124 ]; then
-        echo "✗ git pull 超时 (10秒)，准备重试..."
-        sleep 2
-    else
-        echo "✗ git pull 失败 (退出码: $EXIT_CODE)，准备重试..."
-        sleep 2
-    fi
-done
+retry_git_pull() {
+    retry_count=1
 
-if [ "$GIT_PULL_SUCCESS" = false ]; then
-    echo "错误: git pull 失败，已重试 $MAX_RETRIES 次"
+    while [ "$retry_count" -le "$MAX_RETRIES" ]; do
+        echo "尝试 git pull (第 ${retry_count}/${MAX_RETRIES} 次)..."
+
+        if command -v timeout >/dev/null 2>&1; then
+            if timeout "${GIT_PULL_TIMEOUT}s" git pull; then
+                echo "✓ git pull 成功"
+                return 0
+            fi
+            exit_code=$?
+        else
+            echo "! 未检测到 timeout 命令，本次直接执行 git pull"
+            if git pull; then
+                echo "✓ git pull 成功"
+                return 0
+            fi
+            exit_code=$?
+        fi
+
+        if [ "$exit_code" -eq 124 ]; then
+            echo "✗ git pull 超时 (${GIT_PULL_TIMEOUT}秒)"
+        else
+            echo "✗ git pull 失败 (退出码: ${exit_code})"
+        fi
+
+        if [ "$retry_count" -lt "$MAX_RETRIES" ]; then
+            echo "等待 ${RETRY_DELAY} 秒后重试..."
+            sleep "$RETRY_DELAY"
+        fi
+
+        retry_count=$((retry_count + 1))
+    done
+
+    return 1
+}
+
+if ! retry_git_pull; then
+    echo "错误: git pull 失败，已重试 ${MAX_RETRIES} 次，部署终止"
     exit 1
 fi
 
@@ -74,8 +94,7 @@ if [ ! -d "node_modules" ]; then
     npm install
 fi
 
-pm2 describe git-webhook > /dev/null 2>&1
-if [ $? -eq 0 ]; then
+if pm2 describe git-webhook >/dev/null 2>&1; then
     echo "重启 webhook 服务..."
     pm2 restart git-webhook
 else
