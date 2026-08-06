@@ -1,0 +1,4 @@
+interface:
+  display_name: "Cooyue DB"
+  short_description: "CooyueNext 数据库与服务排查专用助手工具"
+  default_prompt: "Use $cooyue-db to inspect CooyueNext database config, REST tests, or server endpoints."
