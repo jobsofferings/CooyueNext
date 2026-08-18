@@ -104,10 +104,7 @@ export default function Header() {
                 <img src="/assets/images/resources/logo-1.png" alt="Logo" />
               </Link>
             </div>
-            <div className="main-menu__call">
-              <div className="main-menu__call-icon">
-                <span className="icon-telephone"></span>
-              </div>
+            <div className="main-menu__call main-menu__call--text-only">
               <div className="main-menu__call-content">
                 <p className="main-menu__call-sub-title">{dict('Call Anytime')}</p>
                 <h5 className="main-menu__call-number">
