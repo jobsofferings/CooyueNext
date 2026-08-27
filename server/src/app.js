@@ -10,6 +10,11 @@ const seoRouter       = require("./modules/seo/routes");
 const productsRouter  = require("./modules/products/routes");
 const mailRouter      = require("./modules/mail/routes");
 const managementRouter = require("./modules/management/routes");
+const {
+  router: authRouter,
+  authenticateSession,
+  requireManagementAuthForApi,
+} = require("./modules/auth/routes");
 
 const app = express();
 const staticDir = path.join(__dirname, "..", "static");
@@ -79,6 +84,8 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use(authenticateSession);
+
 // ── Routes ─────────────────────────────────────────────────────────────────
 
 app.get("/", (_req, res) => {
@@ -88,6 +95,9 @@ app.get("/", (_req, res) => {
     docs:    "/api",
   });
 });
+
+app.use("/api", authRouter);
+app.use("/api", requireManagementAuthForApi);
 
 // Debug endpoint - shows loaded env vars (remove in production)
 app.get("/api/debug/env", (_req, res) => {
@@ -116,7 +126,7 @@ app.use("/api/health", healthRouter);
  * Public (no auth needed):
  *   GET /api/seo/by-path?path=/about&locale=en – Next.js reads page SEO metadata here
  *
- * Admin (add your auth middleware before these):
+ * Admin (requires management login):
  *   GET    /api/seo              – list seo_keys
  *   POST   /api/seo              – create seo_key
  *   DELETE /api/seo/:key         – delete seo_key + all its records
@@ -140,7 +150,7 @@ app.use("/api/seo", seoRouter);
  *   GET /api/products/:slug             – get one product
  *   GET /api/products/:slug/related     – get related products in same category
  *
- * Admin (add your auth middleware before these):
+ * Admin (requires management login):
  *   POST   /api/products/categories           – upsert category
  *   DELETE /api/products/categories/:slug    – delete category
  *   POST   /api/products                      – upsert product

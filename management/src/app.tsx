@@ -19,6 +19,22 @@ import '@ant-design/v5-patch-for-react-19';
 const isDev = process.env.NODE_ENV === 'development';
 const loginPath = '/user/login';
 
+const authFreePaths = [loginPath];
+
+const redirectToLogin = () => {
+  const { pathname, search } = history.location;
+  if (authFreePaths.includes(pathname)) return;
+
+  const searchParams = new URLSearchParams({
+    redirect: `${pathname}${search || ''}`,
+  });
+
+  history.replace({
+    pathname: loginPath,
+    search: searchParams.toString(),
+  });
+};
+
 /**
  * @see https://umijs.org/docs/api/runtime-config#getinitialstate
  * */
@@ -40,12 +56,12 @@ export async function getInitialState(): Promise<{
   };
   // 如果不是登录页面，执行
   const { location } = history;
-  if (
-    ![loginPath, '/user/register', '/user/register-result'].includes(
-      location.pathname,
-    )
-  ) {
+  if (!authFreePaths.includes(location.pathname)) {
     const currentUser = await fetchUserInfo();
+    if (!currentUser) {
+      redirectToLogin();
+    }
+
     return {
       fetchUserInfo,
       currentUser,
@@ -85,7 +101,11 @@ export const layout: RunTimeLayoutConfig = ({
       content: initialState?.currentUser?.name,
     },
     footerRender: () => <Footer />,
-    onPageChange: () => undefined,
+    onPageChange: () => {
+      if (!initialState?.currentUser) {
+        redirectToLogin();
+      }
+    },
     bgLayoutImgList: [
       {
         src: 'https://mdn.alipayobjects.com/yuyan_qk0oxh/afts/img/D2LWSqNny4sAAAAAAAAAAAAAFl94AQBr',

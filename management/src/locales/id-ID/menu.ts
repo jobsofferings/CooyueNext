@@ -1,5 +1,4 @@
 export default {
-  'menu.welcome': 'Selamat Datang',
   'menu.more-blocks': 'Blocks Lainnya',
   'menu.home': 'Halaman Awal',
   'menu.admin': 'Admin',
@@ -23,7 +22,6 @@ export default {
   'menu.form.step-form.result': 'Form Bertahap(selesai)',
   'menu.form.advanced-form': 'Form Lanjutan',
   'menu.list': 'Daftar',
-  'menu.list.table-list': 'Tabel Pencarian',
   'menu.list.basic-list': 'Daftar Dasar',
   'menu.list.card-list': 'Daftar Kartu',
   'menu.list.search-list': 'Daftar Pencarian',

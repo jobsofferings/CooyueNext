@@ -1,6 +1,22 @@
 ﻿import type { RequestOptions } from '@@/plugin-request/request';
-import type { RequestConfig } from '@umijs/max';
+import { history, type RequestConfig } from '@umijs/max';
 import { message, notification } from 'antd';
+
+const loginPath = '/user/login';
+
+const redirectToLogin = () => {
+  const { pathname, search } = window.location;
+  if (pathname === loginPath) return;
+
+  const searchParams = new URLSearchParams({
+    redirect: `${pathname}${search || ''}`,
+  });
+
+  history.replace({
+    pathname: loginPath,
+    search: searchParams.toString(),
+  });
+};
 
 // 错误处理方案： 错误类型
 enum ErrorShowType {
@@ -74,6 +90,11 @@ export const errorConfig: RequestConfig = {
           }
         }
       } else if (error.response) {
+        if (error.response.status === 401) {
+          message.error(error.response?.data?.errorMessage || '请先登录');
+          redirectToLogin();
+          return;
+        }
         message.error(error.response?.data?.error || `Response status:${error.response.status}`);
       } else if (error.request) {
         message.error('服务没有响应，请确认 /server 已启动。');

@@ -1,5 +1,4 @@
 export default {
-  'menu.welcome': 'ようこそ',
   'menu.more-blocks': 'その他のブロック',
   'menu.home': 'ホーム',
   'menu.admin': '管理者',
@@ -22,7 +21,6 @@ export default {
   'menu.form.step-form.result': 'ステップフォーム（完成）',
   'menu.form.advanced-form': '高度なフォーム',
   'menu.list': 'リスト',
-  'menu.list.table-list': '検索テーブル',
   'menu.list.basic-list': '基本リスト',
   'menu.list.card-list': 'カードリスト',
   'menu.list.search-list': '検索リスト',

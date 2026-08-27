@@ -1,5 +1,4 @@
 export default {
-  'menu.welcome': '歡迎',
   'menu.more-blocks': '更多區塊',
   'menu.home': '首頁',
   'menu.admin': '权限',
@@ -22,7 +21,6 @@ export default {
   'menu.form.step-form.result': '分步表單（完成）',
   'menu.form.advanced-form': '高級表單',
   'menu.list': '列表頁',
-  'menu.list.table-list': '查詢表格',
   'menu.list.basic-list': '標淮列表',
   'menu.list.card-list': '卡片列表',
   'menu.list.search-list': '搜索列表',
