@@ -20,6 +20,10 @@ import React, { useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Footer } from '@/components';
 import { login } from '@/services/ant-design-pro/api';
+import {
+  DEFAULT_AUTHENTICATED_PATH,
+  normalizeInternalRedirect,
+} from '@/utils/authRedirect';
 import Settings from '../../../../config/defaultSettings';
 
 const useStyles = createStyles(({ token }) => {
@@ -79,8 +83,8 @@ const Login: React.FC = () => {
   const { message } = App.useApp();
   const intl = useIntl();
 
-  const fetchUserInfo = async () => {
-    const userInfo = await initialState?.fetchUserInfo?.();
+  const fetchUserInfo = async (fallbackUser?: API.CurrentUser) => {
+    const userInfo = fallbackUser || (await initialState?.fetchUserInfo?.());
     if (userInfo) {
       flushSync(() => {
         setInitialState((s) => ({
@@ -89,6 +93,7 @@ const Login: React.FC = () => {
         }));
       });
     }
+    return userInfo;
   };
 
   const handleSubmit = async (values: API.LoginParams) => {
@@ -101,9 +106,14 @@ const Login: React.FC = () => {
           defaultMessage: '登录成功！',
         });
         message.success(defaultLoginSuccessMessage);
-        await fetchUserInfo();
+        await fetchUserInfo(msg.data);
         const urlParams = new URL(window.location.href).searchParams;
-        window.location.href = urlParams.get('redirect') || '/';
+        window.location.replace(
+          normalizeInternalRedirect(
+            urlParams.get('redirect'),
+            DEFAULT_AUTHENTICATED_PATH,
+          ),
+        );
         return;
       }
       console.log(msg);

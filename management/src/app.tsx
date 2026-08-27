@@ -12,27 +12,22 @@ import {
   SelectLang,
 } from '@/components';
 import { currentUser as queryCurrentUser } from '@/services/ant-design-pro/api';
+import {
+  buildLoginHref,
+  isLoginPath,
+  LOGIN_PATH,
+} from '@/utils/authRedirect';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
 import '@ant-design/v5-patch-for-react-19';
 
 const isDev = process.env.NODE_ENV === 'development';
-const loginPath = '/user/login';
-
-const authFreePaths = [loginPath];
 
 const redirectToLogin = () => {
-  const { pathname, search } = history.location;
-  if (authFreePaths.includes(pathname)) return;
+  const { pathname, search } = window.location;
+  if (isLoginPath(pathname)) return;
 
-  const searchParams = new URLSearchParams({
-    redirect: `${pathname}${search || ''}`,
-  });
-
-  history.replace({
-    pathname: loginPath,
-    search: searchParams.toString(),
-  });
+  window.location.replace(buildLoginHref(`${pathname}${search || ''}`));
 };
 
 /**
@@ -56,7 +51,7 @@ export async function getInitialState(): Promise<{
   };
   // 如果不是登录页面，执行
   const { location } = history;
-  if (!authFreePaths.includes(location.pathname)) {
+  if (!isLoginPath(location.pathname)) {
     const currentUser = await fetchUserInfo();
     if (!currentUser) {
       redirectToLogin();
@@ -95,14 +90,14 @@ export const layout: RunTimeLayoutConfig = ({
       : {
           icon: <UserOutlined />,
           title: '访客模式',
-          render: () => <Link to={loginPath}>登录</Link>,
+          render: () => <Link to={LOGIN_PATH}>登录</Link>,
         },
     waterMarkProps: {
       content: initialState?.currentUser?.name,
     },
     footerRender: () => <Footer />,
     onPageChange: () => {
-      if (!initialState?.currentUser) {
+      if (!initialState?.currentUser && !isLoginPath(window.location.pathname)) {
         redirectToLogin();
       }
     },

@@ -1,21 +1,12 @@
-﻿import type { RequestOptions } from '@@/plugin-request/request';
-import { history, type RequestConfig } from '@umijs/max';
+﻿import type { RequestConfig } from '@umijs/max';
 import { message, notification } from 'antd';
-
-const loginPath = '/user/login';
+import { buildLoginHref, isLoginPath } from '@/utils/authRedirect';
 
 const redirectToLogin = () => {
   const { pathname, search } = window.location;
-  if (pathname === loginPath) return;
+  if (isLoginPath(pathname)) return;
 
-  const searchParams = new URLSearchParams({
-    redirect: `${pathname}${search || ''}`,
-  });
-
-  history.replace({
-    pathname: loginPath,
-    search: searchParams.toString(),
-  });
+  window.location.replace(buildLoginHref(`${pathname}${search || ''}`));
 };
 
 // 错误处理方案： 错误类型

@@ -216,6 +216,7 @@ router.post("/login/account", (req, res) => {
     status: "ok",
     type: requestedType,
     currentAuthority: "admin",
+    data: currentUser(username),
   });
 });
 
