@@ -25,7 +25,7 @@ function currentUser(username) {
     name: username,
     avatar: "/logo.svg",
     userid: username,
-    email: "admin@cooyue.com",
+    email: "admin@cooyue.tech",
     access: "admin",
   };
 }

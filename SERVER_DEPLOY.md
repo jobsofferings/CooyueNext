@@ -272,8 +272,8 @@ curl http://localhost:9000/health
 **Ubuntu/Debian (ufw):**
 
 ```bash
-sudo ufw allow 3000/tcp
-sudo ufw allow 9000/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
 sudo ufw reload
 sudo ufw status
 ```
@@ -281,12 +281,12 @@ sudo ufw status
 **CentOS/RHEL (firewalld):**
 
 ```bash
-sudo firewall-cmd --permanent --add-port=3000/tcp
-sudo firewall-cmd --permanent --add-port=9000/tcp
+sudo firewall-cmd --permanent --add-port=80/tcp
+sudo firewall-cmd --permanent --add-port=443/tcp
 sudo firewall-cmd --reload
 ```
 
-**云服务器：** 在云控制台安全组中开放 3000 和 9000 端口
+**云服务器：** 在云控制台安全组中开放 80 和 443 端口
 
 ---
 
@@ -296,7 +296,7 @@ sudo firewall-cmd --reload
 
 | 配置项 | 值 |
 |--------|-----|
-| Payload URL | `http://服务器IP:9000/webhook` |
+| Payload URL | `https://www.cooyue.tech/webhook` |
 | Content type | `application/json` |
 | Secret | 与 `.env` 中 `WEBHOOK_SECRET` 一致 |
 | Events | Just the push event |
@@ -308,8 +308,11 @@ sudo firewall-cmd --reload
 
 | 服务 | 端口 | 运行方式 | 用途 |
 |------|------|----------|------|
-| Next.js | 3000 | Docker | Web 应用访问 |
-| Webhook | 9000 | PM2 | GitHub webhook 接收 |
+| HTTP 入口 | 80 | Nginx | 301 跳转到 HTTPS |
+| HTTPS 入口 | 443 | Nginx | Web 应用访问 |
+| Next.js | 3000 | Docker | 内部上游 |
+| API | 3001 | Docker | 内部上游 |
+| Webhook | 9000 | PM2 | 内部上游 |
 
 ---
 
@@ -562,7 +565,16 @@ WEBHOOK_PORT=9001
 # /etc/nginx/sites-available/cooyue
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name cooyue.tech www.cooyue.tech;
+    return 301 https://www.cooyue.tech$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name cooyue.tech www.cooyue.tech;
+
+    ssl_certificate /etc/letsencrypt/live/www.cooyue.tech/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/www.cooyue.tech/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -572,6 +584,17 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
 
@@ -581,6 +604,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Hub-Signature-256 $http_x_hub_signature_256;
         proxy_set_header X-GitHub-Event $http_x_github_event;
     }
@@ -601,7 +625,7 @@ sudo systemctl reload nginx
 sudo apt install certbot python3-certbot-nginx
 
 # 自动配置 SSL
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d www.cooyue.tech -d cooyue.tech --redirect
 
 # 自动续期（certbot 会自动添加定时任务）
 sudo certbot renew --dry-run

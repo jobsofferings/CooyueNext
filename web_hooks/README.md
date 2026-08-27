@@ -55,7 +55,7 @@ bash deploy.sh
 
 | 配置项 | 值 | 说明 |
 |--------|-----|------|
-| **Payload URL** | `http://你的服务器IP:9000/webhook` | webhook 接收地址 |
+| **Payload URL** | `https://www.cooyue.tech/webhook` | webhook 接收地址 |
 | **Content type** | `application/json` | 必须选择 JSON 格式 |
 | **Secret** | 留空或随意填写 | 当前版本未实现签名验证 |
 | **Which events** | `Just the push event` | 选择 push 事件 |
@@ -70,7 +70,7 @@ bash deploy.sh
 │                                                         │
 │ Payload URL *                                           │
 │ ┌─────────────────────────────────────────────────────┐ │
-│ │ http://your-server-ip:9000/webhook                  │ │
+│ │ https://www.cooyue.tech/webhook                     │ │
 │ └─────────────────────────────────────────────────────┘ │
 │                                                         │
 │ Content type *                                          │
@@ -97,7 +97,7 @@ bash deploy.sh
 
 | 配置项 | 值 |
 |--------|-----|
-| URL | `http://你的服务器IP:9000/webhook` |
+| URL | `https://www.cooyue.tech/webhook` |
 | Trigger | ✅ Push events |
 
 ---
@@ -160,7 +160,7 @@ curl -X POST http://localhost:9000/webhook \
 
 ⚠️ **当前版本未实现签名验证**，建议采取以下安全措施：
 
-1. **使用防火墙限制访问** - 只允许 GitHub/GitLab 的 IP 段访问 9000 端口
+1. **使用防火墙限制访问** - 只允许反代主机或 GitHub/GitLab 的 IP 段访问 9000 端口
 2. **使用 Nginx 反向代理** - 配置 HTTPS 和访问控制
 3. **监控服务日志** - 定期检查 PM2 日志以发现异常请求
 
@@ -185,7 +185,7 @@ https://docs.gitlab.com/ee/user/gitlab_com/#ip-range
 ### Webhook 未触发
 
 1. 检查 GitHub/GitLab 的 Webhook **Recent Deliveries** 查看请求状态
-2. 确认服务器防火墙已开放 9000 端口
+2. 确认 Nginx 已配置并且 `https://www.cooyue.tech/webhook` 可访问
 3. 确认 webhook 服务正在运行：`pm2 list`
 4. 查看服务日志：`pm2 logs git-webhook`
 
@@ -220,8 +220,10 @@ pm2 startup
 
 ```nginx
 server {
-    listen 80;
-    server_name webhook.yourdomain.com;
+    listen 443 ssl http2;
+    server_name www.cooyue.tech;
+    # ssl_certificate /etc/letsencrypt/live/www.cooyue.tech/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/www.cooyue.tech/privkey.pem;
 
     location /webhook {
         proxy_pass http://127.0.0.1:9000;
@@ -229,6 +231,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```

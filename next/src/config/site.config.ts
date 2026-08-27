@@ -1,5 +1,5 @@
 export const siteConfig = {
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://cooyue.com",
+  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://www.cooyue.tech",
 
   company: {
     name: "Cooyue",

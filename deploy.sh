@@ -9,6 +9,7 @@ WEB_HOOKS_DIR="$PROJECT_ROOT/web_hooks"
 MAX_RETRIES=6
 RETRY_DELAY=2
 GIT_PULL_TIMEOUT=10
+PUBLIC_SITE_URL=${PUBLIC_SITE_URL:-https://www.cooyue.tech/}
 
 run_compose_up() {
     if docker compose up -d --build; then
@@ -142,7 +143,7 @@ echo "[7/7] Smoke Test..."
 smoke_test "Server local" "http://127.0.0.1:3001/"
 smoke_test "Next local" "http://127.0.0.1:3000/en"
 smoke_test "Management local" "http://127.0.0.1:3003/"
-smoke_test "Next public" "http://43.139.70.61:3000/"
+smoke_test "Next public" "$PUBLIC_SITE_URL"
 
 echo ""
 echo "========================================"
@@ -157,6 +158,7 @@ echo ""
 echo "Management: http://localhost:3003"
 echo "Next.js:   http://localhost:3000"
 echo "Server:    http://localhost:3001"
+echo "Public:    $PUBLIC_SITE_URL"
 echo ""
 echo "PM2 服务:"
 pm2 list

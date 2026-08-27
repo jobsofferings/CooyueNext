@@ -25,7 +25,7 @@ RUN yarn install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=http://43.139.70.61:3001
-ARG NEXT_PUBLIC_SITE_URL=https://cooyue.com
+ARG NEXT_PUBLIC_SITE_URL=https://www.cooyue.tech
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 # 从 deps 阶段复制已安装的依赖
@@ -46,7 +46,7 @@ RUN yarn build
 FROM base AS runner
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=http://43.139.70.61:3001
-ARG NEXT_PUBLIC_SITE_URL=https://cooyue.com
+ARG NEXT_PUBLIC_SITE_URL=https://www.cooyue.tech
 
 # 设置生产环境
 ENV NODE_ENV=production
