@@ -40,10 +40,8 @@ export default function AppLayout({
         <link rel="stylesheet" href="/assets/css/sinace.css" />
         <link rel="stylesheet" href="/assets/css/sinace-responsive.css" />
       </head>
-      <body className="custom-cursor">
+      <body>
         <HtmlLangSync />
-        <div className="custom-cursor__cursor"></div>
-        <div className="custom-cursor__cursor-two"></div>
 
         <div className="preloader">
           <div className="preloader__image"></div>

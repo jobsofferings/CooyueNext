@@ -8,7 +8,6 @@ import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
 import {
   getProductBySlug,
-  getProducts,
   getRelatedProducts,
   toProductDetail,
 } from '@/lib/products-api'
@@ -60,17 +59,6 @@ const detailCopy: Record<
 
 interface ProductDetailPageProps {
   params: { lang: Locale; id: string }
-}
-
-export async function generateStaticParams() {
-  const records = await Promise.all(i18n.locales.map((lang) => getProducts(lang)))
-
-  return records.flatMap((items, index) =>
-    items.map((product) => ({
-      lang: i18n.locales[index],
-      id: product.slug,
-    }))
-  )
 }
 
 export async function generateMetadata({ params }: ProductDetailPageProps): Promise<Metadata> {

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Metadata } from 'next'
+import ProductCatalog from '@/components/products/ProductCatalog'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
@@ -8,11 +9,21 @@ import { i18n, Locale } from '@/i18n-config'
 import {
   getProductCategories,
   getProducts,
+  type ProductCategoryRecord,
   toProductFamilySections,
 } from '@/lib/products-api'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 export const revalidate = 300
+
+const INFRARED_ROOT_CATEGORY = 'infrared-products'
+
+function getCatalogCategories(categories: ProductCategoryRecord[]) {
+  return categories.filter(
+    (category) =>
+      category.slug === INFRARED_ROOT_CATEGORY || category.parent_slug === INFRARED_ROOT_CATEGORY
+  )
+}
 
 const pageCopy: Record<
   Locale,
@@ -33,6 +44,8 @@ const pageCopy: Record<
       button: string
     }
     viewLabel: string
+    moreLabel: string
+    lessLabel: string
   }
 > = {
   zh: {
@@ -63,6 +76,8 @@ const pageCopy: Record<
       button: '联系我们',
     },
     viewLabel: '查看详情',
+    moreLabel: '更多产品',
+    lessLabel: '收起产品',
   },
   en: {
     capability: {
@@ -92,6 +107,8 @@ const pageCopy: Record<
       button: 'Contact Us',
     },
     viewLabel: 'View Detail',
+    moreLabel: 'More Products',
+    lessLabel: 'Show Less',
   },
 }
 
@@ -101,9 +118,10 @@ export async function generateMetadata({
   params: { lang: Locale }
 }): Promise<Metadata> {
   const categories = await getProductCategories(lang)
+  const catalogCategories = getCatalogCategories(categories)
   const copy = pageCopy[lang]
   const defaultDescription =
-    categories.map((category) => category.description).filter(Boolean).join(' ') ||
+    catalogCategories.map((category) => category.description).filter(Boolean).join(' ') ||
     copy.capability.description
 
   const seoData = await getSeoByPath('/products', lang)
@@ -138,7 +156,7 @@ export default async function ProductsPage({
   const dict = await getDictionary(lang)
   const copy = pageCopy[lang]
   const [categories, products] = await Promise.all([getProductCategories(lang), getProducts(lang)])
-  const sections = toProductFamilySections(categories, products)
+  const sections = toProductFamilySections(getCatalogCategories(categories), products)
 
   return (
     <>
@@ -203,50 +221,14 @@ export default async function ProductsPage({
           {sections.length === 0 ? (
             <p className="text-center">{copy.empty}</p>
           ) : (
-            <div className="products-catalog__list">
-              {sections.map((section) => (
-                <div
-                  key={section.id}
-                  id={section.id}
-                  className="products-catalog__section products-anchor"
-                >
-                  <div className="products-catalog__section-header">
-                    <div>
-                      <h3 className="products-catalog__section-title">{section.name}</h3>
-                      <p className="products-catalog__section-lead">{section.lead}</p>
-                    </div>
-                    <Link href={`/${lang}/contact`} className="products-catalog__header-link">
-                      {copy.cta.button}
-                      <span className="fa fa-angle-right"></span>
-                    </Link>
-                  </div>
-                  <div className="row">
-                    {section.products.map((product) => (
-                      <div key={product.id} className="col-xl-4 col-lg-4 col-md-6">
-                        <Link href={`/${lang}/products/${product.id}`} className="products-catalog__card">
-                          <span className="products-catalog__card-label">{section.name}</span>
-                          <h4 className="products-catalog__card-model">{product.model}</h4>
-                          <p className="products-catalog__card-subtitle">{product.subtitle}</p>
-                          <p className="products-catalog__card-description">{product.description}</p>
-                          <ul className="products-catalog__specs list-unstyled">
-                            {product.specs.map((spec) => (
-                              <li key={spec}>
-                                <span className="fa fa-check-circle"></span>
-                                {spec}
-                              </li>
-                            ))}
-                          </ul>
-                          <span className="products-catalog__detail-link">
-                            {copy.viewLabel}
-                            <span className="fa fa-angle-right"></span>
-                          </span>
-                        </Link>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+            <ProductCatalog
+              sections={sections}
+              lang={lang}
+              contactLabel={copy.cta.button}
+              viewLabel={copy.viewLabel}
+              moreLabel={copy.moreLabel}
+              lessLabel={copy.lessLabel}
+            />
           )}
         </div>
       </section>

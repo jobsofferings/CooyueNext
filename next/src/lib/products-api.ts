@@ -89,6 +89,8 @@ const CATEGORY_IMAGE_MAP: Record<string, string> = {
 
 const PRODUCT_IMAGE_FALLBACK = '/assets/images/services/services-details-benefit-img.jpg'
 const DEFAULT_API_URL = 'http://43.139.70.61:3001'
+const PRODUCTS_PAGE_SIZE = 100
+const MAX_PRODUCT_PAGES = 20
 
 const getApiBaseUrl = (): string | null => {
   const apiUrl = process.env.SEO_API_URL || process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL
@@ -135,8 +137,23 @@ export async function getProductCategories(locale: Locale): Promise<ProductCateg
 }
 
 export async function getProducts(locale: Locale): Promise<ProductRecord[]> {
-  const response = await fetchFromApi<ApiListResponse<ProductRecord>>(`/api/products?locale=${locale}&pageSize=100`)
-  return response?.data || []
+  const products: ProductRecord[] = []
+
+  for (let page = 1; page <= MAX_PRODUCT_PAGES; page += 1) {
+    const response = await fetchFromApi<ApiListResponse<ProductRecord>>(
+      `/api/products?locale=${locale}&page=${page}&pageSize=${PRODUCTS_PAGE_SIZE}`
+    )
+    const pageProducts = response?.data || []
+
+    products.push(...pageProducts)
+
+    const total = response?.total ?? products.length
+    if (!response || pageProducts.length === 0 || products.length >= total || pageProducts.length < PRODUCTS_PAGE_SIZE) {
+      break
+    }
+  }
+
+  return products
 }
 
 export async function getProductBySlug(locale: Locale, slug: string): Promise<ProductRecord | null> {
@@ -250,10 +267,10 @@ export function toProductFamilySections(
   categories: ProductCategoryRecord[],
   products: ProductRecord[]
 ): ProductFamilySection[] {
-  const categoryMap = new Map(categories.map((category) => [category.slug, category]))
+  const productCategorySlugs = new Set(products.map((product) => product.category_slug).filter(Boolean))
 
   return categories
-    .filter((category) => category.parent_slug !== null || products.some((item) => item.category_slug === category.slug))
+    .filter((category) => productCategorySlugs.has(category.slug))
     .map((category) => {
       const categoryProducts = products
         .filter((product) => product.category_slug === category.slug)
@@ -281,7 +298,7 @@ export function toProductFamilySections(
         }),
       }
     })
-    .filter((section) => section.products.length > 0 || categoryMap.has(section.id))
+    .filter((section) => section.products.length > 0)
 }
 
 export function toProductDetail(record: ProductRecord): ProductDetailView {

@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 
 export default function ScriptInitializer() {
   const pathname = usePathname()
-  const initialized = useRef(false)
 
   useEffect(() => {
     const initPlugins = () => {
@@ -142,53 +141,8 @@ export default function ScriptInitializer() {
       handleScroll()
     }
 
-    const initCustomCursor = () => {
-      if (typeof window === 'undefined' || !document.querySelector('.custom-cursor')) {
-        return
-      }
-
-      const cursor = document.querySelector('.custom-cursor__cursor') as HTMLElement
-      const cursorinner = document.querySelector('.custom-cursor__cursor-two') as HTMLElement
-      const anchors = document.querySelectorAll('a')
-
-      if (!cursor || !cursorinner) return
-
-      const handleMouseMove = (e: MouseEvent) => {
-        cursor.style.transform = `translate3d(calc(${e.clientX}px - 50%), calc(${e.clientY}px - 50%), 0)`
-        cursorinner.style.left = e.clientX + 'px'
-        cursorinner.style.top = e.clientY + 'px'
-      }
-
-      const handleMouseDown = () => {
-        cursor.classList.add('click')
-        cursorinner.classList.add('custom-cursor__innerhover')
-      }
-
-      const handleMouseUp = () => {
-        cursor.classList.remove('click')
-        cursorinner.classList.remove('custom-cursor__innerhover')
-      }
-
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mousedown', handleMouseDown)
-      document.addEventListener('mouseup', handleMouseUp)
-
-      anchors.forEach(item => {
-        item.addEventListener('mouseover', () => {
-          cursor.classList.add('custom-cursor__hover')
-        })
-        item.addEventListener('mouseleave', () => {
-          cursor.classList.remove('custom-cursor__hover')
-        })
-      })
-    }
-
     const timer = setTimeout(() => {
       initPlugins()
-      if (!initialized.current) {
-        initCustomCursor()
-        initialized.current = true
-      }
     }, 500)
 
     return () => {
