@@ -28,6 +28,7 @@ const detailCopy: Record<
     inquiryText: string
     inquiryButton: string
     relatedButton: string
+    imagePendingLabel: string
   }
 > = {
   zh: {
@@ -41,6 +42,7 @@ const detailCopy: Record<
     inquiryText: '如果你已经确定了使用场景、探测距离或结构限制，我们可以基于当前产品进一步匹配方案。',
     inquiryButton: '联系销售团队',
     relatedButton: '查看详情',
+    imagePendingLabel: '暂无产品图',
   },
   en: {
     backLabel: 'Back to Products',
@@ -54,6 +56,7 @@ const detailCopy: Record<
       'If you already know the deployment scenario, target range, or integration limits, we can match this product to a more complete solution path.',
     inquiryButton: 'Talk to Sales',
     relatedButton: 'View Detail',
+    imagePendingLabel: 'Image pending',
   },
 }
 
@@ -83,7 +86,7 @@ export async function generateMetadata({ params }: ProductDetailPageProps): Prom
       title: seoMeta.title,
       description: seoMeta.description,
       url: seoMeta.canonical || `/${params.lang}/products/${params.id}`,
-      images: seoMeta.ogImage ? [seoMeta.ogImage] : [product.image],
+      images: seoMeta.ogImage ? [seoMeta.ogImage] : product.hasImage ? [product.image] : undefined,
     },
     alternates: {
       canonical: seoMeta.canonical || `/${params.lang}/products/${params.id}`,
@@ -123,8 +126,16 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
         <div className="container">
           <div className="row">
             <div className="col-xl-6 col-lg-6">
-              <div className="product-detail-top__image">
-                <img src={product.image} alt={product.model} />
+              <div className={`product-detail-top__image${product.hasImage ? '' : ' product-detail-top__image--empty'}`}>
+                {product.hasImage ? (
+                  <img src={product.image} alt={product.model} />
+                ) : (
+                  <div className="product-detail-top__placeholder" role="img" aria-label={copy.imagePendingLabel}>
+                    <span className="product-detail-top__placeholder-icon fa fa-image"></span>
+                    <span className="product-detail-top__placeholder-label">{copy.imagePendingLabel}</span>
+                    <strong className="product-detail-top__placeholder-model">{product.model}</strong>
+                  </div>
+                )}
               </div>
             </div>
             <div className="col-xl-6 col-lg-6">

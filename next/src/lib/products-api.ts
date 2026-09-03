@@ -74,6 +74,7 @@ export interface ProductDetailView {
   description: string
   specs: string[]
   image: string
+  hasImage: boolean
   intro: string
   highlights: string[]
   applications: string[]
@@ -250,6 +251,17 @@ function getMetrics(record: ProductRecord): ProductMetric[] {
 }
 
 function getImage(record: ProductRecord): string {
+  const productImage = getProductImage(record)
+  if (productImage) {
+    return productImage
+  }
+  if (record.category_slug && CATEGORY_IMAGE_MAP[record.category_slug]) {
+    return CATEGORY_IMAGE_MAP[record.category_slug]
+  }
+  return PRODUCT_IMAGE_FALLBACK
+}
+
+function getProductImage(record: ProductRecord): string | null {
   const extra = asRecord(record.extra)
   if (typeof extra.cover_image === 'string' && extra.cover_image) {
     return extra.cover_image
@@ -257,10 +269,7 @@ function getImage(record: ProductRecord): string {
   if (record.images[0]) {
     return record.images[0]
   }
-  if (record.category_slug && CATEGORY_IMAGE_MAP[record.category_slug]) {
-    return CATEGORY_IMAGE_MAP[record.category_slug]
-  }
-  return PRODUCT_IMAGE_FALLBACK
+  return null
 }
 
 export function toProductFamilySections(
@@ -326,6 +335,7 @@ export function toProductDetail(record: ProductRecord): ProductDetailView {
       '',
     specs: getSpecs(record),
     image: getImage(record),
+    hasImage: Boolean(getProductImage(record)),
     intro: record.description || record.short_description || record.name,
     highlights: highlights.length > 0 ? highlights : getSpecs(record),
     applications: applications.length > 0 ? applications : record.tags.slice(0, 4),
