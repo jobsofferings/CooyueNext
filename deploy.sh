@@ -2,6 +2,20 @@
 
 set -eu
 
+if [ "${COOYUE_DEPLOY_LOCKED:-0}" != "1" ]; then
+    LOCK_FILE=${COOYUE_DEPLOY_LOCK_FILE:-/tmp/cooyue-deploy.lock}
+    LOCK_WAIT=${COOYUE_DEPLOY_LOCK_WAIT:-900}
+
+    if command -v flock >/dev/null 2>&1; then
+        echo "等待部署锁: ${LOCK_FILE}"
+        COOYUE_DEPLOY_LOCKED=1
+        export COOYUE_DEPLOY_LOCKED
+        exec flock -w "$LOCK_WAIT" "$LOCK_FILE" sh "$0" "$@"
+    else
+        echo "! 未检测到 flock，继续执行但无法阻止并发部署"
+    fi
+fi
+
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 PROJECT_ROOT="$SCRIPT_DIR"
 WEB_HOOKS_DIR="$PROJECT_ROOT/web_hooks"
