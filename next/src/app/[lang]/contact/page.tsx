@@ -1,10 +1,25 @@
 import { Metadata } from 'next'
+import { ContactForm } from '@/components/contact/ContactForm'
 import { PageHeader } from '@/components/layout'
 import { SectionTitle } from '@/components/ui'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
+
+type ContactPageSearchParams = {
+  name?: string | string[]
+  email?: string | string[]
+  message?: string | string[]
+}
+
+function firstSearchValue(value?: string | string[]) {
+  if (Array.isArray(value)) {
+    return value[0] || ''
+  }
+
+  return value || ''
+}
 
 export async function generateMetadata({
   params: { lang },
@@ -42,10 +57,18 @@ export async function generateMetadata({
 
 export default async function ContactPage({
   params: { lang },
+  searchParams,
 }: {
   params: { lang: Locale }
+  searchParams?: ContactPageSearchParams
 }) {
   const dict = await getDictionary(lang)
+  const pagePath = `/${lang}/contact`
+  const initialValues = {
+    name: firstSearchValue(searchParams?.name),
+    email: firstSearchValue(searchParams?.email),
+    message: firstSearchValue(searchParams?.message),
+  }
   
   return (
     <>
@@ -58,36 +81,17 @@ export default async function ContactPage({
         <div className="container">
           <div className="row">
             <div className="col-xl-5 col-lg-6">
-              <div className="contact-page__left">
-                <div className="contact-page__form-box">
-                  <form className="contact-page__form">
-                    <div className="row">
-                      <div className="col-xl-12">
-                        <div className="contact-page__input-box">
-                          <input type="text" placeholder={dict('Your name')} name="name" />
-                        </div>
-                      </div>
-                      <div className="col-xl-12">
-                        <div className="contact-page__input-box">
-                          <input type="email" placeholder={dict('Email address')} name="email" />
-                        </div>
-                      </div>
-                    </div>
-                    <div className="row">
-                      <div className="col-xl-12">
-                        <div className="contact-page__input-box text-message-box">
-                          <textarea name="message" placeholder={dict('Write message')}></textarea>
-                        </div>
-                        <div className="contact-page__btn-box">
-                          <button type="submit" className="thm-btn contact-page__btn">
-                            {dict('Send a Message')}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
-              </div>
+              <ContactForm
+                lang={lang}
+                pagePath={pagePath}
+                labels={{
+                  name: dict('Your name'),
+                  email: dict('Email address'),
+                  message: dict('Write message'),
+                  submit: dict('Send a Message'),
+                }}
+                initialValues={initialValues}
+              />
             </div>
             <div className="col-xl-7 col-lg-6">
               <div className="contact-page__right">
@@ -133,14 +137,6 @@ export default async function ContactPage({
             </div>
           </div>
         </div>
-      </section>
-
-      <section className="contact-page-google-map">
-        <iframe
-          src={siteConfig.map.embedUrl}
-          className="contact-page-google-map__box"
-          allowFullScreen
-        ></iframe>
       </section>
     </>
   )

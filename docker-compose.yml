@@ -61,6 +61,14 @@ services:
       - ./server/.env
     environment:
       - NODE_ENV=production
+      - CONTACT_FROM_NAME=${CONTACT_FROM_NAME:-Cooyue Contact}
+      - CONTACT_RECIPIENT_EMAIL=${CONTACT_RECIPIENT_EMAIL:-}
+      - CONTACT_SMTP_HOST=${CONTACT_SMTP_HOST:-}
+      - CONTACT_SMTP_PORT=${CONTACT_SMTP_PORT:-465}
+      - CONTACT_SMTP_SECURE=${CONTACT_SMTP_SECURE:-true}
+      - CONTACT_SMTP_USER=${CONTACT_SMTP_USER:-}
+      - CONTACT_SMTP_PASS=${CONTACT_SMTP_PASS:-}
+      - CONTACT_MAIL_SUBJECT_PREFIX=${CONTACT_MAIL_SUBJECT_PREFIX:-Cooyue Contact}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

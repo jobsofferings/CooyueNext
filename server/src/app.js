@@ -9,6 +9,7 @@ const healthRouter    = require("./routes/health");
 const seoRouter       = require("./modules/seo/routes");
 const productsRouter  = require("./modules/products/routes");
 const mailRouter      = require("./modules/mail/routes");
+const contactRouter   = require("./modules/contact/routes");
 const managementRouter = require("./modules/management/routes");
 const {
   router: authRouter,
@@ -97,6 +98,7 @@ app.get("/", (_req, res) => {
 });
 
 app.use("/api", authRouter);
+app.use("/api/contact", contactRouter);
 app.use("/api", requireManagementAuthForApi);
 
 // Debug endpoint - shows loaded env vars (remove in production)
