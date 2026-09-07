@@ -175,7 +175,11 @@ export default function Header() {
                       <LanguageSwitcher />
                     </div>
                     <div className="main-menu__search-box">
-                      <a href="#" className="main-menu__search search-toggler icon-magnifying-glass"></a>
+                      <a
+                        href={getLocalizedHref('/search')}
+                        className="main-menu__search search-toggler icon-magnifying-glass"
+                        aria-label={dict('search here')}
+                      ></a>
                     </div>
                     <div className="main-menu__btn-box">
                       <Link href={getLocalizedHref('/contact')} className="thm-btn main-menu__btn">

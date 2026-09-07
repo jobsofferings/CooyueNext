@@ -98,28 +98,6 @@ export default function ScriptInitializer() {
         }
       }
 
-      if ($('.search-toggler').length) {
-        $('.search-toggler').off('click').on('click', (e: Event) => {
-          e.preventDefault()
-          $('.search-popup').addClass('active')
-          $('.mobile-nav__wrapper').removeClass('expanded')
-          document.body.classList.add('locked')
-          window.setTimeout(() => {
-            const searchInput = document.querySelector<HTMLInputElement>('#search-popup-keywords')
-            searchInput?.focus()
-          }, 0)
-        })
-      }
-
-      const searchOverlay = document.querySelector('.search-popup__overlay')
-      if (searchOverlay) {
-        searchOverlay.addEventListener('click', (e) => {
-          e.preventDefault()
-          $('.search-popup').removeClass('active')
-          document.body.classList.remove('locked')
-        })
-      }
-
       const mobileTogglers = document.querySelectorAll('.mobile-nav__toggler')
       mobileTogglers.forEach((toggler) => {
         toggler.addEventListener('click', (e) => {

@@ -5,6 +5,45 @@ import { useParams } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
 import { useDictionary } from '@/hooks/useDictionary'
 
+const footerGalleryItems = [
+  {
+    slug: 'hikmicro-le10-3-0',
+    name: 'HIKMICRO LE10 3.0',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/thermal-monoculars/hikmicro-le10-3-0/02-0b929888c7af.png',
+  },
+  {
+    slug: 'hikmicro-sh35-3-0',
+    name: 'HIKMICRO SH35 3.0',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/thermal-scopes/hikmicro-sh35-3-0/02-66efdfb603a9.png',
+  },
+  {
+    slug: 'hikmicro-hq50l',
+    name: 'HIKMICRO HQ50L',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/thermal-binoculars/hikmicro-hq50l/02-ca8151fa6be7.png',
+  },
+  {
+    slug: 'hikmicro-minie',
+    name: 'HIKMICRO MiniE',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/thermal-phone-modules/hikmicro-minie/01-73b39778c512.png',
+  },
+  {
+    slug: 'hikmicro-b20s',
+    name: 'HIKMICRO B20S',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/handheld-thermal-cameras/hikmicro-b20s/01-c4db8993a46d.png',
+  },
+  {
+    slug: 'hikmicro-hm-td2a37t-15-q',
+    name: 'HIKMICRO HM-TD2A37T-15/Q',
+    image:
+      'https://jobsofferings.oss-cn-hangzhou.aliyuncs.com/cooyue_product/fixed-thermal-cameras/hikmicro-hm-td2a37t-15-q/01-a95ba1e0b3f6.png',
+  },
+]
+
 export default function Footer() {
   const params = useParams()
   const lang = params.lang as string
@@ -93,16 +132,23 @@ export default function Footer() {
                   <h3 className="footer-widget__title">{dict('Gallery')}</h3>
                 </div>
                 <ul className="footer-widget__portfolio-list list-unstyled clearfix">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <li key={i}>
-                      <div className="footer-widget__portfolio-img">
+                  {footerGalleryItems.map((item) => (
+                    <li key={item.slug}>
+                      <div className="footer-widget__portfolio-img footer-widget__portfolio-img--product">
                         <img
-                          src={`/assets/images/project/footer-widget-portfolio-img-${i}.jpg`}
-                          alt=""
+                          src={item.image}
+                          alt={item.name}
+                          loading="lazy"
+                          decoding="async"
                         />
-                        <a href="#">
-                          <span className="fab fa-instagram"></span>
-                        </a>
+                        <Link
+                          href={getLocalizedHref(`/products/${item.slug}`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={item.name}
+                        >
+                          <span className="fa fa-external-link-alt"></span>
+                        </Link>
                       </div>
                     </li>
                   ))}

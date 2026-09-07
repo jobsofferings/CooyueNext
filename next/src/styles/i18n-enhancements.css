@@ -733,6 +733,20 @@
   padding-top: 0;
 }
 
+.footer-widget__portfolio-img.footer-widget__portfolio-img--product {
+  height: 80px;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.footer-widget__portfolio-img.footer-widget__portfolio-img--product img {
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  object-fit: contain;
+  background: #fff;
+}
+
 .search-page {
   padding: 96px 0 120px;
 }
