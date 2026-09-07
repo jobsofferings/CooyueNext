@@ -104,6 +104,10 @@ export default function ScriptInitializer() {
           $('.search-popup').addClass('active')
           $('.mobile-nav__wrapper').removeClass('expanded')
           document.body.classList.add('locked')
+          window.setTimeout(() => {
+            const searchInput = document.querySelector<HTMLInputElement>('#search-popup-keywords')
+            searchInput?.focus()
+          }, 0)
         })
       }
 

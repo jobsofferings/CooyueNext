@@ -131,7 +131,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   <img src={product.image} alt={product.model} />
                 ) : (
                   <div className="product-detail-top__placeholder" role="img" aria-label={copy.imagePendingLabel}>
-                    <span className="product-detail-top__placeholder-icon fa fa-image"></span>
+                    <span className="product-detail-top__placeholder-icon">
+                      <i className="fa fa-image" aria-hidden="true"></i>
+                    </span>
                     <span className="product-detail-top__placeholder-label">{copy.imagePendingLabel}</span>
                     <strong className="product-detail-top__placeholder-model">{product.model}</strong>
                   </div>
@@ -261,7 +263,12 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             <div className="row">
               {relatedProducts.map((item) => (
                 <div key={item.id} className="col-xl-4 col-lg-4 col-md-6">
-                  <Link href={`/${params.lang}/products/${item.id}`} className="products-catalog__card">
+                  <Link
+                    href={`/${params.lang}/products/${item.id}`}
+                    className="products-catalog__card"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <span className="products-catalog__card-label">{item.familyName}</span>
                     <h4 className="products-catalog__card-model">{item.model}</h4>
                     <p className="products-catalog__card-subtitle">{item.subtitle}</p>

@@ -73,7 +73,12 @@ export default function ProductCatalog({
             <div id={`${section.id}-products`} className="row products-catalog__grid">
               {visibleProducts.map((product) => (
                 <div key={product.id} className="col-xl-4 col-lg-4 col-md-6">
-                  <Link href={`/${lang}/products/${product.id}`} className="products-catalog__card">
+                  <Link
+                    href={`/${lang}/products/${product.id}`}
+                    className="products-catalog__card"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     <span className="products-catalog__card-label">{section.name}</span>
                     <h4 className="products-catalog__card-model">{product.model}</h4>
                     <p className="products-catalog__card-subtitle">{product.subtitle}</p>
