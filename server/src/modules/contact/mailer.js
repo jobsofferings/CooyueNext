@@ -12,6 +12,11 @@ function parseBoolean(value, fallback = false) {
   return ["1", "true", "yes", "on"].includes(String(value).trim().toLowerCase());
 }
 
+function parsePositiveInteger(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function inferSmtpHost(email) {
   const normalized = String(email || "").trim().toLowerCase();
   if (!normalized) {
@@ -46,6 +51,22 @@ function getContactMailConfig() {
   ).trim();
   const smtpPort = Number(process.env.CONTACT_SMTP_PORT) || 465;
   const secure = parseBoolean(process.env.CONTACT_SMTP_SECURE, smtpPort === 465);
+  const requireTLS = parseBoolean(
+    process.env.CONTACT_SMTP_REQUIRE_TLS,
+    !secure && smtpPort === 587
+  );
+  const connectionTimeoutMs = parsePositiveInteger(
+    process.env.CONTACT_SMTP_CONNECTION_TIMEOUT_MS,
+    15_000
+  );
+  const greetingTimeoutMs = parsePositiveInteger(
+    process.env.CONTACT_SMTP_GREETING_TIMEOUT_MS,
+    15_000
+  );
+  const socketTimeoutMs = parsePositiveInteger(
+    process.env.CONTACT_SMTP_SOCKET_TIMEOUT_MS,
+    30_000
+  );
   const fromName = String(process.env.CONTACT_FROM_NAME || DEFAULT_FROM_NAME).trim();
   const subjectPrefix = String(
     process.env.CONTACT_MAIL_SUBJECT_PREFIX || DEFAULT_SUBJECT_PREFIX
@@ -58,6 +79,10 @@ function getContactMailConfig() {
     smtpHost,
     smtpPort,
     secure,
+    requireTLS,
+    connectionTimeoutMs,
+    greetingTimeoutMs,
+    socketTimeoutMs,
     fromName,
     subjectPrefix,
     enabled: Boolean(recipientEmail && smtpUser && smtpPass && smtpHost),
@@ -141,6 +166,10 @@ function createTransport(config) {
     host: config.smtpHost,
     port: config.smtpPort,
     secure: config.secure,
+    requireTLS: config.requireTLS,
+    connectionTimeout: config.connectionTimeoutMs,
+    greetingTimeout: config.greetingTimeoutMs,
+    socketTimeout: config.socketTimeoutMs,
     auth: {
       user: config.smtpUser,
       pass: config.smtpPass,
