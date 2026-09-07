@@ -14,7 +14,7 @@ export default function AppLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="assets/vendors/fonts/googleapis.css"
+          href="/assets/vendors/fonts/googleapis.css"
           rel="stylesheet"
         />
         <link rel="stylesheet" href="/assets/vendors/bootstrap/css/bootstrap.min.css" />

@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const DEFAULT_RECIPIENT_EMAIL = "cooyue@gmail.com";
+const DEFAULT_RECIPIENT_EMAIL = "a2821740092@gmail.com";
 const DEFAULT_FROM_NAME = "Cooyue Contact";
 const DEFAULT_SUBJECT_PREFIX = "Cooyue Contact";
 

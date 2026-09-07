@@ -1,2 +1,5 @@
 /* Global styles for Next.js app */
 /* Main styles are imported via layout.tsx from /assets/css/sinace.css */
+body:has([data-pv400-experience]) .scroll-to-top {
+  display: none !important;
+}

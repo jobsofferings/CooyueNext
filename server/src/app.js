@@ -20,7 +20,7 @@ const {
 const app = express();
 const staticDir = path.join(__dirname, "..", "static");
 
-app.set("trust proxy", true);
+app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 
 // ── Security & middleware ──────────────────────────────────────────────────
 

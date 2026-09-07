@@ -5,6 +5,11 @@
   margin-right: 40px;
 }
 
+.contact-page__input-box textarea,
+.contact-one__input-box textarea {
+  resize: none;
+}
+
 .language-switcher {
   position: relative;
 }

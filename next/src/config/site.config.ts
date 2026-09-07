@@ -8,7 +8,7 @@ export const siteConfig = {
   },
 
   contact: {
-    email: "cooyue@gmail.com",
+    email: "a2821740092@gmail.com",
     phone: "+8614797992772",
     phoneDisplay: "+86 147-9799-2772",
     address: {

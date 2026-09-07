@@ -12,6 +12,7 @@ import {
   toProductDetail,
 } from '@/lib/products-api'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
+import Pv400Experience from '@/components/products/pv400/Pv400Experience'
 
 export const revalidate = 300
 
@@ -108,6 +109,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const product = toProductDetail(record)
+  if (slug === 'guide-sensmart-pv400') {
+    return <Pv400Experience locale={params.lang} image={product.image} />
+  }
+
   const relatedRecords = await getRelatedProducts(params.lang, slug)
   const relatedProducts = relatedRecords.map(toProductDetail)
 
