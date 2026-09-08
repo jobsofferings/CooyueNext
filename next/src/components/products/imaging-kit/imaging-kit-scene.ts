@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
 import { modelUrl, moduleIds } from './imaging-kit-data'
 import type { ModuleId } from './imaging-kit-data'
+import { ASSEMBLED_SECONDS, getCarouselFrame } from './imaging-kit-carousel'
 
 export interface SceneState {
   selected: ModuleId
@@ -14,6 +15,7 @@ export interface SceneState {
 
 interface SceneCallbacks {
   onSelect: (moduleId: ModuleId) => void
+  onCarouselSelect: (moduleId: ModuleId) => void
   onInteraction: () => void
   onExplosion: (amount: number) => void
   onProject: (moduleId: ModuleId, left: number, top: number, visible: boolean) => void
@@ -74,8 +76,8 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
   let visible = false
   let dirty = true
   let frameId = 0
-  let lastTime = 0
-  let playbackTime = 3
+  let lastTime = performance.now()
+  let playbackTime = ASSEMBLED_SECONDS
   let lastProgressTime = 0
   let lastProgress = -1
   let explosion = initialState.explosion / 100
@@ -201,15 +203,21 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
     frameId = requestAnimationFrame(renderFrame)
     if (!visible || document.hidden || contextLost) { lastTime = time; return }
     if (time - lastTime < 1000 / 30) return
-    const delta = Math.min((time - lastTime) / 1000, 0.1)
+    const elapsed = Math.max(0, (time - lastTime) / 1000)
+    const delta = Math.min(elapsed, 0.1)
     lastTime = time
     const playing = state.autoPlay && !state.reducedMotion
-    if (playing) playbackTime += delta
-    const phase = playbackTime % 16
+    if (playing) playbackTime += elapsed
     let target = state.explosion / 100
     if (playing) {
-      target = phase < 3 ? 0 : phase < 6 ? (phase - 3) / 3 : phase < 10 ? 1 : phase < 13 ? 1 - (phase - 10) / 3 : 0
-      target = THREE.MathUtils.smoothstep(target, 0, 1)
+      const frame = getCarouselFrame(playbackTime, moduleIds.length)
+      target = THREE.MathUtils.smoothstep(frame.explosion, 0, 1)
+      const selected = moduleIds[frame.moduleIndex]
+      if (selected !== state.selected) {
+        state = { ...state, selected }
+        highlight()
+        callbacks.onCarouselSelect(selected)
+      }
     }
     const nextExplosion = state.reducedMotion || Math.abs(explosion - target) < 0.0005 ? target : THREE.MathUtils.damp(explosion, target, 6, delta)
     if (nextExplosion !== explosion) dirty = true
@@ -247,8 +255,13 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
 
   const resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(host)
-  const intersectionObserver = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false }, { threshold: 0.05 })
+  const resetFrameTime = () => { lastTime = performance.now() }
+  const intersectionObserver = new IntersectionObserver(entries => {
+    visible = entries[0]?.isIntersecting ?? false
+    resetFrameTime()
+  }, { threshold: 0.05 })
   intersectionObserver.observe(host)
+  document.addEventListener('visibilitychange', resetFrameTime)
   renderer.domElement.addEventListener('pointerdown', pointerDown)
   renderer.domElement.addEventListener('pointerup', pointerUp)
   renderer.domElement.addEventListener('pointercancel', cancelPointer)
@@ -259,7 +272,7 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
 
   return {
     update(nextState) {
-      if (!state.autoPlay && nextState.autoPlay) { playbackTime = 3; lastProgress = -1 }
+      if (!state.autoPlay && nextState.autoPlay) { playbackTime = ASSEMBLED_SECONDS; lastProgress = -1; resetFrameTime() }
       state = nextState
       highlight()
     },
@@ -283,6 +296,7 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
       cancelAnimationFrame(frameId)
       resizeObserver.disconnect()
       intersectionObserver.disconnect()
+      document.removeEventListener('visibilitychange', resetFrameTime)
       controls.removeEventListener('start', callbacks.onInteraction)
       controls.removeEventListener('change', markDirty)
       controls.dispose()

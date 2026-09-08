@@ -29,7 +29,9 @@ The customer-specified finish is matte black on every non-optical body and opaqu
 ## Interaction and loading
 
 - Lazy-imports the Three.js scene within 250 pixels of the viewport and loads the local GLB with an abortable request.
-- Runs a 16-second assembled / exploded / reassembled loop, with rotation, pause/play and a separation slider.
+- Runs a repeating 26-second carousel: 2 seconds assembled, 2 seconds opening, five 4-second component presentations, then 2 seconds closing. The lens, core, adapter, K10 and housing highlights, descriptions and numbered controls advance together. Initial playback starts at the opening phase.
+- Automatic carousel selection does not invoke the manual-selection pause handler. Pause, direct component selection, dragging and zooming stop the tour; Start carousel begins a fresh tour. Automatic description changes do not repeatedly announce through a screen-reader live region.
+- The tour clock uses actual visible elapsed time rather than the capped physics step, so a lower frame rate does not stretch a 26-second cycle into minutes. Visibility changes reset frame timing to avoid skipping stages after returning to the page.
 - Picking, numbered hotspots and five module buttons select functional descriptions. Selecting an internal module separates the kit to expose it.
 - Supports pointer rotation, pinch/scroll zoom, arrow-key rotation, `+`/`-` zoom and `0` reset.
 - Reduced motion disables autoplay and animated transitions. Offscreen and hidden-tab rendering pauses, and unchanged manual views do not redraw. Rendering is capped at 30 FPS and device pixel ratio at 1.6.
@@ -53,3 +55,5 @@ Obtain `source.stp` from `sourceUrl` in the manifest. The converter rejects a ch
 ## Validation
 
 Run `yarn tsc --noEmit` and `yarn build` in `next`. Validate the seed in PostgreSQL temporary tables before applying it. Verify both locale routes, the product's `systems` listing, the five descriptions and hotspots, autoplay / pause, pointer / keyboard controls, mobile overflow, reduced motion, failed-model retry and WebGL fallback. Check that PV400 still renders its own experience and unrelated products render neither one.
+
+Run `npm run test:carousel` in `server` to verify ordering, transition bounds and repeated cycles. In a browser, keep the viewer visible for at least two complete tours and verify `01 → 02 → 03 → 04 → 05 → 01`, then test pause, manual selection, restart and reduced motion.

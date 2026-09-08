@@ -73,6 +73,7 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
         if (abortController.signal.aborted) return
         controller = await createImagingKitScene(host, stateRef.current, {
           onSelect: selectModule,
+          onCarouselSelect: setSelected,
           onInteraction: () => setAutoPlay(false),
           onExplosion: setExplosion,
           onProject: (moduleId, left, top, visible) => {
@@ -127,12 +128,13 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
           <span className={styles.badge}>CAD / 3D</span>
         </div>
         <div className={styles.card}>
-          <div className={styles.toolbar}>
+          <div className={`${styles.toolbar} ${kitStyles.toolbar}`}>
             <div className={styles.viewToggle} role="group" aria-label={copy.viewLabel}>
               <button type="button" aria-pressed={!autoPlay && explosion === 0} onClick={() => changeView(0)}>{copy.assembled}</button>
               <button type="button" aria-pressed={!autoPlay && explosion > 0} onClick={() => changeView(100)}>{copy.exploded}</button>
             </div>
-            <div className={styles.playControls}>
+            <div className={`${styles.playControls} ${kitStyles.playControls}`}>
+              <span className={kitStyles.playbackStatus}>{autoPlay ? copy.carousel : copy.manual} · {activeModule.number} / {String(modules.length).padStart(2, '0')}</span>
               <button type="button" className={styles.playButton} aria-pressed={autoPlay} disabled={status !== 'ready' || reducedMotion} onClick={() => setAutoPlay(current => !current)}><span aria-hidden="true" className={`fa ${autoPlay ? 'fa-pause' : 'fa-play'}`} />{autoPlay ? copy.pause : copy.play}</button>
               <button type="button" title={copy.reset} aria-label={copy.reset} disabled={status !== 'ready'} onClick={resetView}><span className="fa fa-undo" aria-hidden="true" /></button>
             </div>
@@ -164,7 +166,7 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
           <nav className={`${styles.moduleNav} ${kitStyles.moduleNav}`} aria-label={copy.modules}>
             {modules.map(module => <button type="button" key={module.id} aria-pressed={selected === module.id} onClick={() => selectModule(module.id)}><span>{module.number}</span>{module.label}</button>)}
           </nav>
-          <div className={styles.moduleDescription} aria-live="polite" aria-atomic="true"><h3>{activeModule.label}</h3><p>{activeModule.description}</p></div>
+          <div className={styles.moduleDescription} aria-live={autoPlay ? 'off' : 'polite'} aria-atomic="true"><h3>{activeModule.label}</h3><p>{activeModule.description}</p></div>
           <div className={kitStyles.signalChain}>
             <h3>{copy.chainTitle}</h3>
             <ol>{copy.chain.map((label, index) => <li key={label}>{index > 0 && <span aria-hidden="true">→</span>}{label}</li>)}</ol>

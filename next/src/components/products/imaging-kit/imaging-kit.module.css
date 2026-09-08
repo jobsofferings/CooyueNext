@@ -23,3 +23,19 @@
   .viewerLabel { top: 18px; left: 16px; font-size: 8px; letter-spacing: 1px; }
   .integration p { font-size: 12px; }
 }
+.playbackStatus {
+  color: #526174;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.experience .toolbar { flex-wrap: wrap; }
+.experience .toolbar button { white-space: nowrap; }
+.experience .playControls { flex-shrink: 0; }
+
+@media (max-width: 680px) {
+  .experience .toolbar { flex-direction: column; align-items: stretch; }
+  .experience .toolbar > :first-child { align-self: flex-start; }
+  .experience .playControls { justify-content: flex-end; }
+  .playbackStatus { margin-right: auto; }
+}

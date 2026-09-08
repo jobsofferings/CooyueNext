@@ -34,9 +34,9 @@ export const productModules: Record<Locale, ProductModule[]> = {
 export const experienceCopy = {
   zh: {
     title: '从成像到输出，看清每一层结构',
-    intro: '基于提供的 STEP 三维图，按五个功能模块查看装配关系。',
+    intro: '自动循环展示镜头、机芯、连接件、K10 与散热外壳，依次查看五个功能模块和装配关系。',
     assembled: '装配视图', exploded: '组件拆解', viewLabel: '切换装配与拆解视图',
-    play: '自动演示', pause: '暂停演示', reset: '重置视图', zoomIn: '放大', zoomOut: '缩小',
+    play: '开始轮播', pause: '暂停轮播', carousel: '循环轮播', manual: '手动查看', reset: '重置视图', zoomIn: '放大', zoomOut: '缩小',
     loading: '正在加载 CAD 三维模型…', fallback: '当前无法显示交互模型，可查看 CAD 渲染图与下方组件说明。', retry: '重新加载',
     modelLabel: '成像组件套件三维模型。拖动旋转，滚轮或双指缩放；方向键旋转，加减号缩放，0 重置视图。',
     poster: 'GLA07512K-T2 + ITZ1212IP 成像组件套件 CAD 渲染图',
@@ -49,9 +49,9 @@ export const experienceCopy = {
   },
   en: {
     title: 'Explore the complete imaging chain',
-    intro: 'Explore five functional modules using the supplied STEP geometry.',
+    intro: 'Automatically cycle through the lens, imaging core, adapter, K10 converter and heat-sink housing, then repeat the assembly tour.',
     assembled: 'Assembled', exploded: 'Exploded', viewLabel: 'Assembly views',
-    play: 'Play demo', pause: 'Pause demo', reset: 'Reset view', zoomIn: 'Zoom in', zoomOut: 'Zoom out',
+    play: 'Start carousel', pause: 'Pause carousel', carousel: 'Looping tour', manual: 'Manual view', reset: 'Reset view', zoomIn: 'Zoom in', zoomOut: 'Zoom out',
     loading: 'Loading the CAD model…', fallback: 'The interactive model is unavailable. The CAD render and component descriptions remain available.', retry: 'Retry',
     modelLabel: 'Imaging kit 3D model. Drag to rotate, scroll or pinch to zoom. Arrow keys rotate, plus/minus zoom, and 0 resets the view.',
     poster: 'CAD render of the GLA07512K-T2 + ITZ1212IP imaging kit',
