@@ -49,16 +49,20 @@ function createService(pool) {
     async search(input) {
       const locale = localeOf(input.locale);
       const query = text(input.query, "query", 500);
-      const result = await retriever.retrieve({ query, locale });
+      const result = await retriever.retrieve({ query, locale, requireAll: true });
       const unique = new Map(result.matches.map(({ document }) => [document.product_slug, publicProduct(document)]));
       return {
-        mode: "lexical-validation", provider: retriever.name, category: CATEGORY, query,
+        mode: "lexical-validation", provider: retriever.name, category: CATEGORY, query, matchMode: "all",
         status: result.clarification ? "needs_clarification" : unique.size ? "matches" : "no_matches",
         clarification: result.clarification ? {
           ...result.clarification,
-          message: locale === "zh"
-            ? "“烷”还不能确定具体气体。你是否想查“甲烷”？确认补全后再按该气体筛选，不会仅凭“手持”推荐产品。"
-            : 'The gas name “烷” is incomplete. Did you mean methane? Confirm the gas before filtering; handheld alone is not sufficient.',
+          message: result.clarification.reason === "unsupported_conditions"
+            ? locale === "zh"
+              ? "查询包含当前无法可靠判定的范围、排除、备选关系或同一配置要求。暂不返回候选，也不会忽略这些限制；请拆分为明确条件，或交由工程师核对。"
+              : "The query includes a range, exclusion, alternative or single-configuration requirement that cannot be reliably checked. No candidates are returned and no conditions are silently dropped. Please use explicit conditions or ask an engineer to verify them."
+            : locale === "zh"
+              ? "“烷”还不能确定具体气体。你是否想查“甲烷”？确认补全后再按该气体筛选，不会仅凭“手持”推荐产品。"
+              : 'The gas name “烷” is incomplete. Did you mean methane? Confirm the gas before filtering; handheld alone is not sufficient.',
         } : null,
         products: [...unique.values()],
       };

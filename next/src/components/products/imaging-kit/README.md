@@ -24,6 +24,8 @@ The viewer's five groups are a functional interpretation based on spatial relati
 
 Every source body belongs to exactly one group. No replacement procedural geometry is used. The exported GLB uses meters and a rigid axis rotation; it preserves the assembled relationships. Display colors, highlighting, exploded distances and directions are explanatory, not manufacturer BOM information, material specifications or installation instructions. The poster is rendered from the same GLB, not generated from a product photograph or an AI image.
 
+The customer-specified finish is matte black on every non-optical body and opaque, black mirror-like optics. Only lens bodies 44, 51 and 52 use the reflective material. Both GLB materials explicitly use `OPAQUE`; there is no transparent glass or transmission. Lighting and selection highlighting are neutral so they do not tint the black structures blue or green. The poster uses the same materials and lighting as the interactive viewer.
+
 ## Interaction and loading
 
 - Lazy-imports the Three.js scene within 250 pixels of the viewport and loads the local GLB with an abortable request.

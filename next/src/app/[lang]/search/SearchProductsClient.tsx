@@ -4,22 +4,9 @@ import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Locale } from '@/i18n-config'
 import KnowledgeSearchPanel from '@/components/knowledge/KnowledgeSearchPanel'
+import { searchProducts, type SearchProduct } from '@/lib/catalog-search'
 
-type SearchField = {
-  value: string
-  weight: number
-}
-
-export type SearchProduct = {
-  id: string
-  familyName: string
-  model: string
-  subtitle: string
-  description: string
-  specs: string[]
-  order: number
-  fields: SearchField[]
-}
+export type { SearchProduct } from '@/lib/catalog-search'
 
 export type SearchPageClientCopy = {
   intro: string
@@ -31,115 +18,11 @@ export type SearchPageClientCopy = {
   empty: string
 }
 
-type SearchResult = {
-  product: SearchProduct
-  score: number
-}
-
 interface SearchProductsClientProps {
   lang: Locale
   copy: SearchPageClientCopy
   initialKeywords: string
   products: SearchProduct[]
-}
-
-function normalizeText(value: unknown): string {
-  if (typeof value !== 'string') {
-    return ''
-  }
-
-  return value.normalize('NFKC').toLowerCase().trim()
-}
-
-function tokenizeKeywords(keywords: string): string[] {
-  const cjkPattern = /[\u3400-\u9fff]/
-
-  return normalizeText(keywords)
-    .split(/[\s,，;；|/]+/)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2 || cjkPattern.test(token))
-}
-
-function isSubsequence(needle: string, haystack: string): boolean {
-  if (!needle || !haystack || needle.length > haystack.length) {
-    return false
-  }
-
-  let index = 0
-  for (const char of haystack) {
-    if (char === needle[index]) {
-      index += 1
-      if (index === needle.length) {
-        return true
-      }
-    }
-  }
-
-  return false
-}
-
-function scoreField(field: string, token: string, weight: number): number {
-  if (!field || !token) {
-    return 0
-  }
-
-  if (field === token) {
-    return weight * 4
-  }
-
-  if (field.startsWith(token)) {
-    return weight * 3
-  }
-
-  if (field.includes(token)) {
-    return weight * 2
-  }
-
-  if (isSubsequence(token, field)) {
-    return Math.max(1, Math.round(weight * 0.8))
-  }
-
-  return 0
-}
-
-function scoreProduct(product: SearchProduct, tokens: string[]): number {
-  let score = 0
-  let matchedTokens = 0
-
-  for (const token of tokens) {
-    let tokenScore = 0
-
-    for (const field of product.fields) {
-      tokenScore = Math.max(tokenScore, scoreField(field.value, token, field.weight))
-    }
-
-    if (tokenScore > 0) {
-      matchedTokens += 1
-      score += tokenScore
-    }
-  }
-
-  if (matchedTokens === 0) {
-    return 0
-  }
-
-  return score + matchedTokens * 12
-}
-
-function searchProducts(products: SearchProduct[], keywords: string): SearchResult[] {
-  const tokens = tokenizeKeywords(keywords)
-
-  if (tokens.length === 0) {
-    return []
-  }
-
-  return products
-    .map((product) => ({
-      product,
-      score: scoreProduct(product, tokens),
-    }))
-    .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.product.order - b.product.order || a.product.model.localeCompare(b.product.model))
 }
 
 function getUrlKeywords(): string {
@@ -154,10 +37,10 @@ function pushSearchUrl(lang: Locale, keywords: string) {
 
 function getSummary(lang: Locale, keywords: string, count: number): string {
   if (lang === 'zh') {
-    return `目录关键词匹配：为「${keywords}」找到 ${count} 个产品。`
+    return `目录关键词匹配（全部条件 / AND）：为「${keywords}」找到 ${count} 个产品。`
   }
 
-  return `Catalog keyword matches: ${count} products for "${keywords}".`
+  return `Catalog matches (all keywords / AND): ${count} products for "${keywords}".`
 }
 
 export default function SearchProductsClient({
@@ -168,18 +51,7 @@ export default function SearchProductsClient({
 }: SearchProductsClientProps) {
   const [inputKeywords, setInputKeywords] = useState(initialKeywords)
   const [keywords, setKeywords] = useState(initialKeywords.trim())
-  const indexedProducts = useMemo(
-    () =>
-      products.map((product) => ({
-        ...product,
-        fields: product.fields.map((field) => ({
-          ...field,
-          value: normalizeText(field.value),
-        })),
-      })),
-    [products]
-  )
-  const results = useMemo(() => searchProducts(indexedProducts, keywords), [indexedProducts, keywords])
+  const results = useMemo(() => searchProducts(products, keywords), [products, keywords])
   const hasKeywords = keywords.length > 0
 
   useEffect(() => {

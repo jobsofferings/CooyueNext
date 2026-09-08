@@ -35,7 +35,7 @@ export default function KnowledgeSearchPanel({ locale, query, onQueryChange }: P
   if (!query.trim()) return null
   if (pending) return <p role="status">{isChinese ? '正在查询已审核气体成像资料…' : 'Searching reviewed gas imaging evidence…'}</p>
   if (failed) return <p role="alert">{isChinese ? '知识检索暂时不可用，目录关键词搜索仍可使用。请稍后重新搜索。' : 'Knowledge search is unavailable. Catalog keyword search is still available; please retry later.'}</p>
-  if (!result || result.query !== query.trim() || (!result.products.length && !result.clarification)) return null
+  if (!result || result.query !== query.trim()) return null
 
   return (
     <section className={styles.card} aria-label={isChinese ? '知识库检索结果' : 'Knowledge search results'} aria-live="polite">
@@ -47,8 +47,8 @@ export default function KnowledgeSearchPanel({ locale, query, onQueryChange }: P
             {isChinese ? '按此补全重新搜索：' : 'Confirm and search: '}{suggestion.query}
           </button>
         ))}</div>
-      </div> : <>
-        <p>{isChinese ? `找到 ${result.products.length} 款有已审核依据的候选。气体与镜头配置仍需核对。` : `${result.products.length} candidates have reviewed evidence. Confirm the target gas and lens configuration.`}</p>
+      </div> : !result.products.length ? <p>{isChinese ? '已审核资料中没有同时匹配全部条件的候选，未放宽为部分条件命中。资料未覆盖不等于产品不支持。' : 'No reviewed candidate matches all conditions. Partial matches are not substituted; missing evidence does not establish that a product is incapable.'}</p> : <>
+        <p>{isChinese ? `按全部条件（AND）找到 ${result.products.length} 款有已审核依据的候选。气体与镜头配置仍需核对。` : `${result.products.length} candidates match all conditions (AND) in the reviewed evidence. Confirm the target gas and lens configuration.`}</p>
         <div className={styles.grid}>{result.products.map((product) => <article key={product.slug} className={styles.product}>
           <h3>{product.name}</h3>
           <p>{isChinese ? '红外分辨率' : 'Infrared resolution'}: {product.facts.resolution}</p>

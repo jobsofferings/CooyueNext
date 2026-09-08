@@ -67,6 +67,68 @@ test("English SF6 query uses the English evidence corpus", async () => {
   assert.deepEqual(result.products.map((product) => product.slug).sort(), ["flir-g306", "flir-gf77"]);
 });
 
+test("gas, form factor and exact resolution must all match the same product", async () => {
+  const service = createService(fixturePool());
+  for (const query of ["甲烷 手持 640x512", "甲烷 手持 320x240 320x256", "SF6 手持 320x256"]) {
+    const result = await service.search({ locale: "zh", query });
+    assert.equal(result.status, "no_matches", query);
+    assert.deepEqual(result.products, [], query);
+    assert.equal(result.matchMode, "all");
+  }
+  for (const [locale, query, expected] of [
+    ["zh", "甲烷 手持 320x256", "guide-sensmart-pv400"],
+    ["zh", "我想找一台用于甲烷泄漏巡检的手持相机，分辨率为３２０ × ２５６", "guide-sensmart-pv400"],
+    ["en", "Find a handheld methane camera with 320 * 240 resolution", "flir-gf77"],
+    ["en", "SF6 handheld gas imaging at substations", "flir-g306"],
+  ]) {
+    const result = await service.search({ locale, query });
+    assert.deepEqual(result.products.map((product) => product.slug), [expected], query);
+  }
+});
+
+test("resolution bounds compare structured dimensions without dropping other constraints", async () => {
+  const service = createService(fixturePool());
+  for (const query of ["甲烷 手持 分辨率至少320×256", "甲烷 手持 分辨率高于320×240", "甲烷 手持 分辨率320×256以上"]) {
+    assert.deepEqual((await service.search({ locale: "zh", query })).products.map((product) => product.slug), ["guide-sensmart-pv400"], query);
+  }
+  const result = await service.search({ locale: "en", query: "handheld methane at least 320x256 and at most 640x512" });
+  assert.deepEqual(result.products.map((product) => product.slug), ["guide-sensmart-pv400"]);
+  assert.deepEqual((await service.search({ locale: "en", query: "handheld methane at least 640x512" })).products, []);
+});
+
+test("cooled and uncooled conditions are distinct, including bilingual natural phrasing", async () => {
+  const service = createService(fixturePool());
+  for (const [locale, query, expected] of [
+    ["zh", "非制冷 手持 甲烷", "flir-gf77"],
+    ["zh", "制冷型 手持 甲烷", "guide-sensmart-pv400"],
+    ["en", "cooled handheld methane camera", "guide-sensmart-pv400"],
+    ["en", "uncooled handheld methane camera", "flir-gf77"],
+  ]) assert.deepEqual((await service.search({ locale, query })).products.map((product) => product.slug), [expected], query);
+});
+
+test("unknown additional conditions and multiple model requirements do not become partial matches", async () => {
+  const service = createService(fixturePool());
+  for (const query of ["甲烷 手持 防爆", "甲烷 手持 SDI", "甲烷 手持 640", "PV400 GF77 手持", "PV400 SF6", "hydrogen methane handheld"])
+    assert.deepEqual((await service.search({ locale: "zh", query })).products, [], query);
+});
+
+test("unsupported ranges, exclusions, alternatives and simultaneous configurations require clarification", async () => {
+  const service = createService(fixturePool());
+  for (const query of ["甲烷 手持 重量500g以下", "甲烷 手持 价格低于5000", "甲烷 不要手持", "methane handheld or fixed", "handheld methane not less than 320x240", "同时检测甲烷和SF6的手持相机"]) {
+    const result = await service.search({ locale: "zh", query });
+    assert.equal(result.status, "needs_clarification", query);
+    assert.equal(result.clarification.reason, "unsupported_conditions", query);
+    assert.deepEqual(result.products, [], query);
+  }
+});
+
+test("answer comparison still retrieves evidence from multiple selected products", async () => {
+  const result = await createService(fixturePool()).answer({ locale: "zh", question: "对比这两款的分辨率", productSlugs: ["guide-sensmart-pv400", "flir-gf77"] });
+  assert.equal(result.status, "evidence_found");
+  assert.ok(result.citations.some((citation) => citation.title.includes("PV400")));
+  assert.ok(result.citations.some((citation) => citation.title.includes("GF77")));
+});
+
 test("incomplete gas names require explicit correction without returning generic handheld candidates", async () => {
   const service = createService(fixturePool());
   for (const query of ["烷泄漏巡检，手持设备", "【烷泄漏巡检，手持设备】"]) {

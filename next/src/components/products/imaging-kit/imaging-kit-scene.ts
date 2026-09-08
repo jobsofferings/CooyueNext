@@ -88,7 +88,7 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
   renderer.setClearColor(0x000000, 0)
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
-  renderer.toneMappingExposure = 1.35
+  renderer.toneMappingExposure = 1.15
   renderer.domElement.setAttribute('aria-hidden', 'true')
   host.appendChild(renderer.domElement)
 
@@ -108,14 +108,14 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
   const room = new RoomEnvironment()
   const environment = environmentGenerator.fromScene(room, 0.04)
   scene.environment = environment.texture
-  scene.environmentIntensity = 0.9
+  scene.environmentIntensity = 0.7
   room.dispose()
   environmentGenerator.dispose()
-  scene.add(new THREE.HemisphereLight(0xdbeeff, 0x26323f, 2))
-  const keyLight = new THREE.DirectionalLight(0xf4faff, 3.5)
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x161616, 1.2))
+  const keyLight = new THREE.DirectionalLight(0xffffff, 3)
   keyLight.position.set(-3, 5, 6)
   scene.add(keyLight)
-  const rimLight = new THREE.DirectionalLight(0x83c7eb, 2.8)
+  const rimLight = new THREE.DirectionalLight(0xffffff, 2)
   rimLight.position.set(2, 4, -5)
   scene.add(rimLight)
   scene.add(model)
@@ -150,8 +150,8 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
   function highlight() {
     dirty = true
     highlights.forEach(({ moduleId, material }) => {
-      material.emissive.set(moduleId === state.selected ? 0x266b81 : 0x000000)
-      material.emissiveIntensity = moduleId === state.selected ? 0.22 : 0
+      material.emissive.set(moduleId === state.selected ? 0x222222 : 0x000000)
+      material.emissiveIntensity = moduleId === state.selected ? 0.035 : 0
     })
   }
 

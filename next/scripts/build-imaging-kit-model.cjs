@@ -14,24 +14,12 @@ const modules = {
   housing: [1, 5, 11, 18, 22, 27, 33, 68],
 }
 const materialDefinitions = [
-  { name: 'Lens barrel', color: [0.12, 0.16, 0.19, 1], metallic: 0.65, roughness: 0.32 },
-  { name: 'Optical surfaces (illustrative finish)', color: [0.06, 0.25, 0.3, 1], metallic: 0.78, roughness: 0.12 },
-  { name: 'Connecting flange', color: [0.54, 0.59, 0.63, 1], metallic: 0.8, roughness: 0.3 },
-  { name: 'SDI core', color: [0.24, 0.29, 0.34, 1], metallic: 0.72, roughness: 0.36 },
-  { name: 'Circuit boards (illustrative finish)', color: [0.035, 0.26, 0.16, 1], metallic: 0.15, roughness: 0.58 },
-  { name: 'Electronic components', color: [0.1, 0.13, 0.16, 1], metallic: 0.35, roughness: 0.4 },
-  { name: 'Interface connectors', color: [0.62, 0.63, 0.58, 1], metallic: 0.8, roughness: 0.3 },
-  { name: 'K10 enclosure and heat sink', color: [0.35, 0.4, 0.44, 1], metallic: 0.85, roughness: 0.34 },
+  { name: 'Matte black structures', color: [0.007, 0.007, 0.007, 1], metallic: 0, roughness: 0.96 },
+  { name: 'Opaque black mirror optics', color: [0.025, 0.025, 0.025, 1], metallic: 1, roughness: 0.025 },
 ]
 
 function materialFor(moduleId, bodyIndex) {
-  if (moduleId === 'lens') return [44, 51, 52].includes(bodyIndex) ? 1 : 0
-  if (moduleId === 'adapter') return 2
-  if (moduleId === 'core') return bodyIndex === 24 ? 4 : 3
-  if (moduleId === 'housing') return 7
-  if ([17, 28].includes(bodyIndex)) return 4
-  if ([4, 7, 10, 15, 31, 36, 53, 57].includes(bodyIndex)) return 6
-  return 5
+  return moduleId === 'lens' && [44, 51, 52].includes(bodyIndex) ? 1 : 0
 }
 
 function boundsFor(positions) {
@@ -60,7 +48,7 @@ async function main() {
   const document = {
     asset: { version: '2.0', generator: 'Cooyue STEP conversion / occt-import-js 0.0.23', extras: { sourceUrl, sourceSha256, units: 'meters', grouping: 'Functional interpretation of unnamed CAD bodies; not a manufacturer BOM' } },
     scene: 0, scenes: [{ nodes: [] }], nodes: [], meshes: [], buffers: [], bufferViews: [], accessors: [],
-    materials: materialDefinitions.map(material => ({ name: material.name, pbrMetallicRoughness: { baseColorFactor: material.color, metallicFactor: material.metallic, roughnessFactor: material.roughness } })),
+    materials: materialDefinitions.map(material => ({ name: material.name, alphaMode: 'OPAQUE', pbrMetallicRoughness: { baseColorFactor: material.color, metallicFactor: material.metallic, roughnessFactor: material.roughness } })),
   }
   const chunks = []
   let byteLength = 0

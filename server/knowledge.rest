@@ -21,6 +21,30 @@ Content-Type: application/json
 
 {"locale":"en","query":"SF6 gas imaging at substations"}
 
+### All conditions: methane + handheld + 320x256 returns PV400 only
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"zh","query":"甲烷 手持 320x256"}
+
+### No partial fallback: a 640x512 requirement must not return 320-pixel models
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"zh","query":"甲烷 手持 640x512"}
+
+### Structured resolution range: compare both dimensions, keep the gas and form constraints
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"en","query":"methane handheld at least 320x256"}
+
+### Unsupported weight range: needs_clarification, no silently broadened candidates
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"zh","query":"甲烷 手持 重量500g以下"}
+
 ### Compare two reviewed products
 POST {{baseUrl}}/api/knowledge/compare
 Content-Type: application/json

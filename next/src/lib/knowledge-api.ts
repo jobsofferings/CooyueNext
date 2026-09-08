@@ -18,6 +18,7 @@ export interface KnowledgeAnswer {
 
 export interface KnowledgeSearchResult {
   query: string
+  matchMode: 'all'
   status: 'matches' | 'no_matches' | 'needs_clarification'
   products: KnowledgeProduct[]
   clarification: {

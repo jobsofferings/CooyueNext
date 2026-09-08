@@ -15,23 +15,23 @@ export const revalidate = 300
 const searchCopy: Record<Locale, SearchPageClientCopy & { pageTitle: string }> = {
   zh: {
     pageTitle: '产品搜索',
-    intro: '支持产品目录模糊搜索；气体成像需求同时查询已审核知识库，可继续对比、问答与询盘。',
+    intro: '目录搜索按全部关键词取交集，请用空格或逗号分隔条件。气体成像需求同时查询已审核知识库；关键词出现不等于参数或工况已获确认。',
     inputLabel: '搜索关键词',
     placeholder: '输入型号、分类或规格',
     button: '开始搜索',
     viewDetail: '查看详情',
     idle: '输入关键词后即可查看匹配产品。',
-    empty: '目录关键词暂未匹配到产品；知识库检索结果在上方单独展示。',
+    empty: '目录中没有同时匹配全部关键词的产品，不会放宽为任一条件命中。知识库结果在上方单独展示。',
   },
   en: {
     pageTitle: 'Search Products',
-    intro: 'Search the product catalog and reviewed gas imaging evidence, then continue to comparisons, questions and inquiries.',
+    intro: 'All catalog keywords must match the same product. Separate conditions with spaces or commas. Reviewed gas imaging evidence is searched separately; a keyword match does not verify a specification or application requirement.',
     inputLabel: 'Search keywords',
     placeholder: 'Search by model, category, or spec',
     button: 'Search',
     viewDetail: 'View Detail',
     idle: 'Enter keywords to see matching products.',
-    empty: 'No catalog keyword matches. Knowledge search results are shown separately above.',
+    empty: 'No catalog product matches all keywords. Conditions are not relaxed to partial matches. Knowledge results are shown separately above.',
   },
 }
 
