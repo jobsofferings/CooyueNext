@@ -1,0 +1,25 @@
+.experience .viewer { background: radial-gradient(ellipse at 45% 40%, #334754, #111e2b 80%); }
+.viewerLabel { position: absolute; top: 22px; left: 24px; color: #a3bdce; font: 10px monospace; letter-spacing: 2px; pointer-events: none; }
+.experience .moduleNav { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.signalChain { display: flex; align-items: center; gap: 24px; padding: 19px 24px; background: #f6f8fa; border-top: 1px solid #e1e7ec; }
+.signalChain h3 { margin: 0; font-size: 12px; font-weight: 500; color: #607589; }
+.signalChain ol { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0; margin: 0; list-style: none; }
+.signalChain li { display: flex; align-items: center; gap: 14px; color: #263d50; font-size: 12px; }
+.signalChain li span { color: #91a6b5; }
+.integration { border-left: 3px solid #7fa3b5; padding: 3px 0 3px 18px; margin-top: 24px; }
+.integration h3 { font-size: 15px; margin: 0 0 7px; color: inherit; }
+.integration p { font-size: 13px; line-height: 1.9; color: #667582; margin: 0; }
+.experience a { color: #436d87; text-decoration: underline; text-underline-offset: 3px; }
+
+@media (max-width: 680px) {
+  .experience .moduleNav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .experience .moduleNav button { min-height: 48px; border-bottom: 1px solid #e1e7ec; }
+  .experience .moduleNav button:nth-child(3) { border-right: 1px solid #e1e7ec; }
+  .experience .moduleNav button:nth-child(even) { border-right: 0; }
+  .experience .moduleNav button:last-child { grid-column: 1 / -1; border-bottom: 0; }
+  .signalChain { flex-direction: column; align-items: flex-start; gap: 10px; padding: 16px; }
+  .signalChain ol, .signalChain li { gap: 8px; }
+  .signalChain li { font-size: 10px; }
+  .viewerLabel { top: 18px; left: 16px; font-size: 8px; letter-spacing: 1px; }
+  .integration p { font-size: 12px; }
+}

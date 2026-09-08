@@ -1,0 +1,116 @@
+{
+  "sourceUrl": "https://whale-core-infra.oss-cn-shanghai.aliyuncs.com/20260421_proto/GLA07512K-T2%20ITZ1212IP%20p240921.stp",
+  "sourceSha256": "c57a0880d81327860d8fecfcd0fb109d7628f575416fb09929c911a4aa61a7b0",
+  "sourceFilename": "GLA07512K-T2 ITZ1212IP p240921.stp",
+  "cadTimestamp": "2024-09-21T12:07:24+08:00",
+  "converterVersion": "occt-import-js@0.0.23",
+  "triangulation": {
+    "linearUnit": "millimeter",
+    "linearDeflectionType": "absolute_value",
+    "linearDeflection": 0.12,
+    "angularDeflection": 0.3
+  },
+  "bodyCount": 69,
+  "triangleCount": 218260,
+  "modules": [
+    {
+      "id": "lens",
+      "sourceBodyIndices": [
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        59,
+        64,
+        65,
+        66,
+        67
+      ],
+      "triangleCount": 101662
+    },
+    {
+      "id": "adapter",
+      "sourceBodyIndices": [
+        55,
+        60,
+        61,
+        62,
+        63
+      ],
+      "triangleCount": 16618
+    },
+    {
+      "id": "core",
+      "sourceBodyIndices": [
+        9,
+        16,
+        23,
+        24,
+        26,
+        29,
+        30,
+        39,
+        40,
+        54,
+        58
+      ],
+      "triangleCount": 47122
+    },
+    {
+      "id": "k10",
+      "sourceBodyIndices": [
+        0,
+        2,
+        3,
+        4,
+        6,
+        7,
+        8,
+        10,
+        12,
+        13,
+        14,
+        15,
+        17,
+        19,
+        20,
+        21,
+        25,
+        28,
+        31,
+        32,
+        34,
+        35,
+        36,
+        37,
+        38,
+        41,
+        42,
+        43,
+        53,
+        56,
+        57
+      ],
+      "triangleCount": 18720
+    },
+    {
+      "id": "housing",
+      "sourceBodyIndices": [
+        1,
+        5,
+        11,
+        18,
+        22,
+        27,
+        33,
+        68
+      ],
+      "triangleCount": 34138
+    }
+  ]
+}

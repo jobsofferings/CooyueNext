@@ -13,6 +13,8 @@ import {
 } from '@/lib/products-api'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 import Pv400Experience from '@/components/products/pv400/Pv400Experience'
+import ImagingKitExperience from '@/components/products/imaging-kit/ImagingKitExperience'
+import { imagingKitSlug } from '@/components/products/imaging-kit/imaging-kit-data'
 
 export const revalidate = 300
 
@@ -176,6 +178,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
       {slug === 'guide-sensmart-pv400' && (
         <Pv400Experience locale={params.lang} image={product.image} />
       )}
+
+      {slug === imagingKitSlug && <ImagingKitExperience locale={params.lang} />}
 
       <section className="product-detail-overview">
         <div className="container">
