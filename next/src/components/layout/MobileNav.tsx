@@ -55,10 +55,22 @@ export default function MobileNav() {
             {navItems.map((item, index) => (
               <li key={item.href} className={item.children?.length ? 'dropdown' : ''}>
                 <div className="mobile-nav__item">
-                  <Link href={getLocalizedHref(item.href)} onClick={() => setMobileOpen(false)}>{item.label}</Link>
-                  {Boolean(item.children?.length) && <button type="button" aria-label={item.label} aria-expanded={expanded === item.href} aria-controls={`mobile-submenu-${index}`} onClick={() => setExpanded(expanded === item.href ? null : item.href)}><i className="fa fa-angle-down" /></button>}
+                  {item.children?.length ? (
+                    <button
+                      type="button"
+                      className="mobile-nav__accordion-trigger"
+                      aria-expanded={expanded === item.href}
+                      aria-controls={`mobile-submenu-${index}`}
+                      onClick={() => setExpanded(expanded === item.href ? null : item.href)}
+                    >
+                      <span>{item.label}</span>
+                      <i className="fa fa-angle-down" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <Link href={getLocalizedHref(item.href)} onClick={() => setMobileOpen(false)}>{item.label}</Link>
+                  )}
                 </div>
-                {Boolean(item.children?.length) && <ul id={`mobile-submenu-${index}`} hidden={expanded !== item.href} style={{ display: expanded === item.href ? 'block' : 'none' }}>
+                {Boolean(item.children?.length) && <ul id={`mobile-submenu-${index}`} className="mobile-nav__submenu" hidden={expanded !== item.href}>
                   {item.children?.map((child) => <li key={child.href}><Link href={getLocalizedHref(child.href)} onClick={() => setMobileOpen(false)}>{child.label}</Link></li>)}
                 </ul>}
               </li>

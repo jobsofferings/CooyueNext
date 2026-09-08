@@ -672,7 +672,8 @@
 
 .product-detail-overview__metric h3 {
   margin: 0 0 10px;
-  font-size: 34px;
+  font-size: 28px;
+  line-height: 1.1;
   color: var(--sinace-base);
 }
 
@@ -737,15 +738,80 @@
 }
 
 .product-detail-specs__icon {
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 72, 255, 0.08);
   color: var(--sinace-base);
+  font-size: 21px;
+  line-height: 1;
+  text-align: center;
   flex-shrink: 0;
+}
+
+.mobile-nav__content .main-menu__list > li > .mobile-nav__item {
+  border-bottom: 0;
+}
+
+.mobile-nav__item > a,
+.mobile-nav__accordion-trigger {
+  width: 100%;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--sinace-font);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 30px;
+  text-align: left;
+  cursor: pointer;
+  transition: color 0.35s ease;
+}
+
+.mobile-nav__item > a:hover {
+  color: var(--sinace-base);
+}
+
+.mobile-nav__accordion-trigger:hover,
+.mobile-nav__accordion-trigger[aria-expanded='true'] {
+  color: var(--sinace-base);
+}
+
+.mobile-nav__accordion-trigger i {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--sinace-base);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  transform: rotate(-90deg);
+  transition: transform 0.35s ease, background-color 0.35s ease, color 0.35s ease;
+}
+
+.mobile-nav__accordion-trigger[aria-expanded='true'] i {
+  transform: rotate(0deg);
+  background-color: #fff;
+  color: var(--sinace-base);
+}
+
+.mobile-nav__content .main-menu__list > li > ul.mobile-nav__submenu {
+  display: block;
+  margin-left: 0.5em;
+}
+
+.mobile-nav__content .main-menu__list > li > ul.mobile-nav__submenu[hidden] {
+  display: none;
 }
 
 .product-detail-specs__item p {
@@ -972,6 +1038,16 @@
 
   .product-detail-overview__metrics {
     grid-template-columns: 1fr;
+  }
+
+  .product-detail-overview__metric h3 {
+    font-size: 24px;
+  }
+
+  .product-detail-specs__icon {
+    width: 54px;
+    height: 54px;
+    font-size: 20px;
   }
 
   .product-detail-panel {
