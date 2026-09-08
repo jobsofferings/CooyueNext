@@ -34,26 +34,44 @@ function inferSmtpHost(email) {
   return "";
 }
 
+function getSmtpConfig(prefix, fallbackUser = "") {
+  const smtpUser = String(
+    process.env[`${prefix}_USER`] || fallbackUser
+  ).trim();
+  const smtpPass = String(process.env[`${prefix}_PASS`] || "").replace(/\s+/g, "");
+  const smtpHost = String(
+    process.env[`${prefix}_HOST`] || inferSmtpHost(smtpUser)
+  ).trim();
+  const smtpPort = Number(process.env[`${prefix}_PORT`]) || 465;
+  const secure = parseBoolean(process.env[`${prefix}_SECURE`], smtpPort === 465);
+  const requireTLS = parseBoolean(
+    process.env[`${prefix}_REQUIRE_TLS`],
+    !secure && smtpPort === 587
+  );
+
+  return {
+    smtpUser,
+    smtpPass,
+    smtpHost,
+    smtpPort,
+    secure,
+    requireTLS,
+    enabled: Boolean(smtpUser && smtpPass && smtpHost),
+  };
+}
+
 function getContactMailConfig() {
   const recipientEmail = String(
     process.env.CONTACT_RECIPIENT_EMAIL ||
       process.env.CONTACT_SMTP_USER ||
       DEFAULT_RECIPIENT_EMAIL
   ).trim();
-  const smtpUser = String(
-    process.env.CONTACT_SMTP_USER ||
-      process.env.CONTACT_FROM_EMAIL ||
-      recipientEmail
-  ).trim();
-  const smtpPass = String(process.env.CONTACT_SMTP_PASS || "").replace(/\s+/g, "");
-  const smtpHost = String(
-    process.env.CONTACT_SMTP_HOST || inferSmtpHost(smtpUser)
-  ).trim();
-  const smtpPort = Number(process.env.CONTACT_SMTP_PORT) || 465;
-  const secure = parseBoolean(process.env.CONTACT_SMTP_SECURE, smtpPort === 465);
-  const requireTLS = parseBoolean(
-    process.env.CONTACT_SMTP_REQUIRE_TLS,
-    !secure && smtpPort === 587
+  const smtpConfig = getSmtpConfig(
+    "CONTACT_SMTP",
+    process.env.CONTACT_FROM_EMAIL || recipientEmail
+  );
+  const transports = [getSmtpConfig("CONTACT_QQ_SMTP"), smtpConfig].filter(
+    (config) => config.enabled
   );
   const connectionTimeoutMs = parsePositiveInteger(
     process.env.CONTACT_SMTP_CONNECTION_TIMEOUT_MS,
@@ -73,19 +91,15 @@ function getContactMailConfig() {
   ).trim();
 
   return {
+    ...smtpConfig,
     recipientEmail,
-    smtpUser,
-    smtpPass,
-    smtpHost,
-    smtpPort,
-    secure,
-    requireTLS,
     connectionTimeoutMs,
     greetingTimeoutMs,
     socketTimeoutMs,
     fromName,
     subjectPrefix,
-    enabled: Boolean(recipientEmail && smtpUser && smtpPass && smtpHost),
+    transports,
+    enabled: Boolean(recipientEmail && transports.length),
   };
 }
 
@@ -185,24 +199,38 @@ async function sendContactEmail(payload = {}) {
     });
   }
 
-  const transport = createTransport(config);
   const content = buildContactEmail({
     ...payload,
     subjectPrefix: config.subjectPrefix,
   });
-  const info = await transport.sendMail({
-    from: `"${config.fromName}" <${config.smtpUser}>`,
-    to: config.recipientEmail,
-    replyTo: payload.email,
-    subject: content.subject,
-    text: content.text,
-  });
 
-  return {
-    messageId: info.messageId,
-    envelope: info.envelope,
-    recipientEmail: config.recipientEmail,
-  };
+  for (const [attemptIndex, smtpConfig] of config.transports.entries()) {
+    try {
+      const transport = createTransport({ ...config, ...smtpConfig });
+      const info = await transport.sendMail({
+        from: `"${config.fromName}" <${smtpConfig.smtpUser}>`,
+        to: config.recipientEmail,
+        replyTo: payload.email,
+        subject: content.subject,
+        text: content.text,
+      });
+
+      return {
+        messageId: info.messageId,
+        envelope: info.envelope,
+        recipientEmail: config.recipientEmail,
+      };
+    } catch (error) {
+      if (attemptIndex === config.transports.length - 1) {
+        throw error;
+      }
+
+      console.warn(
+        `[contact] SMTP delivery via ${smtpConfig.smtpHost} failed; trying fallback:`,
+        error.code || "SMTP_ERROR"
+      );
+    }
+  }
 }
 
 module.exports = {

@@ -7,6 +7,10 @@
 
 测试一下发布2
 
+## 网站留言邮件
+
+- QQ 优先、Gmail 备用的配置与验证说明：`docs/contact-mail.md`
+
 ## 气体红外成像知识检索验证
 
 - 操作、验收与向量数据库迁移文档：[docs/knowledge-gas-imaging.md](docs/knowledge-gas-imaging.md)
