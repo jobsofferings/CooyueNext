@@ -7,7 +7,14 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "sync:infrared-products": "node scripts/sync-infrared-products.js"
+    "sync:infrared-products": "node scripts/sync-infrared-products.js",
+    "knowledge:inspect": "node scripts/knowledge.js inspect",
+    "knowledge:migrate": "node scripts/knowledge.js migrate",
+    "knowledge:index": "node scripts/knowledge.js index",
+    "knowledge:export": "node scripts/knowledge.js export",
+    "knowledge:cleanup": "node scripts/knowledge.js cleanup",
+    "test:knowledge": "node --test tests/knowledge.test.js",
+    "verify:knowledge": "node scripts/verify-knowledge.js"
   },
   "engines": {
     "node": ">=18"

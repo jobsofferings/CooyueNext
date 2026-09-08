@@ -11,6 +11,7 @@ const productsRouter  = require("./modules/products/routes");
 const mailRouter      = require("./modules/mail/routes");
 const contactRouter   = require("./modules/contact/routes");
 const managementRouter = require("./modules/management/routes");
+const knowledgeRouters = require("./modules/knowledge/routes");
 const {
   router: authRouter,
   authenticateSession,
@@ -99,7 +100,9 @@ app.get("/", (_req, res) => {
 
 app.use("/api", authRouter);
 app.use("/api/contact", contactRouter);
+app.use("/api/knowledge", knowledgeRouters.publicRouter);
 app.use("/api", requireManagementAuthForApi);
+app.use("/api/knowledge/admin", knowledgeRouters.adminRouter);
 
 // Debug endpoint - shows loaded env vars (remove in production)
 app.get("/api/debug/env", (_req, res) => {

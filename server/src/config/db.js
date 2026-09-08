@@ -304,6 +304,7 @@ async function closeAll() {
 }
 
 module.exports = {
+  buildPoolConfig,
   getProductsPool,
   getSeoPool,
   productsQuery,

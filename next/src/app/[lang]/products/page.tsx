@@ -212,6 +212,11 @@ export default async function ProductsPage({
 
       <section className="products-catalog">
         <div className="container">
+          <p className="text-center">
+            <Link href={`/${lang}/gas-imaging-assistant`} className="thm-btn">
+              {lang === 'zh' ? '气体红外成像 · 选型与问答验证' : 'Gas Imaging · Selection & Evidence Lab'}
+            </Link>
+          </p>
           <SectionTitle
             tagline={lang === 'zh' ? '产品目录' : 'Catalog'}
             title={lang === 'zh' ? '按分类查看已发布产品' : 'Browse published products by category'}

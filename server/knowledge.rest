@@ -1,0 +1,50 @@
+@baseUrl = http://127.0.0.1:3001
+@inquiryId = replace-with-draft-id
+@confirmationToken = replace-with-draft-confirmationToken
+@adminSession = replace-with-management-session-cookie
+
+### Natural-language search: reviewed gas-imaging products only
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"zh","query":"用于甲烷泄漏巡检的手持气体成像相机"}
+
+### English SF6 search
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"en","query":"SF6 gas imaging at substations"}
+
+### Compare two reviewed products
+POST {{baseUrl}}/api/knowledge/compare
+Content-Type: application/json
+
+{"locale":"zh","productSlugs":["guide-sensmart-pv400","flir-gf77"]}
+
+### Answer with source sections and stable citation IDs
+POST {{baseUrl}}/api/knowledge/answer
+Content-Type: application/json
+
+{"locale":"zh","question":"PV400 的红外分辨率是多少？","productSlugs":["guide-sensmart-pv400"]}
+
+### Missing information: must return insufficient_evidence
+POST {{baseUrl}}/api/knowledge/answer
+Content-Type: application/json
+
+{"locale":"zh","question":"PV400 最远检测距离是多少？","productSlugs":["guide-sensmart-pv400"]}
+
+### MUTATING: create a 30-minute anonymous inquiry preview; does not send email
+POST {{baseUrl}}/api/knowledge/inquiries/draft
+Content-Type: application/json
+
+{"locale":"zh","query":"甲烷泄漏巡检","question":"请确认镜头配置","requirements":"请由工程师确认目标气体和现场工况。","productSlugs":["guide-sensmart-pv400","flir-gf77"]}
+
+### MUTATING: set confirmed=true only after reviewing the draft and supplying genuine contact details
+POST {{baseUrl}}/api/knowledge/inquiries/{{inquiryId}}/confirm
+Content-Type: application/json
+
+{"confirmationToken":"{{confirmationToken}}","confirmed":false,"name":"Your name","email":"your-address@example.invalid"}
+
+### Private inquiry inbox: management authentication required; never expose session cookies
+GET {{baseUrl}}/api/knowledge/admin/inquiries
+Cookie: cooyue_admin_session={{adminSession}}
