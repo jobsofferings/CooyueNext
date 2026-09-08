@@ -210,7 +210,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
               <div className="product-detail-overview__metrics">
                 {product.metrics.map((metric) => (
                   <div key={`${metric.label}-${metric.value}`} className="product-detail-overview__metric">
-                    <h3>{metric.value}</h3>
+                    <span className="product-detail-overview__metric-value">{metric.value}</span>
                     <p>{metric.label}</p>
                   </div>
                 ))}
@@ -265,7 +265,9 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
             {product.specs.map((spec) => (
               <div key={spec} className="col-xl-4 col-lg-4 col-md-6">
                 <div className="product-detail-specs__item">
-                  <span className="product-detail-specs__icon fa fa-cog"></span>
+                  <span className="product-detail-specs__icon" aria-hidden="true">
+                    <i className="fa fa-cog"></i>
+                  </span>
                   <p>{spec}</p>
                 </div>
               </div>
