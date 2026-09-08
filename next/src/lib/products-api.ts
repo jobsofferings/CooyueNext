@@ -1,4 +1,5 @@
 import 'server-only'
+import { cache } from 'react'
 import { Locale } from '@/i18n-config'
 
 type Visibility = 'published' | 'draft'
@@ -108,12 +109,15 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
     return null
   }
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 8000)
   try {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       headers: {
         'Content-Type': 'application/json',
       },
       next: { revalidate: 300 },
+      signal: controller.signal,
     })
 
     if (!response.ok) {
@@ -126,50 +130,68 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
     return (await response.json()) as T
   } catch (error) {
     console.warn(`[Products API] Failed to fetch ${path}.`, error)
-    return null
-  }
+    throw error
+  } finally { clearTimeout(timeout) }
 }
 
-export async function getProductCategories(locale: Locale): Promise<ProductCategoryRecord[]> {
+export const getProductCategories = cache(async (locale: Locale): Promise<ProductCategoryRecord[]> => {
   const response = await fetchFromApi<ApiListResponse<ProductCategoryRecord>>(
     `/api/products/categories?locale=${locale}`
   )
-  return response?.data || []
-}
+  if (!response?.ok || !Array.isArray(response.data)) throw new Error('Invalid product categories response')
+  return response.data.filter((category) => category.visibility === 'published' && category.locale === locale)
+})
 
-export async function getProducts(locale: Locale): Promise<ProductRecord[]> {
-  const products: ProductRecord[] = []
-
-  for (let page = 1; page <= MAX_PRODUCT_PAGES; page += 1) {
+export const getProducts = cache(async (locale: Locale): Promise<ProductRecord[]> => {
+  const fetchPage = async (page: number) => {
     const response = await fetchFromApi<ApiListResponse<ProductRecord>>(
       `/api/products?locale=${locale}&page=${page}&pageSize=${PRODUCTS_PAGE_SIZE}`
     )
-    const pageProducts = response?.data || []
-
-    products.push(...pageProducts)
-
-    const total = response?.total ?? products.length
-    if (!response || pageProducts.length === 0 || products.length >= total || pageProducts.length < PRODUCTS_PAGE_SIZE) {
-      break
-    }
+    if (!response?.ok || !Array.isArray(response.data) || typeof response.total !== 'number') throw new Error('Invalid products response')
+    return response
   }
+  const [firstPage, categories] = await Promise.all([fetchPage(1), getProductCategories(locale)])
+  const totalPages = Math.ceil(firstPage.total! / PRODUCTS_PAGE_SIZE)
+  if (totalPages > MAX_PRODUCT_PAGES) throw new Error('Product catalog exceeds the supported page limit')
+  const products = [...firstPage.data]
+  for (let page = 2; page <= totalPages; page += 3) {
+    const pages = await Promise.all(Array.from({ length: Math.min(3, totalPages - page + 1) }, (_item, offset) => fetchPage(page + offset)))
+    pages.forEach((result) => products.push(...result.data))
+  }
+  return products.filter((record) => isPublicProduct(record, locale, categories))
+})
 
-  return products
+function isPublicProduct(record: ProductRecord, locale: Locale, categories: ProductCategoryRecord[]) {
+  if (record.visibility !== 'published' || record.locale !== locale) return false
+  let categorySlug = record.category_slug
+  const visited = new Set<string>()
+  while (categorySlug) {
+    const category = categories.find((item) => item.slug === categorySlug)
+    if (!category || visited.has(categorySlug)) return false
+    visited.add(categorySlug)
+    categorySlug = category.parent_slug
+  }
+  return true
 }
 
-export async function getProductBySlug(locale: Locale, slug: string): Promise<ProductRecord | null> {
-  const response = await fetchFromApi<ApiItemResponse<ProductRecord>>(
-    `/api/products/${encodeURIComponent(slug)}?locale=${locale}`
-  )
-  return response?.data || null
-}
+export const getProductBySlug = cache(async (locale: Locale, slug: string): Promise<ProductRecord | null> => {
+  const [response, categories] = await Promise.all([
+    fetchFromApi<ApiItemResponse<ProductRecord>>(`/api/products/${encodeURIComponent(slug)}?locale=${locale}`),
+    getProductCategories(locale),
+  ])
+  if (!response) return null
+  if (!response.ok || response.data?.slug !== slug || !['published', 'draft'].includes(response.data.visibility)) throw new Error('Invalid product response')
+  return isPublicProduct(response.data, locale, categories) ? response.data : null
+})
 
-export async function getRelatedProducts(locale: Locale, slug: string): Promise<ProductRecord[]> {
-  const response = await fetchFromApi<ApiListResponse<ProductRecord>>(
-    `/api/products/${encodeURIComponent(slug)}/related?locale=${locale}&limit=3`
-  )
-  return response?.data || []
-}
+export const getRelatedProducts = cache(async (locale: Locale, slug: string): Promise<ProductRecord[]> => {
+  const [response, categories] = await Promise.all([
+    fetchFromApi<ApiListResponse<ProductRecord>>(`/api/products/${encodeURIComponent(slug)}/related?locale=${locale}&limit=3`),
+    getProductCategories(locale),
+  ])
+  if (!response?.ok || !Array.isArray(response.data)) throw new Error('Invalid related products response')
+  return response.data.filter((record) => isPublicProduct(record, locale, categories))
+})
 
 function asRecord(value: unknown): Record<string, unknown> {
   if (value && typeof value === 'object' && !Array.isArray(value)) {

@@ -1037,3 +1037,51 @@
     font-size: 20px;
   }
 }
+button.mobile-nav__toggler,
+button.mobile-nav__close {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.mobile-nav__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 46px;
+}
+
+.mobile-nav__item a {
+  flex: 1;
+  color: #fff;
+}
+
+.mobile-nav__item button {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  color: #fff;
+  background: transparent;
+}
+
+.mobile-nav__item button[aria-expanded="true"] i {
+  transform: rotate(180deg);
+}
+
+.faq-page details summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.faq-page details summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-page details[open] .accrodion-title h4 {
+  color: var(--sinace-base);
+}
+
+.faq-page details[open] .accrodion-title h4::before {
+  content: "\f068";
+}

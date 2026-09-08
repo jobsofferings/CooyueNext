@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import PagePlugins from '@/components/layout/PagePlugins'
+import '@/styles/home-plugins.css'
 import { Locale } from '@/i18n-config'
 import { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
@@ -15,6 +17,7 @@ export default async function Home({
   
   return (
     <main>
+      <PagePlugins page="home" />
       <section className="main-slider">
         <div
           className="main-slider__carousel owl-carousel owl-theme thm-owl__carousel"

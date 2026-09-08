@@ -32,6 +32,11 @@ export interface KnowledgeSearchResult {
   } | null
 }
 
+export interface InitialProductSearch {
+  products: KnowledgeProduct[] | null
+  error: string
+}
+
 export interface InquiryDraft {
   id: string
   confirmationToken: string

@@ -90,24 +90,24 @@ export default async function FaqPage({
             align="center"
           />
           <div className="faq-page__inner">
-            <div className="accrodion-grp" data-grp-name="faq-one-accrodion">
+            <div className="accrodion-grp faq-one-accrodion">
               {faqs.map((faq, index) => (
-                <div
+                <details
                   key={index}
                   className="accrodion"
                 >
-                  <div className="accrodion-title">
+                  <summary className="accrodion-title">
                     <h4>
                       {faq.question}
                       <span className="accrodion-icon"></span>
                     </h4>
-                  </div>
+                  </summary>
                   <div className="accrodion-content">
                     <div className="inner">
                       <p>{faq.answer}</p>
                     </div>
                   </div>
-                </div>
+                </details>
               ))}
             </div>
           </div>

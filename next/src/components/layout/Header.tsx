@@ -2,97 +2,28 @@
 
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect } from 'react'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { siteConfig } from '@/config/site.config'
 import { useDictionary } from '@/hooks/useDictionary'
-
-interface NavItem {
-  label: string
-  href: string
-  children?: NavItem[]
-}
-
-interface CategoryItem {
-  slug: string
-  name: string
-}
-
-const getNavItems = (
-  dict: (key: string) => string,
-  categories: CategoryItem[]
-): NavItem[] => [
-  {
-    label: dict('Home'),
-    href: '/'
-  },
-  {
-    label: dict('Products'),
-    href: '/products',
-    children: categories.map((category) => ({
-      label: category.name,
-      href: `/products#${category.slug}`,
-    })),
-  },
-  // {
-  //   label: dict('Pages'),
-  //   href: '#',
-  //   children: [
-  //     { label: dict('Our Team'), href: '/team' },
-  //     { label: dict('Team Details'), href: '/team/1' },
-  //     { label: dict('Testimonials'), href: '/testimonials' },
-  //     { label: dict('Careers'), href: '/careers' },
-  //     { label: dict('FAQs'), href: '/faq' },
-  //   ],
-  // },
-  {
-    label: dict('News'),
-    href: '#',
-    children: [
-      { label: dict('News'), href: '/news' },
-      { label: dict('News Details'), href: '/news/1' },
-    ],
-  },
-  { label: dict('About'), href: '/about' },
-  { label: dict('Contact'), href: '/contact' },
-]
+import { useNavigation } from './NavigationProvider'
 
 export default function Header() {
   const params = useParams()
   const lang = params.lang as string
   const dict = useDictionary()
-  const [categories, setCategories] = useState<CategoryItem[]>([])
+  const { navItems, mobileOpen, setMobileOpen } = useNavigation()
 
   const getLocalizedHref = (href: string) => `/${lang}${href}`
 
   useEffect(() => {
-    let cancelled = false
-
-    fetch(`/api/products/categories?locale=${lang}`)
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`Failed to load categories: ${response.status}`)
-        }
-        return response.json()
-      })
-      .then((payload) => {
-        if (!cancelled) {
-          setCategories(Array.isArray(payload.data) ? payload.data : [])
-        }
-      })
-      .catch((error) => {
-        console.error('[Header] Failed to load product categories:', error)
-        if (!cancelled) {
-          setCategories([])
-        }
-      })
-
-    return () => {
-      cancelled = true
+    const handleScroll = () => {
+      document.querySelector('.stricky-header')?.classList.toggle('stricky-fixed', window.scrollY > 100)
     }
-  }, [lang])
-
-  const navItems = useMemo(() => getNavItems(dict, categories), [categories, dict])
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const menuContent = (
         <div className="main-menu__wrapper">
@@ -148,9 +79,9 @@ export default function Header() {
               <div className="main-menu__bottom">
                 <div className="main-menu__bottom-inner">
                   <div className="main-menu__main-menu-box">
-                    <a href="#" className="mobile-nav__toggler">
+                    <button type="button" className="mobile-nav__toggler" aria-label={lang === 'zh' ? '打开菜单' : 'Open menu'} aria-expanded={mobileOpen} aria-controls="mobile-navigation" onClick={() => setMobileOpen(true)}>
                       <i className="fa fa-bars"></i>
-                    </a>
+                    </button>
                     <ul className="main-menu__list">
                       {navItems.map((item) => (
                         <li key={item.label} className={item.children ? 'dropdown' : ''}>

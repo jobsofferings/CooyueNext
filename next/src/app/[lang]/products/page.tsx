@@ -15,6 +15,11 @@ import {
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
 export const revalidate = 300
+export const dynamic = 'force-static'
+
+export function generateStaticParams() {
+  return i18n.locales.map((lang) => ({ lang }))
+}
 
 const INFRARED_ROOT_CATEGORY = 'infrared-products'
 

@@ -21,3 +21,4 @@
 ## 页面首开性能评估
 
 - 现有 SSR、首开实测与分阶段优化方案：`docs/rendering-performance-assessment.md`
+- 已落地的按页插件、Next Link 手机导航、产品 SSG/ISR、搜索服务端首查与缓存边界：`docs/page-loading-implementation.md`

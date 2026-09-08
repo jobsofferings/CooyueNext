@@ -62,6 +62,7 @@ export default async function AboutPage({
   
   return (
     <>
+      <PagePlugins page="about" />
       <PageHeader
         title={dict('About')}
         breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('About') }]}
@@ -229,3 +230,4 @@ export default async function AboutPage({
     </>
   )
 }
+import PagePlugins from '@/components/layout/PagePlugins'

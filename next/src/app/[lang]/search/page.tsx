@@ -3,6 +3,12 @@ import { siteConfig } from '@/config/site.config'
 import { i18n, type Locale } from '@/i18n-config'
 import { extractSeoMeta, getSeoByPath } from '@/lib/seo-api'
 import ProductSearch from '@/components/knowledge/ProductSearch'
+import SearchLoading from '@/components/knowledge/SearchLoading'
+import { Suspense } from 'react'
+import { getInitialProductSearch } from '@/lib/knowledge-server'
+import type { InitialProductSearch } from '@/lib/knowledge-api'
+
+export const dynamic = 'force-dynamic'
 
 interface SearchPageProps {
   params: { lang: Locale }
@@ -27,5 +33,12 @@ export async function generateMetadata({ params }: SearchPageProps): Promise<Met
 export default function SearchPage({ params, searchParams }: SearchPageProps) {
   const value = searchParams?.keywords ?? searchParams?.query
   const initialQuery = (Array.isArray(value) ? value[0] || '' : value || '').trim()
-  return <ProductSearch locale={params.lang} initialQuery={initialQuery} />
+  const result = getInitialProductSearch(initialQuery, params.lang)
+  return <Suspense key={`${params.lang}:${initialQuery}`} fallback={<SearchLoading locale={params.lang} query={initialQuery} />}>
+    <SearchResults locale={params.lang} query={initialQuery} result={result} />
+  </Suspense>
+}
+
+async function SearchResults({ locale, query, result }: { locale: Locale; query: string; result: Promise<InitialProductSearch> }) {
+  return <ProductSearch key={`${locale}:${query}`} locale={locale} initialQuery={query} initialSearch={await result} />
 }

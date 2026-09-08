@@ -3,7 +3,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
-import { knowledgeRequest, type KnowledgeProduct, type KnowledgeSearchResult, type InquiryDraft } from '@/lib/knowledge-api'
+import { knowledgeRequest, type KnowledgeProduct, type KnowledgeSearchResult, type InquiryDraft, type InitialProductSearch } from '@/lib/knowledge-api'
 import styles from './knowledge.module.css'
 
 const copy = {
@@ -48,11 +48,11 @@ const gasLabels: Record<string, { zh: string; en: string }> = {
   voc: { zh: '部分挥发性有机化合物', en: 'Selected VOCs' }, ammonia: { zh: '氨', en: 'Ammonia' }, ethylene: { zh: '乙烯', en: 'Ethylene' },
 }
 
-export default function ProductSearch({ locale, initialQuery = '' }: { locale: Locale; initialQuery?: string }) {
+export default function ProductSearch({ locale, initialQuery = '', initialSearch }: { locale: Locale; initialQuery?: string; initialSearch?: InitialProductSearch }) {
   const labels = copy[locale]
   const [input, setInput] = useState(initialQuery)
   const [query, setQuery] = useState(initialQuery.trim())
-  const [products, setProducts] = useState<KnowledgeProduct[] | null>(null)
+  const [products, setProducts] = useState<KnowledgeProduct[] | null>(initialSearch?.products ?? null)
   const [selected, setSelected] = useState<KnowledgeProduct[]>([])
   const [comparison, setComparison] = useState<KnowledgeProduct[] | null>(null)
   const [visibleCount, setVisibleCount] = useState(12)
@@ -65,7 +65,7 @@ export default function ProductSearch({ locale, initialQuery = '' }: { locale: L
   const [busy, setBusy] = useState('')
   const [searching, setSearching] = useState(false)
   const [searchAttempt, setSearchAttempt] = useState(0)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(initialSearch?.error || '')
   const [errorTarget, setErrorTarget] = useState('search')
   const disabled = Boolean(busy)
   const contentLength = query.length + requirements.length
@@ -74,7 +74,7 @@ export default function ProductSearch({ locale, initialQuery = '' }: { locale: L
 
   useEffect(() => {
     const syncQuery = (value: string) => {
-      setInput(value); setQuery(value.trim()); setDraft(null); setConsent(false); setSubmitted(false)
+      setInput(value); setQuery(value.trim()); setSearchAttempt((attempt) => attempt + 1); setDraft(null); setConsent(false); setSubmitted(false)
     }
     const externalSearch = (event: Event) => syncQuery((event as CustomEvent<{ keywords?: string }>).detail?.keywords || '')
     const historySearch = () => {
@@ -90,6 +90,7 @@ export default function ProductSearch({ locale, initialQuery = '' }: { locale: L
   }, [])
 
   useEffect(() => {
+    if (initialSearch && searchAttempt === 0 && query === initialQuery.trim()) return
     setProducts(null); setVisibleCount(12); setError(''); setErrorTarget('search')
     if (!query) { setSearching(false); return }
     const controller = new AbortController()
@@ -99,7 +100,7 @@ export default function ProductSearch({ locale, initialQuery = '' }: { locale: L
       .catch((failure) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : labels.failure) })
       .finally(() => { if (!controller.signal.aborted) setSearching(false) })
     return () => controller.abort()
-  }, [query, locale, searchAttempt, labels.failure])
+  }, [query, locale, searchAttempt, labels.failure, initialQuery, initialSearch])
 
   function searchFor(value: string) {
     if (disabled) return
@@ -162,7 +163,7 @@ export default function ProductSearch({ locale, initialQuery = '' }: { locale: L
       <div className={styles.container}>
         <Link className={styles.back} href={`/${locale}/products`}>← {labels.back}</Link>
         <header className={styles.header}><span className={styles.badge}>COOYUE · PRODUCT SEARCH</span><h1>{labels.title}</h1><p>{labels.intro}</p></header>
-        <form className={`${styles.card} ${styles.form}`} onSubmit={(event) => { event.preventDefault(); searchFor(input) }}>
+        <form action={`/${locale}/search`} method="get" className={`${styles.card} ${styles.form}`} onSubmit={(event) => { event.preventDefault(); searchFor(input) }}>
           <label htmlFor="product-query">{labels.query}</label>
           <div className={styles.searchBar}><input id="product-query" name="keywords" type="search" value={input} maxLength={500} required disabled={disabled} placeholder={labels.placeholder} onChange={(event) => setInput(event.target.value)} /><button className={styles.primary} disabled={disabled || !input.trim()}>{labels.search}</button></div>
           <div className={styles.examples}>{labels.examples.map((example) => <button type="button" key={example} disabled={disabled} onClick={() => searchFor(example)}>{example}</button>)}</div>

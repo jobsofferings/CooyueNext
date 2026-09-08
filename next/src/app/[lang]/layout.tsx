@@ -1,5 +1,8 @@
 import type { Metadata } from 'next'
-import { Header, Footer, MobileNav, SearchPopup, ScriptInitializer, ScrollToTop } from '@/components/layout'
+import { Header, Footer, MobileNav, SearchPopup, ScrollToTop } from '@/components/layout'
+import { NavigationProvider } from '@/components/layout/NavigationProvider'
+import { getProductCategories } from '@/lib/products-api'
+import { notFound } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
@@ -24,13 +27,17 @@ export async function generateMetadata({
   }
 }
 
-export default function LocaleLayout({
+export default async function LocaleLayout({
   children,
+  params: { lang },
 }: {
   children: React.ReactNode
+  params: { lang: Locale }
 }) {
+  if (!i18n.locales.includes(lang)) notFound()
+  const categories = await getProductCategories(lang).catch(() => [])
   return (
-    <>
+    <NavigationProvider categories={categories.map(({ slug, name }) => ({ slug, name }))}>
       <div className="page-wrapper">
         <Header />
         {children}
@@ -39,7 +46,6 @@ export default function LocaleLayout({
       <MobileNav />
       <SearchPopup />
       <ScrollToTop />
-      <ScriptInitializer />
-    </>
+    </NavigationProvider>
   )
 }

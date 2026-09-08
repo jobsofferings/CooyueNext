@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react'
 import { useParams, usePathname, useRouter } from 'next/navigation'
 import { useDictionary } from '@/hooks/useDictionary'
+import { useNavigation } from './NavigationProvider'
 
 export default function SearchPopup() {
   const dict = useDictionary()
@@ -11,13 +12,12 @@ export default function SearchPopup() {
   const router = useRouter()
   const lang = typeof params.lang === 'string' ? params.lang : 'en'
   const [keywords, setKeywords] = useState('')
-  const [isOpen, setIsOpen] = useState(false)
+  const { searchOpen: isOpen, setSearchOpen: setIsOpen, setMobileOpen } = useNavigation()
   const inputRef = useRef<HTMLInputElement>(null)
   const searchPath = `/${lang}/search`
 
   const closeSearchPopup = () => {
     setIsOpen(false)
-    document.body.classList.remove('locked')
   }
 
   useEffect(() => {
@@ -34,17 +34,15 @@ export default function SearchPopup() {
 
       event.preventDefault()
       setIsOpen(true)
-      document.querySelector('.mobile-nav__wrapper')?.classList.remove('expanded')
-      document.body.classList.add('locked')
+      setMobileOpen(false)
     }
 
     document.addEventListener('click', handleDocumentClick)
 
     return () => {
       document.removeEventListener('click', handleDocumentClick)
-      document.body.classList.remove('locked')
     }
-  }, [])
+  }, [setIsOpen, setMobileOpen])
 
   useEffect(() => {
     if (!isOpen) {
@@ -64,7 +62,6 @@ export default function SearchPopup() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsOpen(false)
-        document.body.classList.remove('locked')
       }
     }
 
@@ -73,7 +70,7 @@ export default function SearchPopup() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [isOpen])
+  }, [isOpen, setIsOpen])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()

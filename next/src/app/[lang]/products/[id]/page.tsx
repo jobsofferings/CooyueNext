@@ -8,6 +8,8 @@ import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
 import {
   getProductBySlug,
+  getProducts,
+  getProductCategories,
   getRelatedProducts,
   toProductDetail,
 } from '@/lib/products-api'
@@ -17,6 +19,19 @@ import ImagingKitExperience from '@/components/products/imaging-kit/ImagingKitEx
 import { imagingKitSlug } from '@/components/products/imaging-kit/imaging-kit-data'
 
 export const revalidate = 300
+export const dynamic = 'force-static'
+export const dynamicParams = true
+
+export async function generateStaticParams() {
+  const locales = await Promise.all(i18n.locales.map(async (lang) => {
+    const [products, categories] = await Promise.all([getProducts(lang), getProductCategories(lang)])
+    const infraredCategories = new Set(categories.filter((category) => category.slug === 'infrared-products' || category.parent_slug === 'infrared-products').map((category) => category.slug))
+    const primaryProducts = products.filter((product) => product.category_slug && infraredCategories.has(product.category_slug))
+    const featured = products.filter((product) => product.slug === imagingKitSlug || product.slug.includes('pv400'))
+    return Array.from(new Set([...featured, ...primaryProducts.slice(0, 8)].map((product) => product.slug))).map((id) => ({ lang, id }))
+  }))
+  return locales.flat()
+}
 
 const detailCopy: Record<
   Locale,
@@ -101,10 +116,9 @@ export async function generateMetadata({ params }: ProductDetailPageProps): Prom
 }
 
 export default async function ProductDetailPage({ params }: ProductDetailPageProps) {
-  const dict = await getDictionary(params.lang)
   const copy = detailCopy[params.lang]
   const slug = decodeURIComponent(params.id)
-  const record = await getProductBySlug(params.lang, slug)
+  const [dict, record] = await Promise.all([getDictionary(params.lang), getProductBySlug(params.lang, slug)])
 
   if (!record) {
     notFound()

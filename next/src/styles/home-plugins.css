@@ -1,0 +1,21 @@
+.owl-carousel:not(.owl-loaded) {
+  display: block;
+}
+
+.owl-carousel:not(.owl-loaded) > :not(:first-child) {
+  display: none;
+}
+
+.main-slider__carousel:not(.owl-loaded) .main-slider__content > * {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wow,
+  .float-bob-x,
+  .float-bob-y {
+    animation: none !important;
+  }
+}
