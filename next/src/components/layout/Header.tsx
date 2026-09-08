@@ -94,9 +94,7 @@ export default function Header() {
 
   const navItems = useMemo(() => getNavItems(dict, categories), [categories, dict])
 
-  return (
-    <header className="main-header">
-      <nav className="main-menu">
+  const menuContent = (
         <div className="main-menu__wrapper">
           <div className="main-menu__wrapper-inner">
             <div className="main-menu__logo">
@@ -192,7 +190,16 @@ export default function Header() {
             </div>
           </div>
         </div>
-      </nav>
-    </header>
+  )
+
+  return (
+    <>
+      <header className="main-header">
+        <nav className="main-menu">{menuContent}</nav>
+      </header>
+      <div className="stricky-header stricked-menu main-menu">
+        <div className="sticky-header__react-content">{menuContent}</div>
+      </div>
+    </>
   )
 }

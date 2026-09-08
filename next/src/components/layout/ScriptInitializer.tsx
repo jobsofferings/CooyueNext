@@ -41,14 +41,6 @@ export default function ScriptInitializer() {
         }
       }
 
-      if ($('.sticky-header__content').length) {
-        const stickyContent = document.querySelector('.sticky-header__content')
-        const mainMenuContent = document.querySelector('.main-menu')?.innerHTML
-        if (mainMenuContent && stickyContent && !stickyContent.innerHTML.trim()) {
-          stickyContent.innerHTML = mainMenuContent
-        }
-      }
-
       const dropdownAnchors = document.querySelectorAll('.mobile-nav__container .main-menu__list .dropdown > a')
       dropdownAnchors.forEach((anchor) => {
         if (!anchor.nextElementSibling?.matches('button')) {

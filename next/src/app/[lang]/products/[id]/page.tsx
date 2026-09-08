@@ -109,10 +109,6 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const product = toProductDetail(record)
-  if (slug === 'guide-sensmart-pv400') {
-    return <Pv400Experience locale={params.lang} image={product.image} />
-  }
-
   const relatedRecords = await getRelatedProducts(params.lang, slug)
   const relatedProducts = relatedRecords.map(toProductDetail)
 
@@ -176,6 +172,10 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
           </div>
         </div>
       </section>
+
+      {slug === 'guide-sensmart-pv400' && (
+        <Pv400Experience locale={params.lang} image={product.image} />
+      )}
 
       <section className="product-detail-overview">
         <div className="container">

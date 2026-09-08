@@ -1,27 +1,27 @@
-# PV400 interactive product experience
+# PV400 embedded 3D demonstration
 
-The product detail route mounts this experience only for the `guide-sensmart-pv400` slug, in both `zh` and `en`. Other products retain their existing detail pages. Product lookup and SEO metadata remain server-rendered; no database records are changed.
+The existing product detail page inserts this component directly after `product-detail-top`, only for the `guide-sensmart-pv400` slug in Chinese and English. The page header, original product photo, description, specifications, related products, inquiry links and SEO metadata retain their original structure. No product records are changed.
 
-## Files
+## Behavior
 
-- `Pv400Experience.tsx`: accessible controls, loading/fallback states, module descriptions, synchronized palette selection and reference section.
-- `pv400-scene.ts`: lazily imported Three.js scene, procedural assemblies, raycast selection, projected hotspots, orbit controls and GPU resource disposal.
-- `pv400-thermal.ts`: generated demonstration imagery used by the model display and the larger preview.
-- `pv400-data.ts`: Chinese and English interface text and module descriptions.
-- `pv400.module.css`: locally scoped desktop/mobile styling and reduced-motion behavior.
+- On entering the viewport, the model automatically rotates and loops through assembled, separated and reassembled views. The loop takes approximately 16 seconds.
+- Pause/play controls the demonstration. Dragging, keyboard controls, selecting a module or using the separation slider pauses playback for manual inspection.
+- Six module buttons and projected hotspots show functional descriptions. Selecting the detector separates the model to expose the normally hidden module.
+- Arrow keys rotate, `+`/`-` zoom and `0` resets the view when the canvas container is focused.
+- Reduced-motion preferences disable autoplay. Offscreen or hidden-tab scenes pause animation. Devices without WebGL retain the reference image and functional descriptions, with a retry button.
 
-## Interaction
+## Implementation
 
-Drag to rotate, pinch or scroll to zoom, or use the on-screen controls. With keyboard focus on the viewer, arrow keys rotate, `+`/`-` zoom and `0` restores the default view. The assembled/exploded buttons and percentage slider control separation. Selecting the normally hidden detector opens the model automatically. Module navigation remains available when WebGL is unavailable.
+`Pv400Experience.tsx` provides the embedded controls and fallback. `pv400-scene.ts` is dynamically imported near the viewport and owns geometry, animation, picking and resource disposal. `pv400-thermal.ts` generates the illustrative screen texture. Text is localized in `pv400-data.ts`; visual styles are scoped in `pv400.module.css`.
 
-The Three.js chunk loads near the viewport. Rendering is capped at 30 FPS and device pixel ratio at 1.6; hidden/offscreen scenes skip rendering. The display texture refreshes at 12 FPS. Reduced-motion preferences disable automatic rotation and plume animation and make separation changes immediate. Unmounting disposes geometries, materials, textures, controls, observers and the renderer.
+The scene limits rendering to 30 FPS and device pixel ratio to 1.6. It disposes geometry, materials, textures, controls, observers and the renderer on unmount. It never changes the rest of the page’s styles or hides global navigation controls.
 
-## Accuracy boundaries
+## Accuracy
 
-This is a functional illustration reconstructed from the supplied product image, not an official CAD model, dimensional drawing or service guide. The internal detector, battery placement and separation paths are conceptual. The three palette previews are procedurally generated, not measurements or a complete list of device modes.
+The geometry is a functional illustration reconstructed from product imagery, not manufacturer CAD, a dimensional drawing or a service guide. Internal assemblies and separation paths are conceptual. The screen imagery is simulated and must not be used for safety decisions or measurements.
 
-The published resolution (320 × 256), frame rate (50 Hz), cooled detector, flip-out LCD and rotating OLED viewfinder are sourced from the Guide Sensmart PV Series product page. Manufacturer reference links and the original product image are available in the experience. Do not add unverified spectral bands, battery capacity, gas sensitivity or quantitative readouts to the simulation.
+Function descriptions are based on the Guide Sensmart PV Series product page. Do not add unverified specifications or quantitative readings to the illustration.
 
 ## Validation
 
-From `next`, run `yarn tsc --noEmit` and `yarn build`. Browser checks should cover both locales, desktop/mobile widths, all six module selectors, continuous separation, drag and keyboard controls, palette synchronization, fullscreen, reduced motion, no-WebGL fallback/retry, and navigation to another product and back.
+Run `yarn tsc --noEmit` and `yarn build` from `next`. Verify the original page sections remain, the 3D section appears immediately after `product-detail-top`, autoplay separates and reassembles, manual interaction pauses playback, and both locales, mobile layout, reduced motion and WebGL fallback work. Other product routes must not render this component.

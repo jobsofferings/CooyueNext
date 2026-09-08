@@ -31,7 +31,7 @@ export const productModules: Record<Locale, ProductModule[]> = {
     {
       id: 'display', number: '03', label: '翻折触控屏', title: '换个角度，一样清晰。', english: 'FLIP-OUT DISPLAY',
       description: '翻折式 LCD 触控屏支持多角度观察。气体增强算法帮助呈现气体的分布与扩散，便于现场查看。',
-      detail: '下方切换演示配色，3D 机身上的屏幕也会同步变化。',
+      detail: '3D 机身屏幕中的画面为程序生成的成像演示，不是实测数据。',
       tags: ['LCD 触控', '多角度查看'],
     },
     {
@@ -69,7 +69,7 @@ export const productModules: Record<Locale, ProductModule[]> = {
     {
       id: 'display', number: '03', label: 'Flip-out display', title: 'A clearer angle on the scene.', english: 'FLIP-OUT DISPLAY',
       description: 'The flip-out LCD touchscreen supports multi-angle viewing. Gas-enhancement processing helps visualize gas distribution and diffusion.',
-      detail: 'Change the demonstration palette below to update the screen on the 3D camera, too.',
+      detail: 'The image on the 3D display is a generated illustration, not measured data.',
       tags: ['LCD touchscreen', 'Multi-angle viewing'],
     },
     {
@@ -95,6 +95,9 @@ export const productModules: Record<Locale, ProductModule[]> = {
 
 export const experienceCopy = {
   zh: {
+    embeddedTitle: '3D 产品演示', embeddedIntro: '自动展示整机与拆解过程，也可拖动模型、点击部件自由探索。',
+    playDemo: '播放演示', pauseDemo: '暂停演示', gestureHint: '拖动旋转 · 滚轮或双指缩放',
+    screenNote: '屏幕画面为程序模拟，非实测数据。',
     back: '返回产品中心', category: '光学气体成像 · PV SERIES', title: '洞见无形，拆解可能。',
     intro: '不止于一张产品图。转动、拆解、探索，从光学镜头到成像核心，重新认识 PV400。',
     lab: '交互实验室', assembled: '整机视图', exploded: '爆炸拆解', auto: '自动旋转', pause: '暂停旋转',
@@ -117,6 +120,9 @@ export const experienceCopy = {
     fullscreen: '全屏查看', exitFullscreen: '退出全屏',
   },
   en: {
+    embeddedTitle: '3D product demonstration', embeddedIntro: 'Watch the assembly animation, or drag the model and select a module to explore.',
+    playDemo: 'Play demo', pauseDemo: 'Pause demo', gestureHint: 'Drag to rotate · Scroll or pinch to zoom',
+    screenNote: 'Display imagery is simulated, not measured data.',
     back: 'Back to products', category: 'OPTICAL GAS IMAGING · PV SERIES', title: 'See the unseen. Explore within.',
     intro: 'More than a product image. Rotate, separate and explore the PV400, from its optics to its imaging core.',
     lab: 'Interactive lab', assembled: 'Assembled', exploded: 'Exploded', auto: 'Auto rotate', pause: 'Pause rotation',

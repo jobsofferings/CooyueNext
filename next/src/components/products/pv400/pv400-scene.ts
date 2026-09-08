@@ -8,7 +8,7 @@ import { drawThermalFrame } from './pv400-thermal'
 export interface SceneState {
   explosion: number
   selected: ModuleId
-  autoRotate: boolean
+  autoPlay: boolean
   mode: ImagingMode
   reducedMotion: boolean
 }
@@ -16,6 +16,7 @@ export interface SceneState {
 interface SceneCallbacks {
   onSelect: (moduleId: ModuleId) => void
   onInteraction: () => void
+  onExplosion: (amount: number) => void
   onProject: (moduleId: ModuleId, left: number, top: number, visible: boolean) => void
   onError: () => void
 }
@@ -49,13 +50,16 @@ export function createPv400Scene(host: HTMLDivElement, initialState: SceneState,
   let state = initialState
   let destroyed = false
   let frameId = 0
-  let visible = true
+  let visible = false
   let contextLost = false
   let explosion = initialState.explosion / 100
   let lastTime = 0
   let thermalTime = 0
   let lastThermalFrame = -1
   let previousMode: ImagingMode | null = null
+  let playbackTime = 0
+  let lastProgressTime = 0
+  let lastProgress = -1
   let stageWidth = 1
   let stageHeight = 1
   let previousAspect = 0
@@ -407,12 +411,30 @@ export function createPv400Scene(host: HTMLDivElement, initialState: SceneState,
   const renderFrame = (time: number) => {
     if (destroyed || contextLost) return
     frameId = requestAnimationFrame(renderFrame)
-    if (!visible || document.hidden || time - lastTime < 1000 / 30) return
+    if (!visible || document.hidden) {
+      lastTime = time
+      return
+    }
+    if (time - lastTime < 1000 / 30) return
+    const elapsed = Math.min((time - lastTime) / 1000, 0.25)
     const delta = Math.min((time - lastTime) / 1000, 0.05)
     lastTime = time
     if (!state.reducedMotion) thermalTime += delta
-    const targetExplosion = state.explosion / 100
+    const playing = state.autoPlay && !state.reducedMotion
+    if (playing) playbackTime += elapsed
+    const phase = playbackTime % 16
+    let targetExplosion = state.explosion / 100
+    if (playing) {
+      targetExplosion = phase < 3 ? 0 : phase < 6 ? (phase - 3) / 3 : phase < 10 ? 1 : phase < 13 ? 1 - (phase - 10) / 3 : 0
+      targetExplosion = THREE.MathUtils.smoothstep(targetExplosion, 0, 1)
+    }
     explosion = state.reducedMotion ? targetExplosion : THREE.MathUtils.damp(explosion, targetExplosion, 5.5, delta)
+    if (playing && time - lastProgressTime > 100) {
+      const progress = Math.round(explosion * 100)
+      if (progress !== lastProgress) callbacks.onExplosion(progress)
+      lastProgress = progress
+      lastProgressTime = time
+    }
     const scale = 1.22 - explosion * 0.28
     model.scale.setScalar(scale)
     assemblies.forEach((assembly, index) => {
@@ -426,7 +448,7 @@ export function createPv400Scene(host: HTMLDivElement, initialState: SceneState,
     shellSides[0].position.z = -0.78 - explosion * 0.6
     shellSides[1].position.z = 0.78 + explosion * 0.24
     connectorMaterial.opacity = explosion * 0.42
-    controls.autoRotate = state.autoRotate && !state.reducedMotion
+    controls.autoRotate = playing
     controls.update(delta)
 
     const textureFrame = Math.floor(thermalTime * 12)
@@ -449,7 +471,7 @@ export function createPv400Scene(host: HTMLDivElement, initialState: SceneState,
 
   const resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(host)
-  const intersectionObserver = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false }, { rootMargin: '100px' })
+  const intersectionObserver = new IntersectionObserver(entries => { visible = entries[0]?.isIntersecting ?? false }, { threshold: 0.05 })
   intersectionObserver.observe(host)
   renderer.domElement.addEventListener('pointerdown', pointerDown)
   renderer.domElement.addEventListener('pointerup', pointerUp)
@@ -463,6 +485,10 @@ export function createPv400Scene(host: HTMLDivElement, initialState: SceneState,
   return {
     update(nextState) {
       const selectedChanged = state.selected !== nextState.selected
+      if (!state.autoPlay && nextState.autoPlay) {
+        playbackTime = 0
+        lastProgress = -1
+      }
       state = nextState
       if (selectedChanged) setHighlight()
     },

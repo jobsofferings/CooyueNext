@@ -33,9 +33,6 @@ export default function LocaleLayout({
     <>
       <div className="page-wrapper">
         <Header />
-        <div className="stricky-header stricked-menu main-menu">
-          <div className="sticky-header__content"></div>
-        </div>
         {children}
         <Footer />
       </div>
