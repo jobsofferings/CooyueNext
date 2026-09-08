@@ -36,6 +36,13 @@
 .check { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; line-height: 1.7; }
 .check input { margin-top: 5px; flex-shrink: 0; width: 17px; height: 17px; accent-color: #3157b3; }
 .hint { color: #525f75; font-size: 13px; margin: 16px 0; }
+.progress { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; min-height: 26px; margin: 16px 0; color: #7a879c; }
+.progressStep { display: inline-flex; align-items: baseline; gap: 2px; transition: color 0.25s ease, opacity 0.25s ease; }
+.progressActive { color: #3157b3; font-weight: 700; }
+.progressComplete { color: #52647e; }
+.progressArrow { color: #9aa8bc; font-weight: 700; }
+.progressDots { display: inline-block; width: 1.5em; overflow: hidden; color: currentColor; animation: progress-dots 1.2s steps(4, end) infinite; }
+@keyframes progress-dots { 0% { width: 0; } 75%, 100% { width: 1.5em; } }
 .tableScroll { max-width: 100%; overflow: auto; isolation: isolate; margin-top: 24px; border: 1px solid #d8e0ec; border-radius: 8px; }
 .tableScroll table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; table-layout: fixed; font-size: 14px; }
 .tableScroll caption { caption-side: top; color: #1d2636; text-align: left; font-weight: 600; padding: 10px 0; }
@@ -55,6 +62,7 @@
   .searchBar { flex-direction: column; }
   .selectionBar { position: static; }
   .tableScroll tr > :first-child { width: 112px; min-width: 112px; max-width: 112px; padding: 10px; }
+  .progress { gap: 6px; font-size: 13px; }
 }
 .page small { display: block; margin-top: 6px; color: #525f75; }
 .answer { margin-top: 24px; }
@@ -76,4 +84,7 @@
   .grid { grid-template-columns: 1fr; }
   .primary { width: 100%; }
   .preview { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progressDots { animation: none; }
 }

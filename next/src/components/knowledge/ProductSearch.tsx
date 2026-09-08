@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
 import { knowledgeRequest, type KnowledgeProduct, type KnowledgeSearchResult, type InquiryDraft, type InitialProductSearch } from '@/lib/knowledge-api'
+import SearchProgress, { type SearchPhase } from './SearchProgress'
 import styles from './knowledge.module.css'
 
 const copy = {
@@ -64,6 +65,7 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
   const [submitted, setSubmitted] = useState(false)
   const [busy, setBusy] = useState('')
   const [searching, setSearching] = useState(false)
+  const [searchPhase, setSearchPhase] = useState<SearchPhase>('idle')
   const [searchAttempt, setSearchAttempt] = useState(0)
   const [error, setError] = useState(initialSearch?.error || '')
   const [errorTarget, setErrorTarget] = useState('search')
@@ -92,14 +94,16 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
   useEffect(() => {
     if (initialSearch && searchAttempt === 0 && query === initialQuery.trim()) return
     setProducts(null); setVisibleCount(12); setError(''); setErrorTarget('search')
-    if (!query) { setSearching(false); return }
+    if (!query) { setSearching(false); setSearchPhase('idle'); return }
     const controller = new AbortController()
     setSearching(true)
+    setSearchPhase('recognizing')
+    const phaseTimer = window.setTimeout(() => setSearchPhase('matching'), 900)
     knowledgeRequest<KnowledgeSearchResult>('search', { query, locale }, controller.signal)
-      .then((result) => { if (!controller.signal.aborted) setProducts(result.products) })
-      .catch((failure) => { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : labels.failure) })
+      .then((result) => { if (!controller.signal.aborted) { setProducts(result.products); setSearchPhase('complete') } })
+      .catch((failure) => { if (!controller.signal.aborted) { setError(failure instanceof Error ? failure.message : labels.failure); setSearchPhase('idle') } })
       .finally(() => { if (!controller.signal.aborted) setSearching(false) })
-    return () => controller.abort()
+    return () => { window.clearTimeout(phaseTimer); controller.abort() }
   }, [query, locale, searchAttempt, labels.failure, initialQuery, initialSearch])
 
   function searchFor(value: string) {
@@ -177,7 +181,7 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
         <section className={styles.card} aria-labelledby="product-results-title" aria-busy={searching}>
           <h2 id="product-results-title">{labels.candidates}</h2><p>{labels.selectHint}</p>
           <p className={styles.hint}>{labels.caveat}</p>
-          <p role="status">{searching ? labels.searching : products ? `${products.length} ${labels.results}` : !query ? labels.idle : ''}</p>
+          {searching ? <SearchProgress locale={locale} phase={searchPhase} /> : <p role="status">{products ? `${products.length} ${labels.results}` : !query ? labels.idle : ''}</p>}
           {products?.length === 0 && <p className={styles.notice}>{labels.empty}</p>}
           <div className={styles.grid}>{products?.slice(0, visibleCount).map((product) => {
             const checked = selected.some((item) => item.slug === product.slug)
