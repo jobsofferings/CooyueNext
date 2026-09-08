@@ -4,7 +4,7 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { Locale } from '@/i18n-config'
-import { experienceCopy, posterUrl, productModules, sourceUrl } from './imaging-kit-data'
+import { experienceCopy, posterUrl, productModules } from './imaging-kit-data'
 import type { ModuleId } from './imaging-kit-data'
 import type { ImagingKitSceneController, SceneState } from './imaging-kit-scene'
 import styles from '../pv400/pv400.module.css'
@@ -37,8 +37,9 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
   }
 
   function resetView() {
-    changeView(0)
+    setExplosion(0)
     controllerRef.current?.reset()
+    setAutoPlay(!stateRef.current.reducedMotion)
   }
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
         if (abortController.signal.aborted) { controller.destroy(); return }
         controllerRef.current = controller
         controller.update(stateRef.current)
+        setAutoPlay(!stateRef.current.reducedMotion)
         setStatus('ready')
       }).catch(() => {
         if (!abortController.signal.aborted) {
@@ -169,7 +171,7 @@ export default function ImagingKitExperience({ locale }: { locale: Locale }) {
           </div>
         </div>
         <div className={kitStyles.integration}><h3>{copy.integrationTitle}</h3><p>{copy.integration}</p></div>
-        <p className={styles.modelNote}>{copy.note} <a href={sourceUrl} target="_blank" rel="noopener noreferrer">{copy.source} <span aria-hidden="true">↗</span></a></p>
+        <p className={styles.modelNote}>{copy.note}</p>
       </div>
     </section>
   )

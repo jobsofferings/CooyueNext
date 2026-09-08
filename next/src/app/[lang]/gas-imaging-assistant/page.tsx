@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, permanentRedirect } from 'next/navigation'
 import type { Locale } from '@/i18n-config'
-import GasImagingAssistant from '@/components/knowledge/GasImagingAssistant'
 
 export function generateMetadata({ params }: { params: { lang: Locale } }): Metadata {
   return {
@@ -12,9 +11,10 @@ export function generateMetadata({ params }: { params: { lang: Locale } }): Meta
 
 export default function GasImagingPage({ params, searchParams }: {
   params: { lang: Locale }
-  searchParams?: { query?: string | string[] }
+  searchParams?: { query?: string | string[]; keywords?: string | string[] }
 }) {
   if (!['zh', 'en'].includes(params.lang)) notFound()
-  const initialQuery = typeof searchParams?.query === 'string' ? searchParams.query.trim() : ''
-  return <GasImagingAssistant key={`${params.lang}:${initialQuery}`} locale={params.lang} initialQuery={initialQuery} />
+  const value = searchParams?.query ?? searchParams?.keywords
+  const query = (Array.isArray(value) ? value[0] || '' : value || '').trim()
+  permanentRedirect(`/${params.lang}/search${query ? `?keywords=${encodeURIComponent(query)}` : ''}`)
 }

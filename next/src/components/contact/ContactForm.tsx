@@ -101,6 +101,7 @@ export function ContactForm({ lang, pagePath, labels, initialValues }: ContactFo
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   autoComplete="name"
+                  maxLength={100}
                   required
                   disabled={status.kind === 'sending'}
                 />
@@ -115,6 +116,7 @@ export function ContactForm({ lang, pagePath, labels, initialValues }: ContactFo
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   autoComplete="email"
+                  maxLength={100}
                   required
                   disabled={status.kind === 'sending'}
                 />
@@ -127,6 +129,7 @@ export function ContactForm({ lang, pagePath, labels, initialValues }: ContactFo
               <div className="contact-page__input-box text-message-box">
                 <textarea
                   name="message"
+                  maxLength={1000}
                   placeholder={labels.message}
                   value={message}
                   onChange={(event) => setMessage(event.target.value)}

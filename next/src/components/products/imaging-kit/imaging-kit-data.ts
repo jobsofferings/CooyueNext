@@ -46,7 +46,6 @@ export const experienceCopy = {
     integrationTitle: '一套成像组件，多种集成平台',
     integration: '可面向机载、车载、船载等项目进行客户侧集成。不是带统一外壳的手持相机；客户需按平台完成装配、供电、布线、散热与防护设计，适配条件另行确认。',
     note: '几何来自所提供的 CAD（69 个实体）。原文件未提供部件名称，五组划分依据结构位置与提供的功能说明；展示配色、分离方向和间距仅用于讲解，不作为材料、尺寸、装配顺序或平台认证依据。',
-    source: '查看原始 STEP 文件',
   },
   en: {
     title: 'Explore the complete imaging chain',
@@ -62,6 +61,5 @@ export const experienceCopy = {
     integrationTitle: 'One imaging kit. Your integration platform.',
     integration: 'For customer integration into airborne, vehicle and marine projects. This is not a handheld camera with a common outer enclosure. The customer designs mounting, power, wiring, cooling and environmental protection; platform suitability requires confirmation.',
     note: 'Geometry comes from the supplied CAD (69 bodies). The source has no component names; the five functional groups are interpreted from geometry and the supplied descriptions. Display finishes and separation paths are illustrative, not material specifications, dimensions, assembly instructions or platform certifications.',
-    source: 'View original STEP file',
   },
 }

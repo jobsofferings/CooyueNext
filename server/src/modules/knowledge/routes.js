@@ -8,6 +8,8 @@ function createRouters(resolvePool = getProductsPool) {
   const adminRouter = express.Router();
   const limitDrafts = rateLimit({ windowMs: 60 * 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false,
     message: { ok: false, error: "Too many inquiry drafts; try again later" } });
+  const limitConfirmations = rateLimit({ windowMs: 60 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
+    message: { ok: false, error: "Too many inquiry confirmations; try again later" } });
   publicRouter.use((_req, res, next) => { res.set("Cache-Control", "no-store"); next(); });
   const handle = (operation) => async (req, res, next) => {
     try {
@@ -21,12 +23,12 @@ function createRouters(resolvePool = getProductsPool) {
   publicRouter.post("/compare", handle("compare"));
   publicRouter.post("/answer", handle("answer"));
   publicRouter.post("/inquiries/draft", limitDrafts, handle("draft"));
-  publicRouter.post("/inquiries/:id/confirm", handle("confirm"));
+  publicRouter.post("/inquiries/:id/confirm", limitConfirmations, handle("confirm"));
 
   adminRouter.get("/inquiries", async (_req, res, next) => {
     try {
       const pool = await resolvePool();
-      const { rows } = await pool.query(`SELECT id, locale, summary, status, contact_name, contact_email, confirmed_at
+      const { rows } = await pool.query(`SELECT id, locale, summary, status, delivery_status, contact_name, contact_email, confirmed_at
         FROM knowledge.inquiries WHERE status = 'submitted' ORDER BY confirmed_at DESC LIMIT 100`);
       res.set("Cache-Control", "no-store").json({ ok: true, data: rows });
     } catch (error) { next(error); }

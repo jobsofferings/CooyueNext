@@ -1,7 +1,10 @@
 const { randomBytes } = require("crypto");
 const { isDeepStrictEqual } = require("util");
-const { CATEGORY, hash, getDocuments, eligibleSql } = require("./store");
+const { CATEGORY, hash, getDocuments } = require("./store");
 const { analyzeQuery, createRetriever } = require("./retriever");
+const { getCatalog, publicCatalogProduct } = require("./catalog");
+const { retrieveCatalog } = require("./catalog-retriever");
+const { prepareDelivery, deliverInquiry } = require("./inquiry-delivery");
 
 function fail(message, status = 400) {
   throw Object.assign(new Error(message), { status });
@@ -9,7 +12,7 @@ function fail(message, status = 400) {
 
 function text(value, name, maximum = 1000, required = true) {
   if (value == null && !required) return "";
-  if (typeof value !== "string" || value.trim().length > maximum || (required && !value.trim())) fail(`Invalid ${name}`);
+  if (typeof value !== "string" || value.length > maximum || (required && !value.trim())) fail(`Invalid ${name} (maximum ${maximum} characters)`);
   return value.trim();
 }
 
@@ -19,9 +22,9 @@ function localeOf(value) {
 }
 
 function slugsOf(value, minimum = 1) {
-  if (!Array.isArray(value) || value.length < minimum || value.length > 3
+  if (!Array.isArray(value) || value.length < minimum || value.length > 12
     || value.some((slug) => typeof slug !== "string" || !/^[a-z0-9-]{1,120}$/.test(slug))
-    || new Set(value).size !== value.length) fail("Select one to three distinct products");
+    || new Set(value).size !== value.length) fail("Select up to twelve distinct products");
   return value;
 }
 
@@ -36,6 +39,15 @@ function publicProduct(document) {
 function createService(pool) {
   const retriever = createRetriever(pool);
 
+  async function selectedProducts(locale, slugs, connection = pool) {
+    const records = await getCatalog(connection, locale, slugs);
+    return slugs.map((slug) => {
+      const record = records.find((product) => product.slug === slug);
+      if (!record) fail("A selected product is no longer available; please review your selection", 409);
+      return publicCatalogProduct(record);
+    });
+  }
+
   async function selectedDocuments(locale, slugs) {
     const documents = await getDocuments(pool, locale);
     return slugs.map((slug) => {
@@ -47,6 +59,10 @@ function createService(pool) {
 
   return {
     async search(input) {
+      return retrieveCatalog(pool, { locale: localeOf(input.locale), query: text(input.query, "query", 500) });
+    },
+
+    async searchReviewed(input) {
       const locale = localeOf(input.locale);
       const query = text(input.query, "query", 500);
       const result = await retriever.retrieve({ query, locale, requireAll: true });
@@ -70,8 +86,7 @@ function createService(pool) {
 
     async compare(input) {
       const locale = localeOf(input.locale);
-      const documents = await selectedDocuments(locale, slugsOf(input.productSlugs, 2));
-      return { products: documents.map(publicProduct), fields: ["gases", "formFactor", "resolution", "price"] };
+      return { products: await selectedProducts(locale, slugsOf(input.productSlugs, 2)), fields: ["category", "specs", "metrics", "detailPath"] };
     },
 
     async answer(input) {
@@ -102,11 +117,12 @@ function createService(pool) {
     async draft(input) {
       const locale = localeOf(input.locale);
       const query = text(input.query, "query", 500);
-      const requirements = text(input.requirements, "requirements", 2000, false);
+      const requirements = text(input.requirements, "requirements", 1000, false);
       const question = text(input.question, "question", 1000, false);
-      const documents = await selectedDocuments(locale, slugsOf(input.productSlugs));
+      if (query.length + requirements.length + question.length > 1000) fail("User-written inquiry content must not exceed 1000 characters");
+      const products = await selectedProducts(locale, slugsOf(input.productSlugs));
       const confirmationToken = randomBytes(32).toString("hex");
-      const summary = { category: CATEGORY, query, question, requirements, products: documents.map(publicProduct) };
+      const summary = { category: "catalog", query, question, requirements, products };
       const { rows } = await pool.query(`INSERT INTO knowledge.inquiries(locale, confirmation_token_hash, summary)
         VALUES ($1,$2,$3) RETURNING id, expires_at`, [locale, hash(confirmationToken), JSON.stringify(summary)]);
       return { id: rows[0].id, expiresAt: rows[0].expires_at, confirmationToken, summary };
@@ -118,25 +134,32 @@ function createService(pool) {
       const token = text(input.confirmationToken, "confirmation token", 64);
       if (!/^[a-f0-9]{64}$/.test(token)) fail("Invalid confirmation token");
       const name = text(input.name, "name", 100);
-      const email = text(input.email, "email", 254);
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("Invalid email");
-      const draft = (await pool.query("SELECT * FROM knowledge.inquiries WHERE id = $1 AND confirmation_token_hash = $2", [id, hash(token)])).rows[0];
-      if (!draft) fail("Inquiry not found", 404);
-      if (draft.status === "submitted") return { id, status: "submitted", delivery: "stored" };
-      if (new Date(draft.expires_at) <= new Date()) fail("Inquiry draft expired; review a new draft", 410);
-      const current = await selectedDocuments(draft.locale, draft.summary.products.map((product) => product.slug));
-      if (!isDeepStrictEqual(current.map(publicProduct), draft.summary.products)) fail("Product information changed; review a new draft", 409);
-      const updated = await pool.query(`UPDATE knowledge.inquiries SET status = 'submitted', contact_name = $3,
-        contact_email = $4, confirmed_at = now()
-        WHERE id = $1 AND confirmation_token_hash = $2 AND status = 'draft' AND expires_at > now()
-          AND (SELECT count(DISTINCT document.product_slug) ${eligibleSql()}
-            AND document.locale = $6 AND document.product_slug = ANY($5::text[])) = cardinality($5::text[])
-        RETURNING id`, [id, hash(token), name, email, draft.summary.products.map((product) => product.slug), draft.locale]);
-      if (!updated.rowCount) {
-        const status = (await pool.query("SELECT status FROM knowledge.inquiries WHERE id = $1 AND confirmation_token_hash = $2", [id, hash(token)])).rows[0]?.status;
-        if (status !== "submitted") fail("Inquiry draft expired", 410);
+      const email = text(input.email, "email", 100);
+      if (/[\r\n]/.test(name) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("Invalid contact details");
+      const client = await pool.connect();
+      let prepared;
+      try {
+        await client.query("BEGIN");
+        const draft = (await client.query("SELECT * FROM knowledge.inquiries WHERE id = $1 AND confirmation_token_hash = $2 FOR UPDATE", [id, hash(token)])).rows[0];
+        if (!draft) fail("Inquiry not found", 404);
+        if (draft.delivery_status === "sent") {
+          await client.query("COMMIT");
+          return { status: "submitted", delivery: "sent" };
+        }
+        if (draft.delivery_status === "sending") fail("询盘邮件正在发送，请稍后重试 / Inquiry email is being sent; please retry shortly", 409);
+        if (new Date(draft.expires_at) <= new Date()) fail("Inquiry draft expired; review a new draft", 410);
+        if ([draft.summary.query, draft.summary.question, draft.summary.requirements].join("").length > 1000) fail("User-written inquiry content must not exceed 1000 characters");
+        const current = await selectedProducts(draft.locale, slugsOf(draft.summary.products.map((product) => product.slug)), client);
+        if (!isDeepStrictEqual(current, draft.summary.products)) fail("Product information changed; review a new draft", 409);
+        prepared = await prepareDelivery(client, draft, name, email);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      } finally {
+        client.release();
       }
-      return { id, status: "submitted", delivery: "stored" };
+      return deliverInquiry(pool, id, prepared);
     },
   };
 }

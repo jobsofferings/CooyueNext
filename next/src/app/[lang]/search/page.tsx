@@ -1,132 +1,31 @@
-import { Metadata } from 'next'
-import { PageHeader } from '@/components/layout'
+import type { Metadata } from 'next'
 import { siteConfig } from '@/config/site.config'
-import { getDictionary } from '@/get-dictionary'
-import { i18n, Locale } from '@/i18n-config'
-import { getProducts, toProductDetail, type ProductRecord } from '@/lib/products-api'
+import { i18n, type Locale } from '@/i18n-config'
 import { extractSeoMeta, getSeoByPath } from '@/lib/seo-api'
-import SearchProductsClient, {
-  type SearchPageClientCopy,
-  type SearchProduct,
-} from './SearchProductsClient'
-
-export const revalidate = 300
-
-const searchCopy: Record<Locale, SearchPageClientCopy & { pageTitle: string }> = {
-  zh: {
-    pageTitle: '产品搜索',
-    intro: '目录搜索按全部关键词取交集，请用空格或逗号分隔条件。气体成像需求同时查询已审核知识库；关键词出现不等于参数或工况已获确认。',
-    inputLabel: '搜索关键词',
-    placeholder: '输入型号、分类或规格',
-    button: '开始搜索',
-    viewDetail: '查看详情',
-    idle: '输入关键词后即可查看匹配产品。',
-    empty: '目录中没有同时匹配全部关键词的产品，不会放宽为任一条件命中。知识库结果在上方单独展示。',
-  },
-  en: {
-    pageTitle: 'Search Products',
-    intro: 'All catalog keywords must match the same product. Separate conditions with spaces or commas. Reviewed gas imaging evidence is searched separately; a keyword match does not verify a specification or application requirement.',
-    inputLabel: 'Search keywords',
-    placeholder: 'Search by model, category, or spec',
-    button: 'Search',
-    viewDetail: 'View Detail',
-    idle: 'Enter keywords to see matching products.',
-    empty: 'No catalog product matches all keywords. Conditions are not relaxed to partial matches. Knowledge results are shown separately above.',
-  },
-}
+import ProductSearch from '@/components/knowledge/ProductSearch'
 
 interface SearchPageProps {
   params: { lang: Locale }
-  searchParams?: {
-    keywords?: string | string[]
-  }
-}
-
-function getSearchKeywords(value?: string | string[]): string {
-  if (Array.isArray(value)) {
-    return value[0] || ''
-  }
-
-  return value || ''
-}
-
-function buildSearchFields(record: ProductRecord, detail: ReturnType<typeof toProductDetail>): SearchProduct['fields'] {
-  return [
-    { value: detail.model, weight: 80 },
-    { value: record.slug, weight: 72 },
-    { value: detail.subtitle, weight: 44 },
-    { value: detail.familyName, weight: 30 },
-    { value: record.category_name || '', weight: 24 },
-    { value: record.category_slug || '', weight: 20 },
-    { value: detail.description, weight: 22 },
-    { value: detail.specs.join(' '), weight: 24 },
-    { value: detail.highlights.join(' '), weight: 18 },
-    { value: detail.applications.join(' '), weight: 18 },
-    { value: record.tags.join(' '), weight: 16 },
-    { value: JSON.stringify(record.extra), weight: 12 },
-    { value: JSON.stringify(record.specifications), weight: 12 },
-  ].map(({ value, weight }) => ({
-    value: typeof value === 'string' ? value : '',
-    weight,
-  }))
-}
-
-function toSearchProduct(record: ProductRecord): SearchProduct {
-  const detail = toProductDetail(record)
-
-  return {
-    id: detail.id,
-    familyName: detail.familyName,
-    model: detail.model,
-    subtitle: detail.subtitle,
-    description: detail.description,
-    specs: detail.specs,
-    order: record.display_order,
-    fields: buildSearchFields(record, detail),
-  }
+  searchParams?: { keywords?: string | string[]; query?: string | string[] }
 }
 
 export async function generateMetadata({ params }: SearchPageProps): Promise<Metadata> {
-  const copy = searchCopy[params.lang]
   const seoData = await getSeoByPath('/search', params.lang)
   const seoMeta = extractSeoMeta(seoData, {
-    title: siteConfig.seo.titleTemplate(copy.pageTitle),
-    description: copy.intro,
+    title: siteConfig.seo.titleTemplate(params.lang === 'zh' ? '产品搜索、对比与询盘' : 'Product Search, Comparison and Inquiry'),
+    description: params.lang === 'zh' ? '描述需求，查找相关产品，比较参数并发送询盘邮件。' : 'Find related products, compare specifications and send an inquiry email.',
   })
-
   return {
-    title: seoMeta.title,
-    description: seoMeta.description,
-    robots: { index: false, follow: false },
+    title: seoMeta.title, description: seoMeta.description, robots: { index: false, follow: true },
     alternates: {
-      canonical: seoMeta.canonical || `/${params.lang}/search`,
+      canonical: `/${params.lang}/search`,
       languages: Object.fromEntries(i18n.locales.map((locale) => [locale, `/${locale}/search`])),
     },
   }
 }
 
-export default async function SearchPage({ params, searchParams }: SearchPageProps) {
-  const dict = await getDictionary(params.lang)
-  const copy = searchCopy[params.lang]
-  const keywords = getSearchKeywords(searchParams?.keywords)
-  const products = (await getProducts(params.lang)).map(toSearchProduct)
-
-  return (
-    <>
-      <PageHeader
-        title={copy.pageTitle}
-        breadcrumbs={[
-          { label: dict('Home'), href: '/' },
-          { label: copy.pageTitle },
-        ]}
-      />
-
-      <SearchProductsClient
-        lang={params.lang}
-        copy={copy}
-        initialKeywords={keywords}
-        products={products}
-      />
-    </>
-  )
+export default function SearchPage({ params, searchParams }: SearchPageProps) {
+  const value = searchParams?.keywords ?? searchParams?.query
+  const initialQuery = (Array.isArray(value) ? value[0] || '' : value || '').trim()
+  return <ProductSearch locale={params.lang} initialQuery={initialQuery} />
 }

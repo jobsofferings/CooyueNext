@@ -213,6 +213,7 @@ async function sendContactEmail(payload = {}) {
         replyTo: payload.email,
         subject: content.subject,
         text: content.text,
+        ...(payload.messageId ? { messageId: payload.messageId } : {}),
       });
 
       return {

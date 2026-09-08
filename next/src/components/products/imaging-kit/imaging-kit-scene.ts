@@ -75,7 +75,7 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
   let dirty = true
   let frameId = 0
   let lastTime = 0
-  let playbackTime = 0
+  let playbackTime = 3
   let lastProgressTime = 0
   let lastProgress = -1
   let explosion = initialState.explosion / 100
@@ -259,7 +259,7 @@ export async function createImagingKitScene(host: HTMLDivElement, initialState: 
 
   return {
     update(nextState) {
-      if (!state.autoPlay && nextState.autoPlay) { playbackTime = 0; lastProgress = -1 }
+      if (!state.autoPlay && nextState.autoPlay) { playbackTime = 3; lastProgress = -1 }
       state = nextState
       highlight()
     },

@@ -11,8 +11,9 @@
 
 - QQ 优先、Gmail 备用的配置与验证说明：`docs/contact-mail.md`
 
-## 气体红外成像知识检索验证
+## 产品搜索、对比与邮件询盘
 
-- 操作、验收与向量数据库迁移文档：[docs/knowledge-gas-imaging.md](docs/knowledge-gas-imaging.md)
-- 前台验证入口：`/zh/gas-imaging-assistant`、`/en/gas-imaging-assistant`
+- 当前流程、向量召回与验收说明：`docs/product-search.md`
+- 统一入口：`/zh/search`、`/en/search`，旧 `gas-imaging-assistant` 地址保留查询参数后重定向
+- 旧气体审核资料检索的设计记录：`docs/knowledge-gas-imaging.md`
 - 接口样例：`server/knowledge.rest`

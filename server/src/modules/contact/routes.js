@@ -123,8 +123,15 @@ router.post(
     if (!payload.message) {
       return badRequest(res, '"message" is required');
     }
-    if (payload.message.length > 5000) {
-      return badRequest(res, '"message" is too long');
+    const submitted = req.body?.data || req.body || {};
+    if (typeof submitted.name !== "string" || submitted.name.length > 100 || /[\r\n]/.test(submitted.name)) {
+      return badRequest(res, '"name" must not exceed 100 characters or contain line breaks');
+    }
+    if (typeof submitted.email !== "string" || submitted.email.length > 100) {
+      return badRequest(res, '"email" must not exceed 100 characters');
+    }
+    if (typeof submitted.message !== "string" || submitted.message.length > 1000) {
+      return badRequest(res, '"message" must not exceed 1000 characters');
     }
 
     const config = getContactMailConfig();

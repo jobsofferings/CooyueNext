@@ -2,10 +2,14 @@ export interface KnowledgeProduct {
   slug: string
   name: string
   category: string
-  facts: { name: string; gases: string[]; formFactor: string; resolution: string }
-  price: number | null
-  currency: string
-  source: { title: string; url: string; version: string; reviewedAt: string }
+  model: string
+  categoryName: string
+  description: string
+  specs: string[]
+  metrics: Array<{ label: string; value: string }>
+  facts: { gases: string[]; formFactor: string; resolution: string }
+  detailPath: string
+  version: string
 }
 
 export interface KnowledgeAnswer {
@@ -18,7 +22,7 @@ export interface KnowledgeAnswer {
 
 export interface KnowledgeSearchResult {
   query: string
-  matchMode: 'all'
+  matchMode: 'any'
   status: 'matches' | 'no_matches' | 'needs_clarification'
   products: KnowledgeProduct[]
   clarification: {
@@ -40,7 +44,7 @@ export async function knowledgeRequest<Result>(path: string, body: unknown, sign
   const abort = () => controller.abort()
   if (signal?.aborted) controller.abort()
   else signal?.addEventListener('abort', abort, { once: true })
-  const timeout = setTimeout(() => controller.abort(), 20000)
+  const timeout = setTimeout(() => controller.abort(), path.endsWith('/confirm') ? 125000 : 20000)
   try {
     const response = await fetch(`/api/knowledge/${path}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },

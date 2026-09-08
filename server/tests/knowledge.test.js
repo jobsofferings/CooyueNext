@@ -16,6 +16,11 @@ function fixturePool() {
     id: `${source.key}:${section.key}`, document_id: source.key, section: section.title, content: section.content,
   })));
   return { async query(sql, parameters) {
+    if (sql.startsWith("SELECT product.*")) return { rows: documents.filter((document) => document.locale === parameters[0]
+      && (!parameters[1] || parameters[1].includes(document.product_slug))).map((document) => ({
+      slug: document.product_slug, locale: document.locale, name: document.product_name, category_slug: "gas-imaging-cameras",
+      category_name: "Gas imaging cameras", reviewed_facts: document.facts, extra: {}, specifications: {}, tags: [],
+    })) };
     if (sql.includes("FROM knowledge.chunks")) return { rows: chunks.filter((chunk) => parameters[0].includes(chunk.document_id)) };
     if (sql.includes("FROM knowledge.documents document")) return { rows: documents.filter((document) => document.locale === parameters[0]) };
     throw new Error(`Unexpected query: ${sql}`);
@@ -52,25 +57,25 @@ test("reviewed source manifest has stable, unique bilingual source and chunk key
 test("invalid locale, duplicate selection, oversized selection and SQL-looking slugs are rejected", () => {
   assert.throws(() => localeOf("fr"));
   assert.throws(() => slugsOf(["flir-g306", "flir-g306"]));
-  assert.throws(() => slugsOf(["one", "two", "three", "four"]));
+  assert.throws(() => slugsOf(Array.from({ length: 13 }, (_, index) => `product-${index}`)));
   assert.throws(() => slugsOf(["' OR 1=1 --"]));
 });
 
 test("methane search excludes products without documented methane capability", async () => {
-  const result = await createService(fixturePool()).search({ locale: "zh", query: "甲烷泄漏巡检，手持设备" });
+  const result = await createService(fixturePool()).searchReviewed({ locale: "zh", query: "甲烷泄漏巡检，手持设备" });
   assert.deepEqual(result.products.map((product) => product.slug).sort(), ["flir-gf77", "guide-sensmart-pv400"]);
   assert.equal(result.mode, "lexical-validation");
 });
 
 test("English SF6 query uses the English evidence corpus", async () => {
-  const result = await createService(fixturePool()).search({ locale: "en", query: "SF6 handheld gas imaging" });
+  const result = await createService(fixturePool()).searchReviewed({ locale: "en", query: "SF6 handheld gas imaging" });
   assert.deepEqual(result.products.map((product) => product.slug).sort(), ["flir-g306", "flir-gf77"]);
 });
 
 test("gas, form factor and exact resolution must all match the same product", async () => {
   const service = createService(fixturePool());
   for (const query of ["甲烷 手持 640x512", "甲烷 手持 320x240 320x256", "SF6 手持 320x256"]) {
-    const result = await service.search({ locale: "zh", query });
+    const result = await service.searchReviewed({ locale: "zh", query });
     assert.equal(result.status, "no_matches", query);
     assert.deepEqual(result.products, [], query);
     assert.equal(result.matchMode, "all");
@@ -81,7 +86,7 @@ test("gas, form factor and exact resolution must all match the same product", as
     ["en", "Find a handheld methane camera with 320 * 240 resolution", "flir-gf77"],
     ["en", "SF6 handheld gas imaging at substations", "flir-g306"],
   ]) {
-    const result = await service.search({ locale, query });
+    const result = await service.searchReviewed({ locale, query });
     assert.deepEqual(result.products.map((product) => product.slug), [expected], query);
   }
 });
@@ -89,11 +94,11 @@ test("gas, form factor and exact resolution must all match the same product", as
 test("resolution bounds compare structured dimensions without dropping other constraints", async () => {
   const service = createService(fixturePool());
   for (const query of ["甲烷 手持 分辨率至少320×256", "甲烷 手持 分辨率高于320×240", "甲烷 手持 分辨率320×256以上"]) {
-    assert.deepEqual((await service.search({ locale: "zh", query })).products.map((product) => product.slug), ["guide-sensmart-pv400"], query);
+    assert.deepEqual((await service.searchReviewed({ locale: "zh", query })).products.map((product) => product.slug), ["guide-sensmart-pv400"], query);
   }
-  const result = await service.search({ locale: "en", query: "handheld methane at least 320x256 and at most 640x512" });
+  const result = await service.searchReviewed({ locale: "en", query: "handheld methane at least 320x256 and at most 640x512" });
   assert.deepEqual(result.products.map((product) => product.slug), ["guide-sensmart-pv400"]);
-  assert.deepEqual((await service.search({ locale: "en", query: "handheld methane at least 640x512" })).products, []);
+  assert.deepEqual((await service.searchReviewed({ locale: "en", query: "handheld methane at least 640x512" })).products, []);
 });
 
 test("cooled and uncooled conditions are distinct, including bilingual natural phrasing", async () => {
@@ -103,19 +108,19 @@ test("cooled and uncooled conditions are distinct, including bilingual natural p
     ["zh", "制冷型 手持 甲烷", "guide-sensmart-pv400"],
     ["en", "cooled handheld methane camera", "guide-sensmart-pv400"],
     ["en", "uncooled handheld methane camera", "flir-gf77"],
-  ]) assert.deepEqual((await service.search({ locale, query })).products.map((product) => product.slug), [expected], query);
+  ]) assert.deepEqual((await service.searchReviewed({ locale, query })).products.map((product) => product.slug), [expected], query);
 });
 
 test("unknown additional conditions and multiple model requirements do not become partial matches", async () => {
   const service = createService(fixturePool());
   for (const query of ["甲烷 手持 防爆", "甲烷 手持 SDI", "甲烷 手持 640", "PV400 GF77 手持", "PV400 SF6", "hydrogen methane handheld"])
-    assert.deepEqual((await service.search({ locale: "zh", query })).products, [], query);
+    assert.deepEqual((await service.searchReviewed({ locale: "zh", query })).products, [], query);
 });
 
 test("unsupported ranges, exclusions, alternatives and simultaneous configurations require clarification", async () => {
   const service = createService(fixturePool());
   for (const query of ["甲烷 手持 重量500g以下", "甲烷 手持 价格低于5000", "甲烷 不要手持", "methane handheld or fixed", "handheld methane not less than 320x240", "同时检测甲烷和SF6的手持相机"]) {
-    const result = await service.search({ locale: "zh", query });
+    const result = await service.searchReviewed({ locale: "zh", query });
     assert.equal(result.status, "needs_clarification", query);
     assert.equal(result.clarification.reason, "unsupported_conditions", query);
     assert.deepEqual(result.products, [], query);
@@ -132,13 +137,13 @@ test("answer comparison still retrieves evidence from multiple selected products
 test("incomplete gas names require explicit correction without returning generic handheld candidates", async () => {
   const service = createService(fixturePool());
   for (const query of ["烷泄漏巡检，手持设备", "【烷泄漏巡检，手持设备】"]) {
-    const result = await service.search({ locale: "zh", query });
+    const result = await service.searchReviewed({ locale: "zh", query });
     assert.equal(result.query, query);
     assert.equal(result.status, "needs_clarification");
     assert.deepEqual(result.products, []);
     assert.equal(result.clarification.term, "烷");
     assert.equal(result.clarification.suggestions[0].query, query.replace("烷", "甲烷"));
-    const corrected = await service.search({ locale: "zh", query: result.clarification.suggestions[0].query });
+    const corrected = await service.searchReviewed({ locale: "zh", query: result.clarification.suggestions[0].query });
     assert.equal(corrected.status, "matches");
     assert.deepEqual(corrected.products.map((product) => product.slug).sort(), ["flir-gf77", "guide-sensmart-pv400"]);
   }
@@ -146,7 +151,7 @@ test("incomplete gas names require explicit correction without returning generic
 
 test("other alkane names are not silently corrected to methane or reduced to handheld matching", async () => {
   for (const query of ["乙烷泄漏巡检，手持设备", "丙烷泄漏巡检，手持设备", "丁烷气体成像"]) {
-    const result = await createService(fixturePool()).search({ locale: "zh", query });
+    const result = await createService(fixturePool()).searchReviewed({ locale: "zh", query });
     assert.equal(result.clarification, null, query);
     assert.equal(result.status, "no_matches", query);
     assert.deepEqual(result.products, [], query);
@@ -155,16 +160,17 @@ test("other alkane names are not silently corrected to methane or reduced to han
 
 test("unsupported gas, fixed installation, missing model and off-topic search return no matches", async () => {
   for (const query of ["氢气泄漏成像", "固定式甲烷监测", "PV999 gas camera", "推荐一台游戏电脑"]) {
-    assert.equal((await createService(fixturePool()).search({ locale: "zh", query })).products.length, 0, query);
+    assert.equal((await createService(fixturePool()).searchReviewed({ locale: "zh", query })).products.length, 0, query);
   }
 });
 
-test("comparison only accepts reviewed products and preserves unknown prices", async () => {
+test("comparison accepts published products and excludes catalog prices", async () => {
   const service = createService(fixturePool());
   const result = await service.compare({ locale: "zh", productSlugs: ["guide-sensmart-pv400", "flir-g306"] });
   assert.equal(result.products[0].facts.resolution, "320 × 256");
-  assert.equal(result.products[1].price, null);
-  await assert.rejects(service.compare({ locale: "zh", productSlugs: ["guide-sensmart-pv400", "cy-t80"] }), /approved/);
+  assert.equal(Object.hasOwn(result.products[1], "price"), false);
+  assert.equal(result.products[0].detailPath, "/zh/products/guide-sensmart-pv400");
+  await assert.rejects(service.compare({ locale: "zh", productSlugs: ["guide-sensmart-pv400", "cy-t80"] }), /available/);
 });
 
 test("answers expose stable citations and do not invent missing specifications", async () => {

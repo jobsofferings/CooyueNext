@@ -31,10 +31,14 @@ export async function POST(request: NextRequest, { params }: { params: { path: s
   }
   const apiUrl = process.env.KNOWLEDGE_API_URL || process.env.SEO_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:3001'
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 15000)
+  const timeout = setTimeout(() => controller.abort(), endpoint.endsWith('/confirm') ? 120000 : 15000)
   try {
     const response = await fetch(`${apiUrl.replace(/\/+$/, '')}/api/knowledge/${endpoint}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body,
+      method: 'POST', headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': request.headers.get('x-forwarded-for') || '',
+        'x-real-ip': request.headers.get('x-real-ip') || '',
+      }, body,
       cache: 'no-store', signal: controller.signal,
     })
     const payload = await response.json()

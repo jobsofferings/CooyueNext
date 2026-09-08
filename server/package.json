@@ -15,7 +15,7 @@
     "knowledge:cleanup": "node scripts/knowledge.js cleanup",
     "test:contact": "node --test tests/contact-mailer.test.js",
     "test:knowledge": "node --test tests/knowledge.test.js",
-    "test:search": "node --test tests/catalog-search.test.js tests/knowledge.test.js",
+    "test:search": "node --test tests/catalog-search.test.js tests/knowledge.test.js tests/product-inquiry.test.js",
     "verify:knowledge": "node scripts/verify-knowledge.js"
   },
   "engines": {
