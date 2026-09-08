@@ -10,7 +10,11 @@ export function generateMetadata({ params }: { params: { lang: Locale } }): Meta
   }
 }
 
-export default function GasImagingPage({ params }: { params: { lang: Locale } }) {
+export default function GasImagingPage({ params, searchParams }: {
+  params: { lang: Locale }
+  searchParams?: { query?: string | string[] }
+}) {
   if (!['zh', 'en'].includes(params.lang)) notFound()
-  return <GasImagingAssistant locale={params.lang} />
+  const initialQuery = typeof searchParams?.query === 'string' ? searchParams.query.trim() : ''
+  return <GasImagingAssistant key={`${params.lang}:${initialQuery}`} locale={params.lang} initialQuery={initialQuery} />
 }

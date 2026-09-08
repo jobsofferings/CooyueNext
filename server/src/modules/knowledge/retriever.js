@@ -15,11 +15,18 @@ const concepts = [
 function analyzeQuery(query) {
   const normalized = query.normalize("NFKC").toLowerCase();
   const matched = concepts.filter((concept) => concept.pattern.test(normalized));
+  const incompleteGas = /(^|[\s,，;；:：、。【（(\[])烷(?=$|[\s,，;；:：、。】）)\]]|泄漏|巡检|检测|气体|成像)/;
+  const clarification = incompleteGas.test(query) ? {
+    term: "烷",
+    suggestions: [{ label: "甲烷 / Methane", query: query.replace(incompleteGas, "$1甲烷") }],
+  } : null;
+  const unverifiedGases = [...new Set(normalized.match(/[乙丙丁戊己庚辛壬癸]烷/g) || [])];
+  matched.push(...unverifiedGases.map((name) => ({ key: `unverified:${name}`, kind: "gas" })));
   const tokens = [...new Set(normalized.match(/[a-z][a-z0-9-]{1,30}|[\u4e00-\u9fff]{2,}/g) || [])]
     .filter((token) => !["what", "which", "the", "for", "can", "does", "with", "and", "camera", "imaging", "this", "that"].includes(token));
   const models = normalized.match(/\b(?:pv\d+[a-z]*|gf?\d+[a-z]*|adgile)\b/g) || [];
   const broad = /气体|泄漏|成像|红外|选型|gas|leak|optical|infrared|ogi/i.test(normalized);
-  return { normalized, matched, tokens, models, broad };
+  return { normalized, matched, tokens, models, broad, clarification };
 }
 
 function createRetriever(pool) {
@@ -29,6 +36,7 @@ function createRetriever(pool) {
     name: provider,
     async retrieve({ query, locale, productSlugs = [], limit = 12 }) {
       const intent = analyzeQuery(query);
+      if (intent.clarification) return { provider, matches: [], evidence: [], clarification: intent.clarification };
       let documents = await getDocuments(pool, locale);
       if (productSlugs.length) documents = documents.filter((document) => productSlugs.includes(document.product_slug));
       if (!documents.length) return { provider, matches: [], evidence: [] };

@@ -15,6 +15,8 @@
 
 页面：`/zh/gas-imaging-assistant`、`/en/gas-imaging-assistant`。产品目录有入口，验证页面设置 `noindex`。页面使用隔离的 CSS Module，没有修改全局页面宽度或引入未提供的鲸鱼背景图片。
 
+普通搜索 `/zh/search`、`/en/search`（包括顶部放大镜入口）也会查询已审核知识库，并将知识候选与原有目录关键词结果分开展示。点击“继续对比、问答与询盘”会携带原查询进入验证页并自动搜索。
+
 ## 2. 实施前数据库检查
 
 2026 年 9 月 8 日，从 `server/.env` 读取有效配置，以只读事务检查；未展示或复制密码：
@@ -100,6 +102,8 @@ node -e "require('dotenv').config(); require('./src/app').listen(3101, '127.0.0.
 
 Next 的同源代理仅放行 5 类公开知识接口；后端地址优先级为 `KNOWLEDGE_API_URL` → `SEO_API_URL` → `NEXT_PUBLIC_API_URL` → `http://127.0.0.1:3001`。Docker 沿用已有 `SEO_API_URL=http://server:3001` 即可。代理请求有大小限制、超时和 `no-store`，不转发管理会话。
 
+`next.config.mjs` 的通用 `/api` 转发显式排除 `/api/knowledge` 及其子路径，避免抢先匹配知识库的动态 Route Handler，绕过 `KNOWLEDGE_API_URL`、请求大小限制和路径白名单。其余 API 保留原转发顺序；不能把全部 API 移到 `fallback`，否则 `/api/products` 会被 `[lang]/products` 页面误匹配。回归时分别请求直连后端与 Next 同源知识接口，并确认 `/api/products` 仍返回 JSON。
+
 ## 5. 存储与索引
 
 | 表 | 职责 |
@@ -141,6 +145,8 @@ node scripts/knowledge.js withdraw guide-sensmart-pv400-zh-official --apply
 
 新知识接口不改变原有产品、SEO 和管理鉴权规则。公开路由先匹配，管理收件箱在现有管理鉴权之后挂载。收件箱目前是受保护接口，没有新增管理后台页面；可在管理后台登录后通过其 API 代理或 REST 客户端读取。
 
+搜索还返回 `status=matches | no_matches | needs_clarification`。例如“烷泄漏巡检，手持设备”中的“烷”不足以确定气体名称：返回空候选和 `clarification.suggestions`，由用户点击确认是否补全为“甲烷”。不会把“烷”直接当作甲烷，也不会忽略气体约束、只凭手持形态混入型号。未收录的乙烷、丙烷等不能被自动替换为甲烷。
+
 确认 token 只返回给创建预览的调用者，数据库仅保存 hash，前端只保存在组件内存，不写 localStorage 或 URL。只有获取预览不构成提交；必须勾选确认并填写联系方式。重复确认不生成重复记录。token 错误返回 404，过期返回 410，资料撤回、隐藏或摘要对应资料发生变化时返回 409，需要重新预览。
 
 这里的确认只是“用户确认询盘内容”，不是邮箱所有权验证或防机器人证明。生产获客前仍需评估验证码、邮箱验证、告知文案、权限审计及客服处理机制。草稿接口每 IP 每小时最多 12 次；通过当前不转发客户端 IP 的 Next 代理时，会按代理出口合并计数，这是验证环境的保守限制，不是面向大量访客的限流设计。
@@ -170,11 +176,16 @@ NODE_OPTIONS=--max-old-space-size=512 ./node_modules/.bin/tsc --noEmit --increme
 
 2026 年 9 月 8 日发布前已通过：9 项单元测试、23 项数据库/HTTP 检查、TypeScript 检查、完整 Next.js 生产构建，以及重复索引和无询盘导出检查。构建中的既有 `<img>` 和 Browserslist 数据过期警告不属于本次新增功能；未为此修改无关页面或依赖。
 
+同日针对“烷泄漏巡检，手持设备”的修复已通过：12 项单元测试、25 项数据库/HTTP 回滚检查和完整 Next.js 生产构建。使用 Chromium 在本机生产构建验证了顶部搜索入口、气体补全确认、两款候选、查询自动带入验证页、产品对比、带引用回答及 375px 手机布局；浏览器未提交询盘。另确认知识代理的 16 KiB 限制与路径白名单实际生效，目录 `/api/products` 仍返回正常 JSON。
+
 人工验收用例：
 
 | 输入 / 操作 | 预期 |
 | --- | --- |
 | 甲烷泄漏巡检，手持设备 | PV400、GF77；提示镜头/工况待确认 |
+| 烷泄漏巡检，手持设备（普通搜索及验证页） | 提示确认气体名称；点击补全甲烷后仅显示 PV400、GF77 |
+| 【烷泄漏巡检，手持设备】 | 同样提示补全，不依赖完全照抄示例或去掉括号 |
+| 乙烷泄漏巡检，手持设备 | 不猜成甲烷，不仅凭手持条件返回其他型号 |
 | SF6 gas imaging at substations | G306、GF77；英语资料 |
 | 固定式甲烷监测 | 不用手持产品冒充固定式方案，当前无候选 |
 | 氢气泄漏成像 / PV999 | 当前无已审核匹配，不捏造产品 |
@@ -197,7 +208,7 @@ NODE_OPTIONS=--max-old-space-size=512 ./node_modules/.bin/tsc --noEmit --increme
 
 ```text
 retrieve({ query, locale, productSlugs, limit })
-  → { provider, matches: [{ document, score }], evidence: [{
+  → { provider, clarification?, matches: [{ document, score }], evidence: [{
       id, documentId, productSlug, title, url, section,
       content, version, reviewedAt, score
     }] }
@@ -225,6 +236,8 @@ retrieve({ query, locale, productSlugs, limit })
 ## 9. 上线后怎样测试
 
 中文入口：`https://www.cooyue.tech/zh/gas-imaging-assistant`；英文入口：`https://www.cooyue.tech/en/gas-imaging-assistant`。
+
+也可以直接从顶部放大镜搜索。原问题回归步骤：输入“烷泄漏巡检，手持设备” → 在“气体成像 · 已审核资料”区域确认是否补全甲烷 → 应仅出现 PV400、GF77 → 点击“继续对比、问答与询盘”，应自动带入已确认查询。目录关键词可能为零，但那一计数不代表知识库无结果。
 
 1. 中文页面输入“甲烷泄漏巡检，手持设备”，点击搜索，应看到 PV400 和 GF77。
 2. 勾选两款产品，点击对比，检查分辨率、气体清单、来源链接和价格“待确认”状态。

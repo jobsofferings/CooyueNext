@@ -16,6 +16,17 @@ export interface KnowledgeAnswer {
   citations: Array<{ id: string; title: string; url: string; section: string; version: string; reviewedAt: string }>
 }
 
+export interface KnowledgeSearchResult {
+  query: string
+  status: 'matches' | 'no_matches' | 'needs_clarification'
+  products: KnowledgeProduct[]
+  clarification: {
+    term: string
+    message: string
+    suggestions: Array<{ label: string; query: string }>
+  } | null
+}
+
 export interface InquiryDraft {
   id: string
   confirmationToken: string
@@ -23,8 +34,11 @@ export interface InquiryDraft {
   summary: { category: string; query: string; question: string; requirements: string; products: KnowledgeProduct[] }
 }
 
-export async function knowledgeRequest<Result>(path: string, body: unknown): Promise<Result> {
+export async function knowledgeRequest<Result>(path: string, body: unknown, signal?: AbortSignal): Promise<Result> {
   const controller = new AbortController()
+  const abort = () => controller.abort()
+  if (signal?.aborted) controller.abort()
+  else signal?.addEventListener('abort', abort, { once: true })
   const timeout = setTimeout(() => controller.abort(), 20000)
   try {
     const response = await fetch(`/api/knowledge/${path}`, {
@@ -34,5 +48,8 @@ export async function knowledgeRequest<Result>(path: string, body: unknown): Pro
     const payload = await response.json().catch(() => null)
     if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'The knowledge service is temporarily unavailable.')
     return payload.data as Result
-  } finally { clearTimeout(timeout) }
+  } finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener('abort', abort)
+  }
 }

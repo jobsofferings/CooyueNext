@@ -27,6 +27,20 @@ test("query analysis recognizes bilingual gas names and form factors", () => {
   assert.deepEqual(analyzeQuery("fixed SF₆ monitoring").matched.map((concept) => concept.key), ["sf6", "fixed"]);
 });
 
+test("generic API forwarding excludes knowledge routes without breaking catalog routes", async () => {
+  const { default: config } = await import("../../next/next.config.mjs");
+  const rewrites = await config.rewrites();
+  assert.equal(Array.isArray(rewrites), true);
+  assert.equal(rewrites.length, 1);
+  const matcher = new RegExp(`^${rewrites[0].source.replace(":path", "")}$`);
+  for (const path of ["/api/products", "/api/products/guide-sensmart-pv400", "/api/seo", "/api/knowledgebase"]) {
+    assert.equal(matcher.test(path), true, path);
+  }
+  for (const path of ["/api/knowledge", "/api/knowledge/search", "/api/knowledge/inquiries/id/confirm"]) {
+    assert.equal(matcher.test(path), false, path);
+  }
+});
+
 test("reviewed source manifest has stable, unique bilingual source and chunk keys", () => {
   for (const source of sources) validateSource(source);
   assert.equal(new Set(sources.map((source) => source.key)).size, 6);
@@ -51,6 +65,30 @@ test("methane search excludes products without documented methane capability", a
 test("English SF6 query uses the English evidence corpus", async () => {
   const result = await createService(fixturePool()).search({ locale: "en", query: "SF6 handheld gas imaging" });
   assert.deepEqual(result.products.map((product) => product.slug).sort(), ["flir-g306", "flir-gf77"]);
+});
+
+test("incomplete gas names require explicit correction without returning generic handheld candidates", async () => {
+  const service = createService(fixturePool());
+  for (const query of ["烷泄漏巡检，手持设备", "【烷泄漏巡检，手持设备】"]) {
+    const result = await service.search({ locale: "zh", query });
+    assert.equal(result.query, query);
+    assert.equal(result.status, "needs_clarification");
+    assert.deepEqual(result.products, []);
+    assert.equal(result.clarification.term, "烷");
+    assert.equal(result.clarification.suggestions[0].query, query.replace("烷", "甲烷"));
+    const corrected = await service.search({ locale: "zh", query: result.clarification.suggestions[0].query });
+    assert.equal(corrected.status, "matches");
+    assert.deepEqual(corrected.products.map((product) => product.slug).sort(), ["flir-gf77", "guide-sensmart-pv400"]);
+  }
+});
+
+test("other alkane names are not silently corrected to methane or reduced to handheld matching", async () => {
+  for (const query of ["乙烷泄漏巡检，手持设备", "丙烷泄漏巡检，手持设备", "丁烷气体成像"]) {
+    const result = await createService(fixturePool()).search({ locale: "zh", query });
+    assert.equal(result.clarification, null, query);
+    assert.equal(result.status, "no_matches", query);
+    assert.deepEqual(result.products, [], query);
+  }
 });
 
 test("unsupported gas, fixed installation, missing model and off-topic search return no matches", async () => {

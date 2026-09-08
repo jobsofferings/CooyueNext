@@ -51,7 +51,17 @@ function createService(pool) {
       const query = text(input.query, "query", 500);
       const result = await retriever.retrieve({ query, locale });
       const unique = new Map(result.matches.map(({ document }) => [document.product_slug, publicProduct(document)]));
-      return { mode: "lexical-validation", provider: retriever.name, category: CATEGORY, query, products: [...unique.values()] };
+      return {
+        mode: "lexical-validation", provider: retriever.name, category: CATEGORY, query,
+        status: result.clarification ? "needs_clarification" : unique.size ? "matches" : "no_matches",
+        clarification: result.clarification ? {
+          ...result.clarification,
+          message: locale === "zh"
+            ? "“烷”还不能确定具体气体。你是否想查“甲烷”？确认补全后再按该气体筛选，不会仅凭“手持”推荐产品。"
+            : 'The gas name “烷” is incomplete. Did you mean methane? Confirm the gas before filtering; handheld alone is not sufficient.',
+        } : null,
+        products: [...unique.values()],
+      };
     },
 
     async compare(input) {

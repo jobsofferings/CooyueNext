@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
-import { knowledgeRequest, type KnowledgeProduct, type KnowledgeAnswer, type InquiryDraft } from '@/lib/knowledge-api'
+import { knowledgeRequest, type KnowledgeProduct, type KnowledgeAnswer, type KnowledgeSearchResult, type InquiryDraft } from '@/lib/knowledge-api'
 import styles from './knowledge.module.css'
 
 const copy = {
@@ -54,10 +54,11 @@ const gasLabels: Record<string, { zh: string; en: string }> = {
   voc: { zh: '部分挥发性有机化合物', en: 'Selected VOCs' }, ammonia: { zh: '氨', en: 'Ammonia' }, ethylene: { zh: '乙烯', en: 'Ethylene' },
 }
 
-export default function GasImagingAssistant({ locale }: { locale: Locale }) {
+export default function GasImagingAssistant({ locale, initialQuery = '' }: { locale: Locale; initialQuery?: string }) {
   const labels = copy[locale]
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(initialQuery)
   const [products, setProducts] = useState<KnowledgeProduct[] | null>(null)
+  const [clarification, setClarification] = useState<KnowledgeSearchResult['clarification']>(null)
   const [selected, setSelected] = useState<string[]>([])
   const [comparison, setComparison] = useState<KnowledgeProduct[] | null>(null)
   const [question, setQuestion] = useState('')
@@ -71,9 +72,21 @@ export default function GasImagingAssistant({ locale }: { locale: Locale }) {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
 
+  useEffect(() => {
+    if (!initialQuery.trim()) return
+    const controller = new AbortController()
+    let active = true
+    setBusy('search')
+    knowledgeRequest<KnowledgeSearchResult>('search', { query: initialQuery, locale }, controller.signal)
+      .then((result) => { if (active) { setProducts(result.products); setClarification(result.clarification) } })
+      .catch((failure) => { if (active) setError(failure instanceof Error ? failure.message : 'Request failed') })
+      .finally(() => { if (active) setBusy('') })
+    return () => { active = false; controller.abort() }
+  }, [initialQuery, locale])
+
   function resetDraft() { setDraft(null); setConsent(false); setSubmitted(null) }
   function editQuery(value: string) {
-    setQuery(value); setProducts(null); setSelected([]); setComparison(null); setAnswer(null); resetDraft()
+    setQuery(value); setProducts(null); setClarification(null); setSelected([]); setComparison(null); setAnswer(null); resetDraft()
   }
   async function run(operation: string, task: () => Promise<void>) {
     if (busy) return
@@ -83,10 +96,14 @@ export default function GasImagingAssistant({ locale }: { locale: Locale }) {
   }
   async function search(event: FormEvent) {
     event.preventDefault()
+    await searchFor(query)
+  }
+  async function searchFor(nextQuery: string) {
     await run('search', async () => {
-      setSelected([]); setComparison(null); setAnswer(null); resetDraft()
-      const result = await knowledgeRequest<{ products: KnowledgeProduct[] }>('search', { query, locale })
+      setQuery(nextQuery); setSelected([]); setComparison(null); setAnswer(null); setClarification(null); resetDraft()
+      const result = await knowledgeRequest<KnowledgeSearchResult>('search', { query: nextQuery, locale })
       setProducts(result.products)
+      setClarification(result.clarification)
     })
   }
   function toggle(slug: string) {
@@ -119,7 +136,13 @@ export default function GasImagingAssistant({ locale }: { locale: Locale }) {
         {error && <p role="alert" className={styles.error}>{error}</p>}
         {products && <section className={styles.card} aria-labelledby="knowledge-candidates-title" aria-live="polite">
           <h2 id="knowledge-candidates-title">02 / {labels.candidates}</h2><p>{labels.selectHint}</p>
-          {!products.length && <p className={styles.notice}>{labels.empty}</p>}
+          {clarification && <div className={styles.notice}>
+            <p>{clarification.message}</p>
+            <div className={styles.examples}>{clarification.suggestions.map((suggestion) => <button type="button" key={suggestion.query} disabled={Boolean(busy)} onClick={() => searchFor(suggestion.query)}>
+              {locale === 'zh' ? '按此补全重新搜索：' : 'Confirm and search: '}{suggestion.query}
+            </button>)}</div>
+          </div>}
+          {!products.length && !clarification && <p className={styles.notice}>{labels.empty}</p>}
           <div className={styles.grid}>{products.map((product) => <article key={product.slug} className={`${styles.product} ${selected.includes(product.slug) ? styles.selected : ''}`}>
             <h3>{product.name}</h3><p>{gases(product)}</p><p>{labels.resolution}: {product.facts.resolution}</p>
             <div className={styles.links}><Link href={`/${locale}/products/${product.slug}`}>{labels.detail}</Link><a href={product.source.url} target="_blank" rel="noreferrer">{labels.source} ↗</a></div>

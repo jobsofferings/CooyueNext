@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import type { Locale } from '@/i18n-config'
+import KnowledgeSearchPanel from '@/components/knowledge/KnowledgeSearchPanel'
 
 type SearchField = {
   value: string
@@ -153,10 +154,10 @@ function pushSearchUrl(lang: Locale, keywords: string) {
 
 function getSummary(lang: Locale, keywords: string, count: number): string {
   if (lang === 'zh') {
-    return `为「${keywords}」找到 ${count} 个匹配产品。`
+    return `目录关键词匹配：为「${keywords}」找到 ${count} 个产品。`
   }
 
-  return `Found ${count} matching products for "${keywords}".`
+  return `Catalog keyword matches: ${count} products for "${keywords}".`
 }
 
 export default function SearchProductsClient({
@@ -205,12 +206,16 @@ export default function SearchProductsClient({
     }
   }, [])
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    const nextKeywords = inputKeywords.trim()
+  const applySearch = (value: string) => {
+    const nextKeywords = value.trim()
+    setInputKeywords(nextKeywords)
     setKeywords(nextKeywords)
     pushSearchUrl(lang, nextKeywords)
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    applySearch(inputKeywords)
   }
 
   return (
@@ -230,12 +235,15 @@ export default function SearchProductsClient({
             onChange={(event) => setInputKeywords(event.target.value)}
             autoComplete="off"
             spellCheck={false}
+            maxLength={500}
           />
           <button type="submit" className="thm-btn search-page__submit">
             <i className="icon-magnifying-glass"></i>
             <span>{copy.button}</span>
           </button>
         </form>
+
+        <KnowledgeSearchPanel locale={lang} query={keywords} onQueryChange={applySearch} />
 
         {hasKeywords ? (
           <>

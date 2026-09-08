@@ -15,23 +15,23 @@ export const revalidate = 300
 const searchCopy: Record<Locale, SearchPageClientCopy & { pageTitle: string }> = {
   zh: {
     pageTitle: '产品搜索',
-    intro: '支持型号、分类、标签、规格和描述的模糊搜索。',
+    intro: '支持产品目录模糊搜索；气体成像需求同时查询已审核知识库，可继续对比、问答与询盘。',
     inputLabel: '搜索关键词',
     placeholder: '输入型号、分类或规格',
     button: '开始搜索',
     viewDetail: '查看详情',
     idle: '输入关键词后即可查看匹配产品。',
-    empty: '没有找到匹配的产品，请换个关键词试试。',
+    empty: '目录关键词暂未匹配到产品；知识库检索结果在上方单独展示。',
   },
   en: {
     pageTitle: 'Search Products',
-    intro: 'Fuzzy search works across models, categories, tags, specs, and descriptions.',
+    intro: 'Search the product catalog and reviewed gas imaging evidence, then continue to comparisons, questions and inquiries.',
     inputLabel: 'Search keywords',
     placeholder: 'Search by model, category, or spec',
     button: 'Search',
     viewDetail: 'View Detail',
     idle: 'Enter keywords to see matching products.',
-    empty: 'No products matched. Try a different keyword.',
+    empty: 'No catalog keyword matches. Knowledge search results are shown separately above.',
   },
 }
 

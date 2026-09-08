@@ -18,6 +18,10 @@ async function main() {
     const service = createService(client);
     const methane = await service.search({ locale: "zh", query: "手持甲烷泄漏巡检相机" });
     check(methane.products.length === 2, "methane candidates");
+    const incomplete = await service.search({ locale: "zh", query: "烷泄漏巡检，手持设备" });
+    check(incomplete.status === "needs_clarification" && incomplete.products.length === 0, "incomplete gas clarification");
+    const corrected = await service.search({ locale: "zh", query: incomplete.clarification.suggestions[0].query });
+    check(corrected.products.length === 2 && corrected.products.every((product) => product.slug !== "flir-g306"), "confirmed correction preserves gas constraint");
     const sf6 = await service.search({ locale: "en", query: "SF6 gas imaging" });
     check(sf6.products.some((product) => product.slug === "flir-g306"), "English SF6 evidence");
     const chosen = ["guide-sensmart-pv400", "flir-gf77"];

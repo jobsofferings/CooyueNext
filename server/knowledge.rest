@@ -3,6 +3,12 @@
 @confirmationToken = replace-with-draft-confirmationToken
 @adminSession = replace-with-management-session-cookie
 
+### Incomplete gas name: needs_clarification, no products, explicit correction suggestion
+POST {{baseUrl}}/api/knowledge/search
+Content-Type: application/json
+
+{"locale":"zh","query":"烷泄漏巡检，手持设备"}
+
 ### Natural-language search: reviewed gas-imaging products only
 POST {{baseUrl}}/api/knowledge/search
 Content-Type: application/json
