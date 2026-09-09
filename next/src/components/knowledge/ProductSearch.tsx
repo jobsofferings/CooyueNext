@@ -173,11 +173,6 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
           <div className={styles.examples}>{labels.examples.map((example) => <button type="button" key={example} disabled={disabled} onClick={() => searchFor(example)}>{example}</button>)}</div>
         </form>
         {error && errorTarget === 'search' && <p role="alert" className={styles.error}>{error}</p>}
-        {selected.length > 0 && <aside className={styles.selectionBar} aria-label={labels.selected}>
-          <strong>{labels.selected} ({selected.length}/12)</strong>
-          <div className={styles.examples}>{selected.map((product) => <button type="button" key={product.slug} disabled={disabled} onClick={() => toggle(product)} aria-label={`${labels.remove} ${product.name}`}>{product.model} ×</button>)}</div>
-          <div className={styles.actions}><button type="button" className={styles.primary} disabled={disabled || selected.length < 2} onClick={() => void compare()}>{busy === 'compare' ? labels.loading : labels.compare}</button><a href="#product-inquiry">{labels.inquiry}</a><button type="button" className={styles.secondary} disabled={disabled} onClick={() => { setSelected([]); setComparison(null); resetDraft() }}>{labels.clear}</button></div>
-        </aside>}
         <section className={styles.card} aria-labelledby="product-results-title" aria-busy={searching}>
           <h2 id="product-results-title">{labels.candidates}</h2><p>{labels.selectHint}</p>
           <p className={styles.hint}>{labels.caveat}</p>
@@ -194,12 +189,17 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
           })}</div>
           {products && products.length > visibleCount && <button type="button" className={styles.secondary} onClick={() => setVisibleCount((count) => count + 12)}>{labels.more} ({products.length - visibleCount})</button>}
         </section>
+        {selected.length > 0 && <aside className={styles.selectionBar} aria-label={labels.selected}>
+          <strong>{labels.selected} ({selected.length}/12)</strong>
+          <div className={styles.examples}>{selected.map((product) => <button type="button" key={product.slug} disabled={disabled} onClick={() => toggle(product)} aria-label={`${labels.remove} ${product.name}`}>{product.model} ×</button>)}</div>
+          <div className={styles.actions}><button type="button" className={styles.primary} disabled={disabled || selected.length < 2} onClick={() => void compare()}>{busy === 'compare' ? labels.loading : labels.compare}</button><a href="#product-inquiry">{labels.inquiry}</a><button type="button" className={styles.secondary} disabled={disabled} onClick={() => { setSelected([]); setComparison(null); resetDraft() }}>{labels.clear}</button></div>
+        </aside>}
         {comparison && <section id="product-comparison" className={styles.card}>
           <h2>{labels.compare}</h2>
           <div className={styles.tableScroll} tabIndex={0} role="region" aria-label={labels.compare}><table>
             <caption>{labels.compare}</caption><thead><tr><th scope="col">{labels.selected}</th>{comparison.map((product) => <th scope="col" key={product.slug}>{product.name}</th>)}</tr></thead>
             <tbody>{rows.map((row, index) => <tr key={`${row.label}:${index}`}><th scope="row">{row.label}</th>{comparison.map((product) => <td className={styles.preserve} key={product.slug}>{row.value(product) || labels.unknown}</td>)}</tr>)}
-              <tr><th scope="row">{labels.detail}</th>{comparison.map((product) => <td key={product.slug}><Link href={`/${locale}/products/${product.slug}`}>{labels.detail}</Link></td>)}</tr>
+              <tr><th scope="row">{labels.detail}</th>{comparison.map((product) => <td key={product.slug}><Link href={`/${locale}/products/${product.slug}`} target="_blank" rel="noopener noreferrer">{labels.detail}</Link></td>)}</tr>
             </tbody>
           </table></div>
           <p className={styles.hint}>{labels.caveat}</p><a href="#product-inquiry">{labels.inquiry} ↓</a>
