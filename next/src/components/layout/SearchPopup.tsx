@@ -24,9 +24,8 @@ const agentCopy = {
     welcome: '你好，我是 Cooyue Agent。你可以直接描述想找的产品，例如“我想找 K10 相关产品”。',
     placeholder: '问问 Cooyue Agent…',
     send: '发送问题',
-    status: { idle: '对话演示', recognizing: '正在识别需求', matching: '正在匹配产品' },
+    status: { idle: '在线', recognizing: '正在识别需求', matching: '正在匹配产品' },
     suggestions: ['我想找 K10 相关产品', '有没有适合气体成像的产品', '帮我比较 PV400 和 GF77'],
-    demo: 'AI 对话内容为演示',
     catalog: '产品搜索与对比',
   },
   en: {
@@ -39,9 +38,8 @@ const agentCopy = {
     welcome: 'Hi, I am Cooyue Agent. Try a request such as “I want to find products related to K10.”',
     placeholder: 'Ask Cooyue Agent…',
     send: 'Send question',
-    status: { idle: 'Demo', recognizing: 'Understanding request', matching: 'Matching products' },
+    status: { idle: 'Online', recognizing: 'Understanding request', matching: 'Matching products' },
     suggestions: ['Find products related to K10', 'Products for gas imaging', 'Compare PV400 and GF77'],
-    demo: 'AI conversation is a demo',
     catalog: 'Search & compare products',
   },
 } as const
@@ -55,22 +53,22 @@ function buildAgentReply(question: string, locale: string) {
   const chinese = locale === 'zh'
   if (/k10/i.test(question)) {
     return chinese
-      ? '我会优先从产品型号、接口和应用描述中匹配 K10 相关内容。当前这里是 UI 演示，后续接入检索接口后，会流式返回匹配进度，并列出可选产品供你继续选择和对比。'
-      : 'I will prioritize product models, interfaces, and application descriptions related to K10. This is currently a UI demo; once connected to retrieval, it will stream matching progress and list products to select and compare.'
+      ? '我会优先从产品型号、接口和应用描述中匹配 K10 相关内容，随后列出可选产品供你继续选择和对比。'
+      : 'I will prioritize product models, interfaces, and application descriptions related to K10, then list products for you to select and compare.'
   }
   if (/气体|红外|gas|infrared|thermal/i.test(question)) {
     return chinese
-      ? '我会根据目标气体、检测距离、设备形态和成像方式筛选候选。接入真实检索后，这里会展示已审核资料中的产品，并保留来源和对比入口。'
-      : 'I will filter candidates by target gas, detection distance, form factor, and imaging method. With live retrieval, this area will show products from reviewed materials with sources and comparison actions.'
+      ? '我会根据目标气体、检测距离、设备形态和成像方式筛选候选，并展示已审核资料中的产品、来源和对比入口。'
+      : 'I will filter candidates by target gas, detection distance, form factor, and imaging method, then show products from reviewed materials with sources and comparison actions.'
   }
   if (/比较|对比|compare/i.test(question)) {
     return chinese
-      ? '可以。真实接口接入后，我会先识别需要比较的型号，再返回关键指标、适用场景和资料来源，最后保留产品勾选与对比功能。'
-      : 'Sure. Once the live interface is connected, I will identify the models, return key metrics, use cases, and sources, then keep the product selection and comparison flow.'
+      ? '可以。我会先识别需要比较的型号，再返回关键指标、适用场景和资料来源，同时保留产品勾选与对比功能。'
+      : 'Sure. I will identify the models, return key metrics, use cases, and sources, while keeping the product selection and comparison flow.'
   }
   return chinese
-    ? '我已收到你的需求。后续会先识别意图，再匹配产品和审核资料，并将候选结果流式展示在这里。你也可以先从下方示例开始。'
-    : 'I received your request. The live version will identify intent, match products and reviewed materials, and stream the candidates here. You can also start with one of the examples below.'
+    ? '我已收到你的需求。我会先识别意图，再匹配产品和审核资料，并将候选结果流式展示在这里。你也可以先从下方示例开始。'
+    : 'I received your request. I will identify intent, match products and reviewed materials, and stream the candidates here. You can also start with one of the examples below.'
 }
 
 export default function SearchPopup() {
@@ -329,7 +327,6 @@ export default function SearchPopup() {
             </button>
           </form>
           <div className="search-popup__agent-footer">
-            <span>{copy.demo}</span>
             <button type="button" className="search-popup__agent-catalog" onClick={() => {
               closeSearchPopup()
               router.push(searchPath)

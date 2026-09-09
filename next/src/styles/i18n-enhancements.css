@@ -1556,15 +1556,9 @@ button.mobile-nav__close {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: 18px;
-}
-
-.search-popup__agent-footer > span {
-  color: #68778b;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .search-popup__agent-catalog {
