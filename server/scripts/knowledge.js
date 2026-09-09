@@ -42,7 +42,7 @@ async function main() {
       console.log("knowledge schema ready");
     } else if (action === "vector-migrate") {
       console.log("Applying pgvector dense embedding migration to", summary.database || "configured products database");
-      await pool.query(fs.readFileSync(path.join(__dirname, "../migrations/products/008_pgvector_dense_embeddings.sql"), "utf8"));
+      await pool.query(fs.readFileSync(path.join(__dirname, "../migrations/products/optional/008_pgvector_dense_embeddings.sql"), "utf8"));
       console.log("pgvector dense embedding columns and indexes ready");
     } else if (action === "index") {
       for (const source of sources) console.log(await indexDocument(pool, source));

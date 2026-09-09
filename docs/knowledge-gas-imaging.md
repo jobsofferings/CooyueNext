@@ -216,7 +216,7 @@ NODE_OPTIONS=--max-old-space-size=512 ./node_modules/.bin/tsc --noEmit --increme
 
 ## 8. PostgreSQL + pgvector 第一阶段
 
-第一阶段继续使用当前 PostgreSQL，不拆分结构化产品、审核知识、权限状态和询盘数据。新增迁移 `server/migrations/products/008_pgvector_dense_embeddings.sql`，为 `knowledge.product_vectors` 和 `knowledge.chunks` 增加 1536 维 dense embedding、模型版本、内容 hash、更新时间，并建立 cosine HNSW 索引。原 JSONB 稀疏字段保留作为回滚和混合检索路径。
+第一阶段继续使用当前 PostgreSQL，不拆分结构化产品、审核知识、权限状态和询盘数据。新增可选迁移 `server/migrations/products/optional/008_pgvector_dense_embeddings.sql`，为 `knowledge.product_vectors` 和 `knowledge.chunks` 增加 1536 维 dense embedding、模型版本、内容 hash、更新时间，并建立 cosine HNSW 索引。原 JSONB 稀疏字段保留作为回滚和混合检索路径；该迁移不放入服务启动时的自动迁移目录。
 
 dense 产品检索由 `KNOWLEDGE_DENSE_EMBEDDINGS=true`、embedding provider 和已安装的 pgvector 同时开启；未满足条件时自动使用原 `postgres-sparse-vector`，不会因为部署代码而让线上搜索失效。当前部署环境需要先由数据库运维安装 pgvector，再执行：
 
