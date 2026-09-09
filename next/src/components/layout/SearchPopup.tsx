@@ -15,24 +15,34 @@ type AgentStage = 'idle' | 'recognizing' | 'matching'
 
 const agentCopy = {
   zh: {
+    searchTitle: '产品搜索',
+    searchPlaceholder: '搜索型号或关键词，例如 K10',
+    close: '关闭搜索',
     title: 'Cooyue Agent',
+    kicker: 'AI 产品助手',
     subtitle: '告诉我应用场景、型号或技术需求，我先帮你梳理产品方向。',
     welcome: '你好，我是 Cooyue Agent。你可以直接描述想找的产品，例如“我想找 K10 相关产品”。',
     placeholder: '问问 Cooyue Agent…',
     send: '发送问题',
-    status: { idle: 'Online', recognizing: '正在识别需求', matching: '正在匹配产品' },
+    status: { idle: '对话演示', recognizing: '正在识别需求', matching: '正在匹配产品' },
     suggestions: ['我想找 K10 相关产品', '有没有适合气体成像的产品', '帮我比较 PV400 和 GF77'],
-    catalog: '进入完整产品搜索',
+    demo: 'AI 对话内容为演示',
+    catalog: '产品搜索与对比',
   },
   en: {
+    searchTitle: 'Product search',
+    searchPlaceholder: 'Search a model or keyword, e.g. K10',
+    close: 'Close search',
     title: 'Cooyue Agent',
+    kicker: 'AI PRODUCT GUIDE',
     subtitle: 'Describe your application, model, or technical need and I will map the product direction.',
     welcome: 'Hi, I am Cooyue Agent. Try a request such as “I want to find products related to K10.”',
     placeholder: 'Ask Cooyue Agent…',
     send: 'Send question',
-    status: { idle: 'Online', recognizing: 'Understanding request', matching: 'Matching products' },
+    status: { idle: 'Demo', recognizing: 'Understanding request', matching: 'Matching products' },
     suggestions: ['Find products related to K10', 'Products for gas imaging', 'Compare PV400 and GF77'],
-    catalog: 'Open full product search',
+    demo: 'AI conversation is a demo',
+    catalog: 'Search & compare products',
   },
 } as const
 
@@ -76,6 +86,9 @@ export default function SearchPopup() {
   const [agentStage, setAgentStage] = useState<AgentStage>('idle')
   const { searchOpen: isOpen, setSearchOpen: setIsOpen, setMobileOpen } = useNavigation()
   const inputRef = useRef<HTMLInputElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const messagesRef = useRef<HTMLDivElement>(null)
+  const followMessagesRef = useRef(true)
   const agentTimersRef = useRef<number[]>([])
   const searchPath = `/${lang}/search`
   const copy = lang === 'zh' ? agentCopy.zh : agentCopy.en
@@ -132,28 +145,47 @@ export default function SearchPopup() {
       return
     }
 
-    window.setTimeout(() => {
-      inputRef.current?.focus()
-    }, 0)
-  }, [isOpen])
-
-  useEffect(() => {
-    if (!isOpen) {
-      return
-    }
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const focusTimer = window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 0)
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        event.preventDefault()
         setIsOpen(false)
+      }
+
+      if (event.key !== 'Tab') return
+
+      const controls = contentRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), a[href], [tabindex="0"]')
+      const firstControl = controls?.[0]
+      const lastControl = controls?.[controls.length - 1]
+      if (!firstControl || !lastControl) return
+
+      if (!contentRef.current?.contains(document.activeElement)) {
+        event.preventDefault()
+        firstControl.focus()
+      } else if (event.shiftKey && document.activeElement === firstControl) {
+        event.preventDefault()
+        lastControl.focus()
+      } else if (!event.shiftKey && document.activeElement === lastControl) {
+        event.preventDefault()
+        firstControl.focus()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
 
     return () => {
+      window.clearTimeout(focusTimer)
       window.removeEventListener('keydown', handleKeyDown)
+      if (previousFocus?.isConnected) previousFocus.focus({ preventScroll: true })
     }
   }, [isOpen, setIsOpen])
+
+  useEffect(() => {
+    const messages = messagesRef.current
+    if (isOpen && messages && followMessagesRef.current) messages.scrollTop = messages.scrollHeight
+  }, [agentMessages, isOpen])
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -182,6 +214,7 @@ export default function SearchPopup() {
 
     const messageId = `agent-${Date.now()}`
     const reply = buildAgentReply(value, lang)
+    followMessagesRef.current = true
     setAgentMessages((messages) => [
       ...messages,
       { id: `user-${messageId}`, role: 'user', content: value },
@@ -216,9 +249,17 @@ export default function SearchPopup() {
   }
 
   return (
-    <div className={`search-popup${isOpen ? ' active' : ''}`}>
-      <div className="search-popup__overlay" onClick={closeSearchPopup}></div>
-      <div className="search-popup__content">
+    <div className={`search-popup${isOpen ? ' active' : ''}`} aria-hidden={!isOpen}>
+      <div className="search-popup__overlay" onClick={closeSearchPopup} aria-hidden="true"></div>
+      <div className="search-popup__content" ref={contentRef} role="dialog" aria-modal="true" aria-labelledby="search-popup-title">
+        <div className="search-popup__toolbar">
+          <h2 id="search-popup-title">{copy.searchTitle}</h2>
+          <button type="button" className="search-popup__close" onClick={closeSearchPopup} aria-label={copy.close}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </div>
         <form className="search-popup__query-form" action={searchPath} method="get" onSubmit={handleSubmit}>
           <label htmlFor="search-popup-keywords" className="sr-only">
             {dict('search here')}
@@ -228,33 +269,39 @@ export default function SearchPopup() {
             id="search-popup-keywords"
             name="keywords"
             ref={inputRef}
-            placeholder={dict('Search Here...')}
+            placeholder={copy.searchPlaceholder}
             value={keywords}
             onChange={(event) => setKeywords(event.target.value)}
             autoComplete="off"
             spellCheck={false}
           />
-          <button type="submit" aria-label={dict('search here')} className="thm-btn">
-            <i className="icon-magnifying-glass"></i>
+          <button type="submit" aria-label={dict('search here')} className="search-popup__search-submit">
+            <i className="icon-magnifying-glass" aria-hidden="true"></i>
           </button>
         </form>
         <section className="search-popup__agent" aria-label={copy.title}>
           <div className="search-popup__agent-header">
-            <div>
-              <span className="search-popup__agent-kicker">AI PRODUCT GUIDE</span>
-              <h2>{copy.title}</h2>
-              <p>{copy.subtitle}</p>
+            <div className="search-popup__agent-heading">
+              <span className="search-popup__agent-avatar" aria-hidden="true">AI</span>
+              <div>
+                <span className="search-popup__agent-kicker">{copy.kicker}</span>
+                <h3>{copy.title}</h3>
+              </div>
             </div>
-            <span className={`search-popup__agent-status search-popup__agent-status--${agentStage}`}>
-              <span></span>{copy.status[agentStage]}
+            <span className={`search-popup__agent-status search-popup__agent-status--${agentStage}`} role="status">
+              <span aria-hidden="true"></span>{copy.status[agentStage]}
             </span>
           </div>
-          <div className="search-popup__agent-messages" role="log" aria-live="polite">
+          <p className="search-popup__agent-subtitle">{copy.subtitle}</p>
+          <div className="search-popup__agent-messages" ref={messagesRef} role="log" aria-live="polite" onScroll={(event) => {
+            const messages = event.currentTarget
+            followMessagesRef.current = messages.scrollHeight - messages.scrollTop - messages.clientHeight < 48
+          }}>
             {agentMessages.map((message) => (
               <div key={message.id} className={`search-popup__agent-message search-popup__agent-message--${message.role}`}>
                 <span>{message.content}</span>
                 {message.role === 'agent' && agentStreaming && message.id === agentMessages[agentMessages.length - 1]?.id && !message.content && (
-                  <span className="search-popup__agent-dots" aria-label="Thinking"><i></i><i></i><i></i></span>
+                  <span className="search-popup__agent-dots" aria-hidden="true"><i></i><i></i><i></i></span>
                 )}
               </div>
             ))}
@@ -267,7 +314,7 @@ export default function SearchPopup() {
             ))}
           </div>
           <form className="search-popup__agent-form" onSubmit={handleAgentSubmit}>
-            <label htmlFor="search-popup-agent-question" className="sr-only">{copy.title}</label>
+            <label htmlFor="search-popup-agent-question" className="sr-only">{copy.placeholder}</label>
             <input
               type="text"
               id="search-popup-agent-question"
@@ -277,16 +324,19 @@ export default function SearchPopup() {
               autoComplete="off"
               spellCheck={false}
             />
-            <button type="submit" className="thm-btn" aria-label={copy.send} disabled={agentStreaming || !agentQuestion.trim()}>
-              <i className="icon-right-arrow"></i>
+            <button type="submit" className="search-popup__agent-send" aria-label={copy.send} disabled={agentStreaming || !agentQuestion.trim()}>
+              <i className="icon-right-arrow" aria-hidden="true"></i>
             </button>
           </form>
-          <button type="button" className="search-popup__agent-catalog" onClick={() => {
-            closeSearchPopup()
-            router.push(searchPath)
-          }}>
-            {copy.catalog}<i className="icon-right-arrow"></i>
-          </button>
+          <div className="search-popup__agent-footer">
+            <span>{copy.demo}</span>
+            <button type="button" className="search-popup__agent-catalog" onClick={() => {
+              closeSearchPopup()
+              router.push(searchPath)
+            }}>
+              {copy.catalog}<i className="icon-right-arrow" aria-hidden="true"></i>
+            </button>
+          </div>
         </section>
       </div>
     </div>
