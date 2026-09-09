@@ -65,6 +65,7 @@ export async function getSeoByPath(routePath: string, locale: string): Promise<S
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'x-cooyue-internal': 'server-rendered',
         },
         next: { revalidate: 3600 },
         signal: AbortSignal.timeout(5000),

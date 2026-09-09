@@ -13,6 +13,7 @@ export async function getInitialProductSearch(query: string, locale: Locale): Pr
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-cooyue-internal': 'server-rendered',
         'x-forwarded-for': requestHeaders.get('x-forwarded-for') || '',
         'x-real-ip': requestHeaders.get('x-real-ip') || '',
       },

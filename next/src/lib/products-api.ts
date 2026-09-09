@@ -115,6 +115,7 @@ async function fetchFromApi<T>(path: string): Promise<T | null> {
     const response = await fetch(`${apiBaseUrl}${path}`, {
       headers: {
         'Content-Type': 'application/json',
+        'x-cooyue-internal': 'server-rendered',
       },
       next: { revalidate: 300 },
       signal: controller.signal,

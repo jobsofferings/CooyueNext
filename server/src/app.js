@@ -23,6 +23,23 @@ const staticDir = path.join(__dirname, "..", "static");
 
 app.set("trust proxy", ["loopback", "linklocal", "uniquelocal"]);
 
+function isPrivateNetworkAddress(address) {
+  const normalized = String(address || "").replace(/^::ffff:/i, "");
+  return normalized === "::1"
+    || /^10\./.test(normalized)
+    || /^127\./.test(normalized)
+    || /^172\.(1[6-9]|2\d|3[0-1])\./.test(normalized)
+    || /^192\.168\./.test(normalized)
+    || /^(fc|fd)[0-9a-f]{2}:/i.test(normalized)
+    || /^fe80:/i.test(normalized);
+}
+
+function isServerRenderedRequest(req) {
+  return req.method === "GET"
+    && req.get("x-cooyue-internal") === "server-rendered"
+    && isPrivateNetworkAddress(req.socket?.remoteAddress);
+}
+
 // ── Security & middleware ──────────────────────────────────────────────────
 
 app.use(
@@ -51,6 +68,7 @@ const limiter = rateLimit({
   max:      Number(process.env.RATE_LIMIT_MAX)       || 200,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: isServerRenderedRequest,
   message: { ok: false, error: "Too many requests – please slow down." },
 });
 
