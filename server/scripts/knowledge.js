@@ -8,8 +8,8 @@ const sources = require("../knowledge/gas-imaging-sources");
 
 async function main() {
   const action = process.argv[2] || "inspect";
-  if (!["inspect", "migrate", "index", "withdraw", "cleanup", "export"].includes(action)) throw new Error("Unknown knowledge command");
-  if (["migrate", "index", "withdraw", "cleanup"].includes(action) && !process.argv.includes("--apply")) {
+  if (!["inspect", "migrate", "vector-migrate", "index", "withdraw", "cleanup", "export"].includes(action)) throw new Error("Unknown knowledge command");
+  if (["migrate", "vector-migrate", "index", "withdraw", "cleanup"].includes(action) && !process.argv.includes("--apply")) {
     throw new Error("Writes require --apply. Inspect the target products database first.");
   }
   const { config, summary } = buildPoolConfig("PRODUCTS");
@@ -40,6 +40,10 @@ async function main() {
       console.log("Applying additive knowledge migration to", summary.database || "configured products database");
       await pool.query(fs.readFileSync(path.join(__dirname, "../migrations/products/005_knowledge.sql"), "utf8"));
       console.log("knowledge schema ready");
+    } else if (action === "vector-migrate") {
+      console.log("Applying pgvector dense embedding migration to", summary.database || "configured products database");
+      await pool.query(fs.readFileSync(path.join(__dirname, "../migrations/products/008_pgvector_dense_embeddings.sql"), "utf8"));
+      console.log("pgvector dense embedding columns and indexes ready");
     } else if (action === "index") {
       for (const source of sources) console.log(await indexDocument(pool, source));
     } else if (action === "withdraw") {

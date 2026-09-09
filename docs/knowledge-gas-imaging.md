@@ -214,9 +214,18 @@ NODE_OPTIONS=--max-old-space-size=512 ./node_modules/.bin/tsc --noEmit --increme
 
 检查 375px 和桌面布局、键盘焦点、加载/错误提示，以及新页面不影响原有产品详情。数值约束、否定句、复杂多气体组合、跨语种隐含意图和配置级兼容性尚不能完整解析；搜索结果只能作为待核实候选，而非自动完成工程选型。可在这批用例基础上补充真实客户问题，再定义检索命中率、引用正确率、正确拒答率、延迟和单次成本指标，不把演示通过当作生产准确率。
 
-## 8. 向量数据库迁移边界
+## 8. PostgreSQL + pgvector 第一阶段
 
-当前 `KNOWLEDGE_RETRIEVER=postgres-lexical` 是唯一已实现配置。改成未实现的名称会明确报错，不会静默伪装为向量检索。
+第一阶段继续使用当前 PostgreSQL，不拆分结构化产品、审核知识、权限状态和询盘数据。新增迁移 `server/migrations/products/008_pgvector_dense_embeddings.sql`，为 `knowledge.product_vectors` 和 `knowledge.chunks` 增加 1536 维 dense embedding、模型版本、内容 hash、更新时间，并建立 cosine HNSW 索引。原 JSONB 稀疏字段保留作为回滚和混合检索路径。
+
+dense 产品检索由 `KNOWLEDGE_DENSE_EMBEDDINGS=true`、embedding provider 和已安装的 pgvector 同时开启；未满足条件时自动使用原 `postgres-sparse-vector`，不会因为部署代码而让线上搜索失效。当前部署环境需要先由数据库运维安装 pgvector，再执行：
+
+```bash
+cd /root/CooyueNext/server
+npm run knowledge:vector-migrate -- --apply
+```
+
+embedding provider 配置使用 server 环境变量 `KNOWLEDGE_DENSE_EMBEDDINGS`、`KNOWLEDGE_EMBEDDING_API_URL`、`KNOWLEDGE_EMBEDDING_API_KEY`、`KNOWLEDGE_EMBEDDING_MODEL`、`KNOWLEDGE_EMBEDDING_DIMENSIONS` 和 `KNOWLEDGE_EMBEDDING_TIMEOUT_MS`，默认模型为 `text-embedding-3-small`、1536 维。模型或维度变化必须使用新的模型版本并重新生成向量，不能混用不同维度或版本。
 
 检索适配接口位于 `server/src/modules/knowledge/retriever.js`：
 
@@ -240,12 +249,12 @@ retrieve({ query, locale, productSlugs, limit })
    ```
 
 2. 选定 embedding 模型及版本、维度和距离度量，记录每个 `chunk_id`、`content_hash`、模型版本与索引版本。模型/维度变化需要重建，不能混用旧向量。
-3. 根据资源和运维条件实现 pgvector 或独立向量服务的适配器。沿用稳定片段 ID；新增/修改/撤回需要可靠的增量任务与删除机制，不能只做一次全量上传。
+3. 当前产品目录在搜索时按内容 hash 增量生成 dense embedding；后续 RAG 片段索引沿用 `knowledge.chunks.id`、`content_hash` 和审核状态，新增/修改/撤回需要可靠的增量任务与删除机制，不能只做一次全量上传。
 4. 在向量召回前按语言和作用域过滤，召回后回查 PostgreSQL 的当前审核、公开、产品与分类状态，再构造引用。向量结果为空或权限不符时宁可无答案，不绕过过滤补齐结果。
-5. 用同一批验收题进行影子对比，比较召回、过滤、引用、拒答、延迟和成本；在通过后才切换 provider。保留 `postgres-lexical` 作为回滚路径。
+5. 用同一批验收题进行影子对比，比较召回、过滤、引用、拒答、延迟和成本；在通过后才切换 provider。保留稀疏检索作为回滚路径。
 6. 若之后接入大模型，再单独实现生成层：只传已授权片段、验证引用 ID、允许明确拒答、隔离检索文本指令、设置超时/成本上限。不需要改变搜索、对比和询盘的业务边界。
 
-这不是“只改环境变量就完成迁移”：本期保留了存储、片段身份和接口边界，但向量写入、embedding、向量服务运维和生成式 RAG 均属于后续工作。
+这不是“只改环境变量就完成迁移”：代码、表结构和回滚路径已准备好，但生产启用前仍需要数据库安装 pgvector、配置 embedding provider，并完成向量回填和影子评估。
 
 ## 9. 上线后怎样测试
 

@@ -10,6 +10,7 @@
     "sync:infrared-products": "node scripts/sync-infrared-products.js",
     "knowledge:inspect": "node scripts/knowledge.js inspect",
     "knowledge:migrate": "node scripts/knowledge.js migrate",
+    "knowledge:vector-migrate": "node scripts/knowledge.js vector-migrate",
     "knowledge:index": "node scripts/knowledge.js index",
     "knowledge:export": "node scripts/knowledge.js export",
     "knowledge:cleanup": "node scripts/knowledge.js cleanup",
