@@ -6,6 +6,7 @@ import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
+import { getCompanyContent } from '@/content/company'
 
 type ContactPageSearchParams = {
   name?: string | string[]
@@ -27,12 +28,13 @@ export async function generateMetadata({
   params: { lang: Locale }
 }): Promise<Metadata> {
   const dict = await getDictionary(lang)
+  const copy = getCompanyContent(lang)
 
   // 尝试从数据库获取 SEO 数据
   const seoData = await getSeoByPath('/contact', lang)
   const seoMeta = extractSeoMeta(seoData, {
     title: siteConfig.seo.titleTemplate(dict('Contact')),
-    description: dict('Get in touch with us'),
+    description: copy.contactText,
   })
 
   return {
@@ -64,6 +66,7 @@ export default async function ContactPage({
 }) {
   const dict = await getDictionary(lang)
   const pagePath = `/${lang}/contact`
+  const copy = getCompanyContent(lang)
   const initialValues = {
     name: firstSearchValue(searchParams?.name),
     email: firstSearchValue(searchParams?.email),
@@ -71,7 +74,7 @@ export default async function ContactPage({
   }
   
   return (
-    <>
+    <main>
       <PageHeader
         title={dict('Contact')}
         breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('Contact') }]}
@@ -96,19 +99,19 @@ export default async function ContactPage({
             <div className="col-xl-7 col-lg-6">
               <div className="contact-page__right">
                 <SectionTitle
-                  tagline={dict('contact us')}
-                  title={dict('Have Questions? Contact')+' '+dict('with us')+' '+dict('Anytime')}
-                  highlight={dict('Anytime')}
+                  tagline={copy.email}
+                  title={copy.contactTitle}
                 />
+                <p className="contact-page__intro">{copy.contactText}</p>
                 <ul className="contact-page__points list-unstyled">
                   <li>
                     <div className="icon">
                       <span className="icon-telephone-1"></span>
                     </div>
                     <div className="text">
-                      <p>{dict('Have any question?')}</p>
+                      <p>{copy.phone}</p>
                       <h3>
-                        {dict('Free')} <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
+                        <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
                       </h3>
                     </div>
                   </li>
@@ -117,7 +120,7 @@ export default async function ContactPage({
                       <span className="icon-email"></span>
                     </div>
                     <div className="text">
-                      <p>{dict('Send Email')}</p>
+                      <p>{copy.email}</p>
                       <h3>
                         <a href={`mailto:${siteConfig.contact.email}`}>{siteConfig.contact.email}</a>
                       </h3>
@@ -128,8 +131,8 @@ export default async function ContactPage({
                       <span className="icon-pin"></span>
                     </div>
                     <div className="text">
-                      <p>{dict('Visit anytime')}</p>
-                      <h3>{siteConfig.contact.address.en}</h3>
+                      <p>{copy.locationLabel}</p>
+                      <h3>{copy.location}</h3>
                     </div>
                   </li>
                 </ul>
@@ -138,6 +141,6 @@ export default async function ContactPage({
           </div>
         </div>
       </section>
-    </>
+    </main>
   )
 }

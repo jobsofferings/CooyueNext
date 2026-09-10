@@ -18,11 +18,11 @@ const agentCopy = {
     searchTitle: '产品搜索',
     searchPlaceholder: '搜索型号或关键词，例如 K10',
     close: '关闭搜索',
-    title: 'Cooyue Agent',
-    kicker: 'AI 产品助手',
+    title: 'Cooyue 产品助手',
+    kicker: '产品支持',
     subtitle: '告诉我应用场景、型号或技术需求，我先帮你梳理产品方向。',
-    welcome: '你好，我是 Cooyue Agent。你可以直接描述想找的产品，例如“我想找 K10 相关产品”。',
-    placeholder: '问问 Cooyue Agent…',
+    welcome: '你好，可以直接描述想找的红外设备，例如“我想找 K10 相关产品”。',
+    placeholder: '描述你的产品需求…',
     send: '发送问题',
     status: { idle: '在线', recognizing: '正在识别需求', matching: '正在匹配产品' },
     suggestions: ['我想找 K10 相关产品', '有没有适合气体成像的产品', '帮我比较 PV400 和 GF77'],
@@ -32,11 +32,11 @@ const agentCopy = {
     searchTitle: 'Product search',
     searchPlaceholder: 'Search a model or keyword, e.g. K10',
     close: 'Close search',
-    title: 'Cooyue Agent',
-    kicker: 'AI PRODUCT GUIDE',
-    subtitle: 'Describe your application, model, or technical need and I will map the product direction.',
-    welcome: 'Hi, I am Cooyue Agent. Try a request such as “I want to find products related to K10.”',
-    placeholder: 'Ask Cooyue Agent…',
+    title: 'Cooyue Product Guide',
+    kicker: 'PRODUCT SUPPORT',
+    subtitle: 'Describe your application, model, or technical need and we will help organize the product direction.',
+    welcome: 'Describe the infrared equipment you need, such as “I want to find products related to K10.”',
+    placeholder: 'Describe your product requirements…',
     send: 'Send question',
     status: { idle: 'Online', recognizing: 'Understanding request', matching: 'Matching products' },
     suggestions: ['Find products related to K10', 'Products for gas imaging', 'Compare PV400 and GF77'],
@@ -53,7 +53,7 @@ function buildAgentReply(question: string, locale: string) {
   const chinese = locale === 'zh'
   if (/k10/i.test(question)) {
     return chinese
-      ? '我会优先从产品型号、接口和应用描述中匹配 K10 相关内容，随后列出可选产品供你继续选择和对比。'
+      ? '我会优先从产品型号、接口和应用描述中匹配 K10 相关内容，随后列出可选产品供你选择和对比。'
       : 'I will prioritize product models, interfaces, and application descriptions related to K10, then list products for you to select and compare.'
   }
   if (/气体|红外|gas|infrared|thermal/i.test(question)) {
@@ -67,8 +67,8 @@ function buildAgentReply(question: string, locale: string) {
       : 'Sure. I will identify the models, return key metrics, use cases, and sources, while keeping the product selection and comparison flow.'
   }
   return chinese
-    ? '我已收到你的需求。我会先识别意图，再匹配产品和审核资料，并将候选结果流式展示在这里。你也可以先从下方示例开始。'
-    : 'I received your request. I will identify intent, match products and reviewed materials, and stream the candidates here. You can also start with one of the examples below.'
+    ? '我已收到你的需求。我会先识别应用，再匹配产品资料，并将候选结果展示在这里。'
+    : 'I received your request. I will identify the application, match product information and show the candidate products here.'
 }
 
 export default function SearchPopup() {
@@ -280,7 +280,7 @@ export default function SearchPopup() {
         <section className="search-popup__agent" aria-label={copy.title}>
           <div className="search-popup__agent-header">
             <div className="search-popup__agent-heading">
-              <span className="search-popup__agent-avatar" aria-hidden="true">AI</span>
+              <span className="search-popup__agent-avatar" aria-hidden="true">CT</span>
               <div>
                 <span className="search-popup__agent-kicker">{copy.kicker}</span>
                 <h3>{copy.title}</h3>

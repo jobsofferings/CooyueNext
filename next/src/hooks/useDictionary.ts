@@ -15,17 +15,13 @@ export const useDictionary = () => {
   const ossResult = useDictionaryByOss();
 
   return useMemo(() => {
-    if (ossResult) {
-      return createDictionaryFunction(ossResult);
-    }
-
     if (i18n.locales.includes(locale)) {
       const dict_map = {
         'zh': ZH_CONFIG,
         'en': EN_CONFIG,
       }
       const dict = dict_map[locale] as Record<string, string>
-      return createDictionaryFunction(dict);
+      return createDictionaryFunction({ ...ossResult, ...dict });
     }
 
     return createDictionaryFunction({});

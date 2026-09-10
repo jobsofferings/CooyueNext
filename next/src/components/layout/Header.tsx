@@ -30,7 +30,7 @@ export default function Header() {
           <div className="main-menu__wrapper-inner">
             <div className="main-menu__logo">
               <Link href={getLocalizedHref('/')}>
-                <img src="/assets/images/resources/logo-1.png" alt="Logo" />
+                <img src="/assets/images/resources/logo-1.png" alt={dict('Logo image')} />
               </Link>
             </div>
             <div className="main-menu__call">
@@ -68,14 +68,6 @@ export default function Header() {
                         </div>
                       </li>
                     </ul>
-                  </div>
-                  <div className="main-menu__top-right">
-                    <div className="main-menu__social">
-                      <a href="#"><i className="fab fa-twitter"></i></a>
-                      <a href="#"><i className="fab fa-facebook"></i></a>
-                      <a href="#"><i className="fab fa-pinterest-p"></i></a>
-                      <a href="#"><i className="fab fa-instagram"></i></a>
-                    </div>
                   </div>
                 </div>
               </div>

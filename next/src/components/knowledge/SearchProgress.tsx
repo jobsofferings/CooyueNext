@@ -4,8 +4,8 @@ import styles from './knowledge.module.css'
 export type SearchPhase = 'recognizing' | 'matching' | 'complete' | 'idle'
 
 const labels = {
-  zh: { recognizing: '正在识别需求', matching: '正在匹配产品' },
-  en: { recognizing: 'Understanding your needs', matching: 'Matching products' },
+  zh: { recognizing: '正在识别应用需求', matching: '正在匹配红外设备' },
+  en: { recognizing: 'Understanding your application', matching: 'Matching infrared equipment' },
 }
 
 export default function SearchProgress({ locale, phase }: { locale: Locale; phase: SearchPhase }) {

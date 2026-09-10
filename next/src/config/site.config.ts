@@ -2,9 +2,10 @@ export const siteConfig = {
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://www.cooyue.tech",
 
   company: {
-    name: "Cooyue",
-    tagline: "Business Consulting",
-    description: "Professional business consulting services",
+    name: "Cooyue Tech",
+    legalName: "杭州科越设备有限公司",
+    tagline: "Infrared Camera Equipment",
+    description: "Infrared camera customization, product supply and after-sales support for overseas customers.",
   },
 
   contact: {
@@ -12,8 +13,8 @@ export const siteConfig = {
     phone: "+8614797992772",
     phoneDisplay: "+86 147-9799-2772",
     address: {
-      cn: "湖南省长沙市岳麓区",
-      en: "Yuelu District, Changsha, Hunan Province, China",
+      cn: "中国 · 杭州",
+      en: "Hangzhou, China",
     },
   },
 
@@ -36,9 +37,9 @@ export const siteConfig = {
   },
 
   seo: {
-    defaultTitle: "Cooyue - Business Consulting",
-    defaultDescription: "Professional business consulting services",
-    titleTemplate: (page: string) => `${page} - Cooyue`,
+    defaultTitle: "Cooyue Tech - Infrared Camera Equipment",
+    defaultDescription: "Infrared camera customization, product supply and after-sales support for overseas customers.",
+    titleTemplate: (page: string) => `${page} - Cooyue Tech`,
   },
 
   deployment: {

@@ -36,7 +36,7 @@ export default function PageHeader({ title, breadcrumbs }: PageHeaderProps) {
       </div>
       <div className="container">
         <div className="page-header__inner">
-          <h2>{title}</h2>
+          <h1>{title}</h1>
           <div className="thm-breadcrumb__inner">
             <ul className="thm-breadcrumb list-unstyled">
               {breadcrumbs.map((item, index) => (

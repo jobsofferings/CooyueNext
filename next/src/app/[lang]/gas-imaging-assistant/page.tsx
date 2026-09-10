@@ -4,7 +4,10 @@ import type { Locale } from '@/i18n-config'
 
 export function generateMetadata({ params }: { params: { lang: Locale } }): Metadata {
   return {
-    title: params.lang === 'zh' ? '气体红外成像选型验证 | Cooyue' : 'Gas Imaging Selection Lab | Cooyue',
+    title: params.lang === 'zh' ? '气体红外成像产品与询盘 | Cooyue Tech' : 'Gas Imaging Products and Inquiry | Cooyue Tech',
+    description: params.lang === 'zh'
+      ? '根据目标气体、检测距离和使用环境查找气体红外成像产品，并通过邮件确认适用条件。'
+      : 'Find gas imaging products by target gas, detection distance and operating environment, then confirm suitability by email.',
     robots: { index: false, follow: true },
   }
 }

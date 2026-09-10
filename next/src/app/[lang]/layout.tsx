@@ -4,20 +4,18 @@ import { NavigationProvider } from '@/components/layout/NavigationProvider'
 import { getProductCategories } from '@/lib/products-api'
 import { notFound } from 'next/navigation'
 import { siteConfig } from '@/config/site.config'
-import { getDictionary } from '@/get-dictionary'
 import { i18n, Locale } from '@/i18n-config'
+import { getCompanyContent } from '@/content/company'
 
 export async function generateMetadata({
   params: { lang },
 }: {
   params: { lang: Locale }
 }): Promise<Metadata> {
-  const dict = await getDictionary(lang)
-
   return {
     metadataBase: new URL(siteConfig.siteUrl),
-    title: `${siteConfig.company.name} - ${dict('Business Consulting')}`,
-    description: dict('Professional business consulting services'),
+    title: siteConfig.seo.titleTemplate(getCompanyContent(lang).title),
+    description: getCompanyContent(lang).description,
     alternates: {
       canonical: `/${lang}`,
       languages: Object.fromEntries(

@@ -17,6 +17,7 @@ import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 import Pv400Experience from '@/components/products/pv400/Pv400Experience'
 import ImagingKitExperience from '@/components/products/imaging-kit/ImagingKitExperience'
 import { imagingKitSlug } from '@/components/products/imaging-kit/imaging-kit-data'
+import { getCompanyContent } from '@/content/company'
 
 export const revalidate = 300
 export const dynamic = 'force-static'
@@ -89,10 +90,11 @@ export async function generateMetadata({ params }: ProductDetailPageProps): Prom
   }
 
   const product = toProductDetail(record)
+  const companyCopy = getCompanyContent(params.lang)
   const seoData = await getSeoByPath(`/products/${params.id}`, params.lang)
   const seoMeta = extractSeoMeta(seoData, {
-    title: siteConfig.seo.titleTemplate(product.model),
-    description: product.description,
+    title: siteConfig.seo.titleTemplate(`${product.model} infrared equipment`),
+    description: `${product.description} ${companyCopy.contactText}`,
   })
 
   return {
@@ -125,6 +127,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
   }
 
   const product = toProductDetail(record)
+  const companyCopy = getCompanyContent(params.lang)
   const relatedRecords = await getRelatedProducts(params.lang, slug)
   const relatedProducts = relatedRecords.map(toProductDetail)
 
@@ -170,6 +173,7 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                 <h2 className="product-detail-top__title">{product.model}</h2>
                 <p className="product-detail-top__subtitle">{product.subtitle}</p>
                 <p className="product-detail-top__description">{product.description}</p>
+                <p className="product-detail-top__source-note">{companyCopy.productNote}</p>
                 <ul className="products-overview__badges list-unstyled">
                   {product.specs.map((spec) => (
                     <li key={spec}>{spec}</li>
@@ -179,8 +183,8 @@ export default async function ProductDetailPage({ params }: ProductDetailPagePro
                   <Link href={`/${params.lang}/contact`} className="thm-btn">
                     {copy.inquiryButton}
                   </Link>
-                  <a href={`tel:${siteConfig.contact.phone}`} className="product-detail-top__phone">
-                    {siteConfig.contact.phoneDisplay}
+                  <a href={`mailto:${siteConfig.contact.email}`} className="product-detail-top__phone">
+                    {siteConfig.contact.email}
                   </a>
                 </div>
               </div>

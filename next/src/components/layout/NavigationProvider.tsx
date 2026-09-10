@@ -24,7 +24,7 @@ export function NavigationProvider({ categories, children }: { categories: Categ
   const navItems = useMemo(() => [
     { label: dict('Home'), href: '/' },
     { label: dict('Products'), href: '/products', children: categories.map((category) => ({ label: category.name, href: `/products#${category.slug}` })) },
-    { label: dict('News'), href: '/news', children: [{ label: dict('News'), href: '/news' }, { label: dict('News Details'), href: '/news/1' }] },
+    { label: dict('News'), href: '/news', children: [{ label: dict('News'), href: '/news' }, { label: dict('FAQs'), href: '/faq' }] },
     { label: dict('About'), href: '/about' },
     { label: dict('Contact'), href: '/contact' },
   ], [categories, dict])

@@ -7,13 +7,11 @@ const dictionaries = {
 }
 
 export const getDictionary = async (locale: Locale) => {
-  const ossResult = await getDictionaryByOss(locale);
-  if (ossResult) {
-    return createDictionaryFunction(ossResult);
-  }
   if (i18n.locales.includes(locale)) {
-    const dict = await dictionaries[locale]()
-    return createDictionaryFunction(dict as unknown as Record<string, string>);
+    const [dict, ossResult] = await Promise.all([dictionaries[locale](), getDictionaryByOss(locale)])
+    const localeDict = (dict as unknown as { default?: Record<string, string> }).default ||
+      (dict as unknown as Record<string, string>)
+    return createDictionaryFunction({ ...ossResult, ...localeDict });
   }
   return createDictionaryFunction({});
 }

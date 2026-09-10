@@ -8820,6 +8820,7 @@ ul {
   z-index: 15;
 }
 
+.page-header__inner h1,
 .page-header__inner h2 {
   font-size: 46px;
   color: var(--sinace-white);

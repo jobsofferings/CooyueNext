@@ -13,6 +13,7 @@ import {
   toProductFamilySections,
 } from '@/lib/products-api'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
+import { getCompanyContent } from '@/content/company'
 
 export const revalidate = 300
 export const dynamic = 'force-static'
@@ -55,64 +56,64 @@ const pageCopy: Record<
 > = {
   zh: {
     capability: {
-      tagline: '性能优势',
-      title: '围绕精准探测构建可靠的产品能力',
-      highlight: '精准探测',
+      tagline: '产品与项目支持',
+      title: '围绕实际应用，选择合适的红外设备',
+      highlight: '实际应用',
       description:
-        '从核心探测器到整机热管理，我们在图像细节、响应速度和环境适应性之间做完整协同，帮助项目更快交付。',
+        '浏览红外摄像头、机芯、镜头与气体成像设备。Cooyue Tech 提供定制、销售及售后支持，具体配置和交付条件按项目确认。',
       bullets: [
-        '支持多分辨率、多焦段与多接口平台快速适配',
-        '面向安防、车载、边防与工业应用提供稳定图像输出',
-        '支持二次开发与整机定制，缩短样机到量产的周期',
+        '从应用、型号、安装空间和接口开始梳理需求',
+        '区分可询购产品与第三方参考资料，再确认可供方案',
+        '通过邮件确认定制范围、价格、交期和售后条款',
       ],
       metrics: [
-        { value: '30mK', label: '最低热灵敏度' },
-        { value: '4x', label: '电子变倍方案' },
-        { value: 'IP66', label: '整机防护等级' },
-        { value: '24h', label: '连续稳定工作' },
+        { value: '定制', label: '按项目核对要求' },
+        { value: '销售', label: '确认设备与配置' },
+        { value: '售后', label: '按约定范围支持' },
+        { value: '邮件', label: '海外主要联系渠道' },
       ],
     },
-    empty: '当前没有可展示的产品数据，请先在后台发布产品。',
+    empty: '暂时没有可展示的产品。请通过邮箱告诉我们你的需求。',
     cta: {
       tagline: '项目对接',
-      title: '需要匹配具体应用的红外产品方案？',
+      title: '还没有确定型号？从应用需求开始',
       description:
-        '告诉我们探测距离、安装方式与平台接口，我们可以按项目需求推荐合适的机芯、镜头和整机组合。',
-      button: '联系我们',
+        '发送应用、使用距离、安装方式、接口、数量与目的国家，我们会与你讨论产品方向和待确认问题。',
+      button: '发送询盘',
     },
     viewLabel: '查看详情',
-    moreLabel: '更多产品',
+    moreLabel: '展开更多产品',
     lessLabel: '收起产品',
   },
   en: {
     capability: {
-      tagline: 'Capabilities',
-      title: 'Reliable product engineering centered on precision detection',
-      highlight: 'precision detection',
+      tagline: 'Product and project support',
+      title: 'Choose infrared equipment around your application',
+      highlight: 'your application',
       description:
-        'From detector performance to thermal management, each layer is tuned for sharper imagery, faster response, and dependable operation in the field.',
+        'Explore infrared cameras, cores, lenses and gas imaging equipment. Cooyue Tech offers customization, sales and after-sales support, with configuration and delivery terms confirmed per project.',
       bullets: [
-        'Fast platform adaptation across resolutions, focal lengths, and interface standards',
-        'Stable image output for security, vehicle, border, and industrial applications',
-        'Customization support from evaluation units to production-ready system integration',
+        'Start with your application, model, mounting space and interfaces',
+        'Distinguish purchasing options from third-party reference information',
+        'Confirm customization scope, pricing, lead time and support terms by email',
       ],
       metrics: [
-        { value: '30mK', label: 'Minimum thermal sensitivity' },
-        { value: '4x', label: 'Digital zoom workflow' },
-        { value: 'IP66', label: 'Protection rating' },
-        { value: '24h', label: 'Continuous operation' },
+        { value: 'Custom', label: 'Requirements reviewed together' },
+        { value: 'Supply', label: 'Equipment and configuration' },
+        { value: 'Support', label: 'Agreed after-sales scope' },
+        { value: 'Email', label: 'Our primary contact channel' },
       ],
     },
-    empty: 'No published products are available yet. Publish products in the management console first.',
+    empty: 'No products are currently available to display. Email us with your requirements.',
     cta: {
       tagline: 'Project Fit',
-      title: 'Need an infrared product stack matched to a real deployment?',
+      title: 'Not sure which model fits? Start with your application.',
       description:
-        'Share your detection range, mounting method, and platform interface requirements. We can recommend the right combination of core, lens, and complete system.',
-      button: 'Contact Us',
+        'Send your application, viewing distance, mounting method, interfaces, quantity and destination country. We can discuss product directions and open questions.',
+      button: 'Send an inquiry',
     },
-    viewLabel: 'View Detail',
-    moreLabel: 'More Products',
+    viewLabel: 'View product details',
+    moreLabel: 'Show more products',
     lessLabel: 'Show Less',
   },
 }
@@ -122,12 +123,7 @@ export async function generateMetadata({
 }: {
   params: { lang: Locale }
 }): Promise<Metadata> {
-  const categories = await getProductCategories(lang)
-  const catalogCategories = getCatalogCategories(categories)
-  const copy = pageCopy[lang]
-  const defaultDescription =
-    catalogCategories.map((category) => category.description).filter(Boolean).join(' ') ||
-    copy.capability.description
+  const defaultDescription = getCompanyContent(lang).description
 
   const seoData = await getSeoByPath('/products', lang)
   const seoMeta = extractSeoMeta(seoData, {
@@ -224,10 +220,11 @@ export default async function ProductsPage({
           </p>
           <SectionTitle
             tagline={lang === 'zh' ? '产品目录' : 'Catalog'}
-            title={lang === 'zh' ? '按分类查看已发布产品' : 'Browse published products by category'}
-            highlight={lang === 'zh' ? '已发布产品' : 'published products'}
+            title={lang === 'zh' ? '按类别查看红外设备与组件' : 'Browse infrared equipment and components'}
+            highlight={lang === 'zh' ? '红外设备与组件' : 'infrared equipment and components'}
             align="center"
           />
+          <p className="catalog-reference-note">{getCompanyContent(lang).referenceText}</p>
           {sections.length === 0 ? (
             <p className="text-center">{copy.empty}</p>
           ) : (
@@ -256,8 +253,8 @@ export default async function ProductsPage({
               <Link href={`/${lang}/contact`} className="thm-btn">
                 {copy.cta.button}
               </Link>
-              <a href={`tel:${siteConfig.contact.phone}`} className="products-cta__phone">
-                {siteConfig.contact.phoneDisplay}
+              <a href={`mailto:${siteConfig.contact.email}`} className="products-cta__phone">
+                {siteConfig.contact.email}
               </a>
             </div>
           </div>

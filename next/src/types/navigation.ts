@@ -34,7 +34,7 @@ export const getNavigationConfig = (dict: (key: string) => string): NavItem[] =>
     href: '/news',
     children: [
       { label: dict('News'), href: '/news' },
-      { label: dict('News Details'), href: '/news/1' },
+      { label: dict('FAQs'), href: '/faq' },
     ],
   },
   {

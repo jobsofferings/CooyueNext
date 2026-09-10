@@ -1,233 +1,70 @@
-import { Metadata } from 'next'
+import Link from 'next/link'
+import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
-import { SectionTitle, TeamCard, TestimonialCard } from '@/components/ui'
+import { SectionTitle } from '@/components/ui'
+import { getCompanyContent } from '@/content/company'
 import { siteConfig } from '@/config/site.config'
 import { getDictionary } from '@/get-dictionary'
-import { i18n, Locale } from '@/i18n-config'
+import type { Locale } from '@/i18n-config'
 import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
 
-const getTeam = (dict: (key: string) => string) => [
-  { name: dict('Kevin Martin'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-1.jpg', href: '/team/1' },
-  { name: dict('Jessica Brown'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-2.jpg', href: '/team/2' },
-  { name: dict('Mike Hardson'), role: dict('Consultant'), description: dict('There are many vartion of passages of available.'), image: '/assets/images/team/team-1-3.jpg', href: '/team/3' },
-]
-
-const getTestimonials = (dict: (key: string) => string) => [
-  { name: dict('Mike Hardson'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-1.jpg' },
-  { name: dict('Sarah Albert'), role: dict('CO Founder'), content: dict('Exercitation ullamco laboris nisi ut aliquip ex ea ex commodo consequat duis aute aboris nisi ut aliquip irure reprehederit in voluptate velit esse.'), image: '/assets/images/testimonial/testimonial-2-2.jpg' },
-]
-
-export async function generateMetadata({
-  params: { lang },
-}: {
-  params: { lang: Locale }
-}): Promise<Metadata> {
-  const dict = await getDictionary(lang)
-
-  // 尝试从数据库获取 SEO 数据
-  const seoData = await getSeoByPath('/about', lang)
-  const seoMeta = extractSeoMeta(seoData, {
-    title: siteConfig.seo.titleTemplate(dict('About')),
-    description: dict('Learn more about our company'),
+export async function generateMetadata({ params: { lang } }: { params: { lang: Locale } }): Promise<Metadata> {
+  const copy = getCompanyContent(lang)
+  const seo = extractSeoMeta(await getSeoByPath('/about', lang), {
+    title: siteConfig.seo.titleTemplate(copy.aboutTag),
+    description: copy.description,
   })
-
   return {
-    title: seoMeta.title,
-    description: seoMeta.description,
-    keywords: seoMeta.keywords,
-    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
-    openGraph: {
-      title: seoMeta.title,
-      description: seoMeta.description,
-      url: seoMeta.canonical || `/${lang}/about`,
-      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
-    },
-    alternates: {
-      canonical: seoMeta.canonical || `/${lang}/about`,
-      languages: Object.fromEntries(
-        i18n.locales.map((locale) => [locale, `/${locale}/about`])
-      ),
-    },
+    title: seo.title,
+    description: seo.description,
+    robots: seo.noIndex ? { index: false, follow: false } : undefined,
+    alternates: { canonical: seo.canonical || `/${lang}/about`, languages: { zh: '/zh/about', en: '/en/about' } },
+    openGraph: { title: seo.title, description: seo.description, url: seo.canonical || `/${lang}/about`, images: seo.ogImage ? [seo.ogImage] : undefined },
   }
 }
 
-export default async function AboutPage({
-  params: { lang },
-}: {
-  params: { lang: Locale }
-}) {
+export default async function AboutPage({ params: { lang } }: { params: { lang: Locale } }) {
   const dict = await getDictionary(lang)
-  const team = getTeam(dict)
-  const testimonials = getTestimonials(dict)
-  
+  const copy = getCompanyContent(lang)
   return (
-    <>
-      <PagePlugins page="about" />
-      <PageHeader
-        title={dict('About')}
-        breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('About') }]}
-      />
-
-      <section className="about-four">
+    <main>
+      <PageHeader title={dict('About')} breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('About') }]} />
+      <section className="about-four company-content">
         <div className="container">
+          <div className="row align-items-center">
+            <div className="col-lg-6">
+              <div className="company-content__image">
+                <img src="/assets/models/imaging-kit/imaging-kit.webp" alt={lang === 'zh' ? 'GLA07512K-T2 + ITZ1212IP 成像套件 CAD 渲染图' : 'CAD render of the GLA07512K-T2 + ITZ1212IP imaging kit'} />
+              </div>
+            </div>
+            <div className="col-lg-6">
+              <SectionTitle tagline={copy.aboutTag} title={copy.aboutTitle} />
+              <p>{copy.aboutText}</p>
+              <p className="company-content__legal">{copy.legalName}</p>
+              <Link href={`/${lang}/contact`} className="thm-btn">{copy.form}</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section className="company-content company-content--muted">
+        <div className="container">
+          <SectionTitle tagline={copy.servicesTag} title={copy.servicesTitle} />
           <div className="row">
-            <div className="col-xl-6">
-              <div className="about-four__left">
-                <div className="about-four__img-box">
-                  <div className="about-four__img">
-                    <img src="/assets/images/resources/about-four-img-1.jpg" alt="" />
-                  </div>
-                  <div className="about-four__img-two">
-                    <img src="/assets/images/resources/about-four-img-2.jpg" alt="" />
-                  </div>
-                  <div className="about-four__shape-1 img-bounce"></div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xl-6">
-              <div className="about-four__right">
-                <SectionTitle
-                  tagline={dict('Welcome to agency')}
-                  title={dict('Get to Know About Consultancy Company')}
-                  highlight={dict('Company')}
-                />
-                <p className="about-four__text">
-                  {dict('Lorem ipsum dolor sit am adipi we help you ensure everyone is in the right jobs sicing elit, sed do consulting firms Et leggings across the nation tempor.')}
-                </p>
-                <ul className="about-four__points list-unstyled">
-                  <li>
-                    <div className="icon">
-                      <span className="fa fa-check"></span>
-                    </div>
-                    <div className="text">
-                      <p>{dict('Suspe ndisse suscipit sagittis leo.')}</p>
-                    </div>
-                  </li>
-                  <li>
-                    <div className="icon">
-                      <span className="fa fa-check"></span>
-                    </div>
-                    <div className="text">
-                      <p>{dict('Entum estibulum dignissim posuere.')}</p>
-                    </div>
-                  </li>
-                  <li>
-                    <div className="icon">
-                      <span className="fa fa-check"></span>
-                    </div>
-                    <div className="text">
-                      <p>{dict('Lorem Ipsum gene on the tend to repeat.')}</p>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-            </div>
+            {copy.services.map((service) => <div className="col-lg-4" key={service.title}><article className="company-content__card"><span className={`fa ${service.icon}`} aria-hidden="true"></span><h3>{service.title}</h3><p>{service.text}</p></article></div>)}
           </div>
         </div>
       </section>
-
-      <section className="expectation-one">
-        <div
-          className="expectation-one__bg jarallax"
-          style={{ backgroundImage: 'url(/assets/images/backgrounds/expectation-one-bg.jpg)' }}
-        ></div>
-        <SectionTitle
-          tagline={dict('Recent work lists')}
-          title={dict('Consultancy Work that Meets Your Expectations')}
-          highlight={dict('Expectations')}
-          align="center"
-        />
-        <div className="expectation-one__inner">
-          <div className="container">
-            <ul className="expectation-one__points list-unstyled">
-              <li>
-                <div className="icon">
-                  <span className="icon-strategy"></span>
-                </div>
-                <h3 className="expectation-one__title">{dict('Saving and Strategy')}</h3>
-                <p className="expectation-one__text">
-                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
-                </p>
-              </li>
-              <li>
-                <div className="icon">
-                  <span className="icon-conversation"></span>
-                </div>
-                <h3 className="expectation-one__title">{dict('HR Business Consulting')}</h3>
-                <p className="expectation-one__text">
-                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
-                </p>
-              </li>
-              <li>
-                <div className="icon">
-                  <span className="icon-planning"></span>
-                </div>
-                <h3 className="expectation-one__title">{dict('Business Planning')}</h3>
-                <p className="expectation-one__text">
-                  {dict('There are many variations of passages of available but the majority have suffered alteration in some form injected randomised words.')}
-                </p>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <section className="team-one about-page-team">
+      <section className="company-content">
         <div className="container">
-          <div className="team-one__top">
-            <div className="row">
-              <div className="col-xl-7 col-lg-6">
-                <SectionTitle
-                  tagline={dict('meet our team')}
-                  title={dict('Meet the People Behind')+' '+dict('the High')+' '+dict('Success')}
-                  highlight={dict('Success')}
-                />
-              </div>
-              <div className="col-xl-5 col-lg-6">
-                <p className="team-one__text">
-                  {dict('Lorem ipsum dolor sit amet, consectetur notted adipisicing elit sed do eiusmod tempor incididunt ut labore et simply free text dolore magna aliqua lonm andhn.')}
-                </p>
-              </div>
-            </div>
+          <SectionTitle tagline={copy.processTag} title={copy.processTitle} />
+          <p>{copy.processText}</p>
+          <div className="row">
+            {copy.steps.map((step) => <div className="col-lg-4" key={step.title}><article className="company-content__card"><h3>{step.title}</h3><p>{step.text}</p></article></div>)}
           </div>
-          <div className="team-one__bottom">
-            <div className="row">
-              {team.map((member, index) => (
-                <div key={index} className="col-xl-4 col-lg-4">
-                  <TeamCard {...member} />
-                </div>
-              ))}
-            </div>
-          </div>
+          <aside className="catalog-reference-note"><h3>{copy.referenceTitle}</h3><p>{copy.referenceText}</p></aside>
+          <a className="thm-btn" href={`mailto:${siteConfig.contact.email}`}>{copy.inquire}</a>
         </div>
       </section>
-
-      <section className="testimonial-two about-page-testimonial">
-        <div className="testimonial-two__bg-box">
-          <div
-            className="testimonial-two__bg"
-            style={{ backgroundImage: 'url(/assets/images/backgrounds/testimonial-two-bg.png)' }}
-          ></div>
-        </div>
-        <div className="container">
-          <SectionTitle
-            tagline={dict('our testimonials')}
-            title={`${dict("What They're Talking About")} ${siteConfig.company.name}`}
-            highlight={siteConfig.company.name}
-            align="center"
-          />
-          <div className="testimonial-two__bottom">
-            <div className="row">
-              {testimonials.map((item, index) => (
-                <div key={index} className="col-xl-6 col-lg-6">
-                  <TestimonialCard {...item} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-    </>
+    </main>
   )
 }
-import PagePlugins from '@/components/layout/PagePlugins'

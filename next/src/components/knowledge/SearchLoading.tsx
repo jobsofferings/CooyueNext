@@ -16,8 +16,8 @@ export default function SearchLoading({ locale, query }: { locale: Locale; query
 
   return <main className={styles.page} aria-busy="true">
     <div className={styles.container}>
-      <header className={styles.header}><h1>{locale === 'zh' ? '搜索产品，比较后直接询盘' : 'Find products, compare and inquire'}</h1></header>
-      <div className={styles.card}><p>{query}</p>{query ? <SearchProgress locale={locale} phase={phase} /> : <p role="status">{locale === 'zh' ? '输入需求后开始搜索。' : 'Enter a request to start searching.'}</p>}</div>
+      <header className={styles.header}><h1>{locale === 'zh' ? '查找红外设备，比较后发送询盘' : 'Find infrared equipment and send an inquiry'}</h1></header>
+      <div className={styles.card}><p>{query}</p>{query ? <SearchProgress locale={locale} phase={phase} /> : <p role="status">{locale === 'zh' ? '输入应用、型号或技术需求后开始搜索。' : 'Enter an application, model or technical requirement to start.'}</p>}</div>
     </div>
   </main>
 }

@@ -1,193 +1,48 @@
-import { Metadata } from 'next'
-import { siteConfig } from '@/config/site.config'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import type { Metadata } from 'next'
 import { PageHeader } from '@/components/layout'
+import { getCompanyContent } from '@/content/company'
+import { productGuides } from '@/content/guides'
 import { getDictionary } from '@/get-dictionary'
-import { i18n, Locale } from '@/i18n-config'
-import { getSeoByPath, extractSeoMeta } from '@/lib/seo-api'
+import { siteConfig } from '@/config/site.config'
+import { i18n, type Locale } from '@/i18n-config'
 
-interface NewsDetailPageProps {
-  params: { lang: Locale; id: string }
+interface GuidePageProps { params: { lang: Locale; id: string } }
+
+export function generateStaticParams() {
+  return i18n.locales.flatMap((lang) => productGuides[lang].map((guide) => ({ lang, id: guide.id })))
 }
 
-export async function generateMetadata({ params }: NewsDetailPageProps): Promise<Metadata> {
-  const dict = await getDictionary(params.lang)
-
-  // 尝试从数据库获取 SEO 数据 (使用 news-{id} 作为 key)
-  const seoData = await getSeoByPath(`/news/${params.id}`, params.lang)
-  const seoMeta = extractSeoMeta(seoData, {
-    title: siteConfig.seo.titleTemplate(dict('News Details')),
-    description: dict('Read the full article'),
-  })
-
-  return {
-    title: seoMeta.title,
-    description: seoMeta.description,
-    keywords: seoMeta.keywords,
-    robots: seoMeta.noIndex ? { index: false, follow: false } : undefined,
-    openGraph: {
-      title: seoMeta.title,
-      description: seoMeta.description,
-      url: seoMeta.canonical || `/${params.lang}/news/${params.id}`,
-      images: seoMeta.ogImage ? [seoMeta.ogImage] : undefined,
-    },
-    alternates: {
-      canonical: seoMeta.canonical || `/${params.lang}/news/${params.id}`,
-      languages: Object.fromEntries(
-        i18n.locales.map((locale) => [locale, `/${locale}/news/${params.id}`])
-      ),
-    },
-  }
+export function generateMetadata({ params: { lang, id } }: GuidePageProps): Metadata {
+  const guide = productGuides[lang].find((entry) => entry.id === id)
+  if (!guide) return {}
+  return { title: siteConfig.seo.titleTemplate(guide.title), description: guide.intro, alternates: { canonical: `/${lang}/news/${id}`, languages: { zh: `/zh/news/${id}`, en: `/en/news/${id}` } }, openGraph: { type: 'article', title: guide.title, description: guide.intro, url: `/${lang}/news/${id}` } }
 }
 
-export default async function NewsDetailPage({ params }: NewsDetailPageProps) {
-  const dict = await getDictionary(params.lang)
-  
+export default async function NewsDetailPage({ params: { lang, id } }: GuidePageProps) {
+  const guide = productGuides[lang].find((entry) => entry.id === id)
+  if (!guide) notFound()
+  const dict = await getDictionary(lang)
+  const copy = getCompanyContent(lang)
   return (
-    <>
-      <PageHeader
-        title={dict('News Details')}
-        breadcrumbs={[
-          { label: dict('Home'), href: '/' },
-          { label: dict('News'), href: '/news' },
-          { label: dict('News Details') },
-        ]}
-      />
-
-      <section className="news-details">
+    <main>
+      <PageHeader title={guide.title} breadcrumbs={[{ label: dict('Home'), href: '/' }, { label: dict('News'), href: '/news' }, { label: guide.category }]} />
+      <section className="company-content">
         <div className="container">
           <div className="row">
-            <div className="col-xl-8 col-lg-7">
-              <div className="news-details__left">
-                <div className="news-details__img">
-                  <img src="/assets/images/blog/news-details-img-1.jpg" alt="" />
-                  <div className="news-details__date">
-                    <p>{dict('30 Mar, 2023')}</p>
-                  </div>
-                </div>
-                <div className="news-details__content">
-                  <ul className="news-details__meta list-unstyled">
-                    <li>
-                      <div className="icon">
-                        <span className="fas fa-tags"></span>
-                      </div>
-                      <div className="text">
-                        <p>{dict('Business')}</p>
-                      </div>
-                    </li>
-                    <li>
-                      <span>/</span>
-                      <div className="icon">
-                        <span className="fas fa-comments"></span>
-                      </div>
-                      <div className="text">
-                        <p>2 {dict('Comments')}</p>
-                      </div>
-                    </li>
-                  </ul>
-                  <h3 className="news-details__title">
-                    {dict('Discover 10 ways to solve your business problems')}
-                  </h3>
-                  <p className="news-details__text-1">
-                    {dict('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.')}
-                  </p>
-                  <p className="news-details__text-2">
-                    {dict('Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.')}
-                  </p>
-                  <div className="news-details__quote">
-                    <p>
-                      &ldquo;{dict('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.')}&rdquo;
-                    </p>
-                    <span className="news-details__quote-name">{dict('- John Doe')}</span>
-                  </div>
-                  <p className="news-details__text-3">
-                    {dict('Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.')}
-                  </p>
-                </div>
-                <div className="news-details__bottom">
-                  <p className="news-details__tags">
-                    <span>{dict('Tags')}</span>
-                    <a href="#">{dict('Business')}</a>
-                    <a href="#">{dict('Finance')}</a>
-                    <a href="#">{dict('Consulting')}</a>
-                  </p>
-                  <div className="news-details__social">
-                    <a href="#">
-                      <i className="fab fa-twitter"></i>
-                    </a>
-                    <a href="#">
-                      <i className="fab fa-facebook"></i>
-                    </a>
-                    <a href="#">
-                      <i className="fab fa-pinterest-p"></i>
-                    </a>
-                    <a href="#">
-                      <i className="fab fa-instagram"></i>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="col-xl-4 col-lg-5">
-              <div className="sidebar">
-                <div className="sidebar__single sidebar__search">
-                  <form className="sidebar__search-form">
-                    <input type="search" placeholder={dict('Search here')} />
-                    <button type="submit">
-                      <i className="icon-magnifying-glass"></i>
-                    </button>
-                  </form>
-                </div>
-                <div className="sidebar__single sidebar__category">
-                  <h3 className="sidebar__title">{dict('Categories')}</h3>
-                  <ul className="sidebar__category-list list-unstyled">
-                    <li>
-                      <Link href={`/${params.lang}/news`}>
-                        {dict('Business')} <span className="icon-right-arrow"></span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href={`/${params.lang}/news`}>
-                        {dict('Finance')} <span className="icon-right-arrow"></span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href={`/${params.lang}/news`}>
-                        {dict('Consulting')} <span className="icon-right-arrow"></span>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href={`/${params.lang}/news`}>
-                        {dict('Marketing')} <span className="icon-right-arrow"></span>
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-                <div className="sidebar__single sidebar__post">
-                  <h3 className="sidebar__title">{dict('Latest Posts')}</h3>
-                  <ul className="sidebar__post-list list-unstyled">
-                    {[1, 2, 3].map((i) => (
-                      <li key={i}>
-                        <div className="sidebar__post-image">
-                          <img src={`/assets/images/blog/lp-1-${i}.jpg`} alt="" />
-                        </div>
-                        <div className="sidebar__post-content">
-                          <p className="sidebar__post-date">{dict('30 Mar, 2023')}</p>
-                          <h3>
-                            <Link href={`/${params.lang}/news/${i}`}>
-                              {dict('Basic rules of running a small web')}
-                            </Link>
-                          </h3>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
+            <article className="col-lg-8 company-content__article">
+              <p className="company-content__tag">{guide.category}</p><p>{guide.intro}</p>
+              {guide.sections.map((section) => <section key={section.title}><h2>{section.title}</h2><p>{section.text}</p></section>)}
+              <h2>{lang === 'zh' ? '邮件中建议包含' : 'Include in your email'}</h2>
+              <ul>{guide.checklist.map((item) => <li key={item}>{item}</li>)}</ul>
+              <p>{copy.contactNote}</p>
+              <a href={`mailto:${siteConfig.contact.email}`} className="thm-btn">{copy.inquire}</a>
+            </article>
+            <aside className="col-lg-4"><div className="company-content__card"><h2>{lang === 'zh' ? '更多采购指南' : 'More purchasing guides'}</h2><ul className="company-content__links">{productGuides[lang].filter((entry) => entry.id !== id).map((entry) => <li key={entry.id}><Link href={`/${lang}/news/${entry.id}`}>{entry.title}</Link></li>)}</ul><Link href={`/${lang}/products`}>{copy.browse}</Link></div></aside>
           </div>
         </div>
       </section>
-    </>
+    </main>
   )
 }

@@ -164,6 +164,7 @@ export const getProducts = cache(async (locale: Locale): Promise<ProductRecord[]
 
 function isPublicProduct(record: ProductRecord, locale: Locale, categories: ProductCategoryRecord[]) {
   if (record.visibility !== 'published' || record.locale !== locale) return false
+  if (asRecord(record.extra).sample_entry === true) return false
   let categorySlug = record.category_slug
   const visited = new Set<string>()
   while (categorySlug) {

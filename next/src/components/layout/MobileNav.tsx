@@ -47,7 +47,7 @@ export default function MobileNav() {
         </button>
         <div className="logo-box">
           <Link href={getLocalizedHref('/')} aria-label="logo image" onClick={() => setMobileOpen(false)}>
-            <img src="/assets/images/resources/logo-2.png" width="135" alt="" />
+            <img src="/assets/images/resources/logo-2.png" width="135" alt="Cooyue Tech" />
           </Link>
         </div>
         <nav className="mobile-nav__container">
@@ -82,14 +82,6 @@ export default function MobileNav() {
             <a href={`tel:${siteConfig.contact.phone}`}>{siteConfig.contact.phoneDisplay}</a>
           </li>
         </ul>
-        <div className="mobile-nav__top">
-          <div className="mobile-nav__social">
-            <a href="#" className="fab fa-twitter"></a>
-            <a href="#" className="fab fa-facebook-square"></a>
-            <a href="#" className="fab fa-pinterest-p"></a>
-            <a href="#" className="fab fa-instagram"></a>
-          </div>
-        </div>
       </div>
     </div>
   )

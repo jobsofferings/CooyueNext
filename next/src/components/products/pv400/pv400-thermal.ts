@@ -85,7 +85,7 @@ export function drawThermalFrame(context: CanvasRenderingContext2D, mode: Imagin
   context.fillRect(width * 0.943, height * 0.24, width * 0.009, height * 0.54)
   context.fillStyle = '#e3ebe4'
   context.font = `${Math.max(10, width * 0.019)}px monospace`
-  context.fillText('PV400 / DEMO', width * 0.038, height * 0.083)
+  context.fillText('PV400 / PREVIEW', width * 0.038, height * 0.083)
   context.fillText(gas ? 'GAS ENHANCEMENT' : thermal ? 'IRON PALETTE' : 'WHITE HOT', width * 0.038, height * 0.94)
   context.font = `${Math.max(9, width * 0.015)}px monospace`
   context.textAlign = 'right'
