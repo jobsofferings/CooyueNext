@@ -7,6 +7,11 @@
 
 测试一下发布2
 
+## 官网搜索 Agent
+
+- P0 需求、权限边界、配置和验收：`agent_cooyue.md`。
+- 独立流式搜索、同浏览器历史、后台 `/operations/agent` 只读运行记录；默认关闭，需配置模型服务后再开启。
+
 ## 网站留言邮件
 
 - QQ 优先、Gmail 备用的配置与验证说明：`docs/contact-mail.md`

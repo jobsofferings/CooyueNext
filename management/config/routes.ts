@@ -46,6 +46,13 @@ export default [
         component: './Operations/Products',
       },
       {
+        path: '/operations/agent',
+        name: 'Agent 运行记录',
+        icon: 'robot',
+        component: './Operations/Agent',
+        access: 'canAdmin',
+      },
+      {
         path: '/operations/mail',
         name: '邮件任务',
         icon: 'mail',

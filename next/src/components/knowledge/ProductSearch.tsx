@@ -5,6 +5,7 @@ import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
 import { knowledgeRequest, type KnowledgeProduct, type KnowledgeSearchResult, type InquiryDraft, type InitialProductSearch } from '@/lib/knowledge-api'
 import SearchProgress, { type SearchPhase } from './SearchProgress'
+import AgentSearch from './AgentSearch'
 import styles from './knowledge.module.css'
 
 const copy = {
@@ -67,15 +68,18 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
   const [searching, setSearching] = useState(false)
   const [searchPhase, setSearchPhase] = useState<SearchPhase>('idle')
   const [searchAttempt, setSearchAttempt] = useState(0)
+  const [agentMode, setAgentMode] = useState(false)
+  const [agentBusy, setAgentBusy] = useState(false)
   const [error, setError] = useState(initialSearch?.error || '')
   const [errorTarget, setErrorTarget] = useState('search')
-  const disabled = Boolean(busy)
+  const disabled = Boolean(busy) || agentBusy
   const contentLength = query.length + requirements.length
 
   function resetDraft() { setDraft(null); setConsent(false); setSubmitted(false) }
 
   useEffect(() => {
     const syncQuery = (value: string) => {
+      setAgentMode(false)
       setInput(value); setQuery(value.trim()); setSearchAttempt((attempt) => attempt + 1); setDraft(null); setConsent(false); setSubmitted(false)
     }
     const externalSearch = (event: Event) => syncQuery((event as CustomEvent<{ keywords?: string }>).detail?.keywords || '')
@@ -92,6 +96,7 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
   }, [])
 
   useEffect(() => {
+    if (agentMode) return
     if (initialSearch && searchAttempt === 0 && query === initialQuery.trim()) return
     setProducts(null); setVisibleCount(12); setError(''); setErrorTarget('search')
     if (!query) { setSearching(false); setSearchPhase('idle'); return }
@@ -104,10 +109,11 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
       .catch((failure) => { if (!controller.signal.aborted) { setError(failure instanceof Error ? failure.message : labels.failure); setSearchPhase('idle') } })
       .finally(() => { if (!controller.signal.aborted) setSearching(false) })
     return () => { window.clearTimeout(phaseTimer); controller.abort() }
-  }, [query, locale, searchAttempt, labels.failure, initialQuery, initialSearch])
+  }, [query, locale, searchAttempt, labels.failure, initialQuery, initialSearch, agentMode])
 
   function searchFor(value: string) {
     if (disabled) return
+    setAgentMode(false)
     const nextQuery = value.trim()
     setInput(value); setQuery(nextQuery); setSearchAttempt((attempt) => attempt + 1); resetDraft()
     window.history.pushState({ keywords: nextQuery }, '', `/${locale}/search${nextQuery ? `?keywords=${encodeURIComponent(nextQuery)}` : ''}`)
@@ -167,6 +173,13 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
       <div className={styles.container}>
         <Link className={styles.back} href={`/${locale}/products`}>← {labels.back}</Link>
         <header className={styles.header}><span className={styles.badge}>COOYUE · PRODUCT SEARCH</span><h1>{labels.title}</h1><p>{labels.intro}</p></header>
+        <AgentSearch locale={locale} disabled={disabled} onBusyChange={(active) => {
+          setAgentBusy(active)
+          if (active) { setAgentMode(true); setProducts(null); setSearching(false); resetDraft() }
+        }} onResults={(result) => {
+          setAgentMode(true); setProducts(result.products); setQuery(result.query.slice(0, 500)); setVisibleCount(20)
+          setSearching(false); setSearchPhase('complete'); setError(''); resetDraft()
+        }} />
         <form action={`/${locale}/search`} method="get" className={`${styles.card} ${styles.form}`} onSubmit={(event) => { event.preventDefault(); searchFor(input) }}>
           <label htmlFor="product-query">{labels.query}</label>
           <div className={styles.searchBar}><input id="product-query" name="keywords" type="search" value={input} maxLength={500} required disabled={disabled} placeholder={labels.placeholder} onChange={(event) => setInput(event.target.value)} /><button className={styles.primary} disabled={disabled || !input.trim()}>{labels.search}</button></div>

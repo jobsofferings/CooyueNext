@@ -38,6 +38,8 @@ services:
     environment:
       - NODE_ENV=production
       - SEO_API_URL=http://server:3001
+      - AGENT_API_URL=http://server:3001
+      - AGENT_PROXY_SECRET=${AGENT_PROXY_SECRET:-}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://43.139.70.61:3001}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://www.cooyue.tech}
     networks:
@@ -62,6 +64,7 @@ services:
       - ./server/.env
     environment:
       - NODE_ENV=production
+      - AGENT_NEWS_ORIGIN=http://next-app:3000
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:

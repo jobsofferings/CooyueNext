@@ -2,6 +2,11 @@
 # yarn lockfile v1
 
 
+"@electric-sql/pglite@0.5.8":
+  version "0.5.8"
+  resolved "https://registry.npmjs.org/@electric-sql/pglite/-/pglite-0.5.8.tgz#9b5b4a61a14d6cf96b3b4e2ea7f124f8d6fe68b3"
+  integrity sha512-n9tsbUOhwx2epK1V0ZG9Ar4SHWUju04dhmzZXiSBXwBoleOvIfals33NAaWgagQVAL4Rbvx/Ptsu3P+pA09f6Q==
+
 accepts@^2.0.0:
   version "2.0.0"
   resolved "https://registry.npmjs.org/accepts/-/accepts-2.0.0.tgz#bbcf4ba5075467f3f2131eab3cffc73c2f5d7895"
@@ -475,6 +480,11 @@ once@^1.4.0:
   integrity sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==
   dependencies:
     wrappy "1"
+
+openai@7.15.0:
+  version "7.15.0"
+  resolved "https://registry.npmjs.org/openai/-/openai-7.15.0.tgz#a4220009b4cee2fe0d5a5a1525095a19e8f7aef8"
+  integrity sha512-2DIwesnPSduw68MFx7nAdgvshrgvS8WOan5W8+tgUMlAy/tY+Q41g80Pa+w/v64rHA6rtn+dketa8QvMVxU96w==
 
 parseurl@^1.3.3:
   version "1.3.3"

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:rendering": "node --test tests/rendering-data.test.cjs"
+    "test:rendering": "node --test tests/rendering-data.test.cjs",
+    "test:agent": "node --test tests/agent-proxy.test.cjs"
   },
   "dependencies": {
     "autoprefixer": "^10.4.27",

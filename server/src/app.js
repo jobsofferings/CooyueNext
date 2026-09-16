@@ -12,6 +12,7 @@ const mailRouter      = require("./modules/mail/routes");
 const contactRouter   = require("./modules/contact/routes");
 const managementRouter = require("./modules/management/routes");
 const knowledgeRouters = require("./modules/knowledge/routes");
+const agentRouters = require("./modules/agent/routes");
 const {
   router: authRouter,
   authenticateSession,
@@ -78,6 +79,8 @@ app.use("/api", limiter);
 app.use((req, res, next) => {
   const startedAt = Date.now();
   const requestId = req.headers["x-request-id"] || randomUUID();
+  const agentRequest = /^\/api\/agent(?:\/|$)/.test(req.path);
+  const loggedPath = agentRequest ? req.path : req.originalUrl;
 
   req.id = requestId;
   res.locals.requestId = requestId;
@@ -86,16 +89,16 @@ app.use((req, res, next) => {
   console.log("[request:start]", {
     requestId,
     method: req.method,
-    path: req.originalUrl,
-    ip: req.ip,
-    query: req.query,
+    path: loggedPath,
+    ip: agentRequest ? undefined : req.ip,
+    query: agentRequest ? undefined : req.query,
   });
 
   res.on("finish", () => {
     console.log("[request:end]", {
       requestId,
       method: req.method,
-      path: req.originalUrl,
+      path: loggedPath,
       status: res.statusCode,
       durationMs: Date.now() - startedAt,
     });
@@ -118,6 +121,8 @@ app.get("/", (_req, res) => {
 
 app.use("/api", authRouter);
 app.use("/api/contact", contactRouter);
+app.use("/api/agent/admin", requireManagementAuthForApi, agentRouters.adminRouter);
+app.use("/api/agent", agentRouters.publicRouter);
 app.use("/api/knowledge", knowledgeRouters.publicRouter);
 app.use("/api", requireManagementAuthForApi);
 app.use("/api/knowledge/admin", knowledgeRouters.adminRouter);

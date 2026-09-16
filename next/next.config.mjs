@@ -11,7 +11,7 @@ const nextConfig = {
 
     return [
       {
-        source: '/api/:path((?!knowledge(?:/|$)).*)',
+        source: '/api/:path((?!(?:knowledge|agent|agent-content)(?:/|$)).*)',
         destination: `${apiBase}/api/:path`,
       },
     ];

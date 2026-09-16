@@ -1,0 +1,39 @@
+@siteUrl = http://localhost:3000
+@baseUrl = http://127.0.0.1:3001
+@sessionId = replace-with-session-id
+@visitorCookie = replace-with-signed-cookie
+@adminSession = replace-with-management-session-cookie
+
+### Browser-facing session (response sets an HttpOnly anonymous cookie)
+POST {{siteUrl}}/api/agent/sessions
+Content-Type: application/json
+x-cooyue-agent: 1
+
+{"locale":"zh"}
+
+### SSE search; use a new requestId for each new turn, same ID only for retry
+POST {{siteUrl}}/api/agent/sessions/{{sessionId}}/messages
+Content-Type: application/json
+x-cooyue-agent: 1
+Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+{"requestId":"360d0cab-af46-42ad-bf39-6c5f9a14dd53","message":"我要找用于甲烷巡检的手持设备，帮我对比候选"}
+
+### Same-browser history, no delete endpoint
+GET {{siteUrl}}/api/agent/sessions/{{sessionId}}
+x-cooyue-agent: 1
+Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+### Published news feed; no credentials and no draft/private content
+GET {{siteUrl}}/api/agent-content?locale=zh
+
+### Protected admin analytics
+GET {{baseUrl}}/api/agent/admin/runs?page=1&pageSize=20
+Cookie: cooyue_admin_session={{adminSession}}
+
+### Must reject anonymous access
+GET {{baseUrl}}/api/agent/admin/runs
+
+### Must reject destructive methods
+DELETE {{siteUrl}}/api/agent/sessions/{{sessionId}}
+x-cooyue-agent: 1

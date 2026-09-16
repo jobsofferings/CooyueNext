@@ -5,3 +5,4 @@ coverage
 static
 *.rest
 !knowledge.rest
+!agent.rest
