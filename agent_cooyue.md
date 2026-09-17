@@ -63,7 +63,7 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 
 真实环境文件不提交 Git，文件权限设为 600；Next 和后端构建上下文根目录的 `.dockerignore` 排除 `.env*`，防止凭据进入镜像层。外部模型地址默认要求 HTTPS；只有运维显式设置 `AGENT_ALLOWED_HTTP_BASE_URL` 与 `AGENT_BASE_URL` 完整地址一致时，才允许该特定 HTTP 中转（主机、端口、路径均不能替换），仍拒绝重定向和 URL 中的凭据。HTTP 会使后端到中转的 API key 及内容失去传输加密，此例外是用户明确授权的临时配置，应尽快换回 HTTPS。Codex 的 Responses 配置不等于已验证 Chat Completions/Embeddings 兼容性，必须实际联调。
 
-官网浏览器入口继续使用 HTTPS 域名；后端中转使用 HTTP 不要求网站也改成 HTTP。生产匿名 Cookie 保留 Secure，浏览器调用使用安全上下文，不为公网裸 IP 的 HTTP 访问降低 Cookie 安全性或暴露模型密钥。
+官网域名继续使用 HTTPS。按用户要求，`AGENT_HTTP_SITE_ORIGINS` 可在 Next 与后端两侧显式配置允许的 HTTP 网站 origin（含端口，逗号分隔）。仅这类来源经过内部代理验证后使用非 Secure 的 HttpOnly/SameSite Cookie；域名 HTTPS 的 Cookie 仍为 Secure。HTTP 网站的对话和匿名 Cookie 缺少传输加密，仅用于受控测试，模型密钥始终留在后端。
 
 ## 验收
 
@@ -115,6 +115,16 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 - 网站 Nginx 已为 `/api/agent/` 配置转发到 Next 的独立 location，关闭缓冲、缓存及该入口 access log，读取超时 75 秒；`/api/agent-content` 也转发到 Next。配置位于 `/www/server/panel/vhost/nginx/cooyue.tech.conf`，修改前备份并通过 `nginx -t` 后 reload。
 - `/etc/cron.d/cooyue-agent-cleanup` 每小时第 7 分钟在后端容器运行 `node scripts/agent.js cleanup --apply`，使用独占锁，结果写入系统日志标签 `cooyue-agent-cleanup`。只清理 Agent 的过期数据和超时执行记录；会话到期立即不可读，物理删除在下次任务完成。
 - 用户授权的 HTTP 例外只针对后端到指定中转的完整地址，官网 HTTPS 与 Secure Cookie 不变。此中转链路仍是明文，应后续升级为 HTTPS；不能将“网页 HTTPS”误解为中转链路也被加密。
+
+## IP、流式与诊断修复（2026-09-17）
+
+- 已查到 14:16:52（北京时间）的一次线上请求：45 秒后 `RUN_TIMEOUT`，模型调用一次、工具调用零次。旧记录只能确定超时发生在需求理解阶段，无法进一步断言是建立连接还是等待模型首包。
+- 网站 HTTP 例外：Next 和后端使用相同的 `AGENT_HTTP_SITE_ORIGINS`，当前允许 `http://43.139.70.61`、`http://43.139.70.61:3000`；不是放开任意 Origin，也不能由外部请求伪造内部代理头。浏览器请求 ID 改用兼容 HTTP 的加密随机生成方式。IP 与域名 Cookie 分属不同主机，历史不相互同步。
+- 初始化失败显示实际错误码、阶段和 Request ID，并提供重试按钮；不再将所有情况统一展示为“尚未启用”。点击后立即展示连接/理解/检索/说明等进度与耗时，服务端每两秒推送进度，检索完先下发真实结果摘要，再逐段输出模型说明，不用假打字动画伪装流式。
+- 链路强制不压缩 SSE：上游 `Accept-Encoding: identity`、返回 `Content-Encoding: identity`、禁缓冲/缓存，Nginx Agent location 关闭 gzip。可通过浏览器 Network 的 EventStream 和界面实时文字核对。
+- 总预算 60 秒，`AGENT_SELECT_TIMEOUT_MS` 默认 18 秒、`AGENT_EXPLAIN_TIMEOUT_MS` 默认 15 秒。需求模型超时/不可用时使用用户原始需求和服务端跨轮硬约束做一次只读检索；说明阶段超时保留已有文字与已验证候选，并明确告知降级。不会自动重试模型请求或发送询盘，仍最多两次模型调用、一次搜索工具调用。
+- 运行日志新增阶段时间线：数据库连接、会话占用、模型理解、产品查询、新闻读取、Embedding、结果复核、模型说明、记录保存；包含开始偏移、截止时间、耗时、上游 HTTP 状态、响应头/首包延迟、分块数量、脱敏错误分类。模型首包、阶段开始/结束及定期心跳会更新正在执行的记录，后台不必等到运行结束才看见进度。
+- 后台详情显示 Request ID、Run ID、异常阶段、模型降级、时间线和流事件数量；执行中自动刷新。旧日志缺失的阶段不会伪造补齐。失败进入数据库前，网关/后端只输出脱敏结构化诊断，分别使用 `[agent:gateway]`、`[agent:request]`、`[agent:trace]` 标签，不输出密钥、请求正文或原始供应商错误内容。
 
 ### 已知边界
 

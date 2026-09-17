@@ -1,4 +1,5 @@
 const express = require("express");
+const { randomUUID } = require("crypto");
 const rateLimit = require("express-rate-limit");
 const { getProductsPool } = require("../../config/db");
 const { failure, getConfig, integer, validateConfig } = require("./config");
@@ -6,6 +7,7 @@ const { UUID, messageInput, requireProxy, visitor } = require("./security");
 const { createStore } = require("./store");
 const { execute } = require("./service");
 const { refreshResult, loadContent } = require("./content");
+const { createTrace, diagnostic } = require("./trace");
 
 function createRouters(dependencies = {}) {
   const publicRouter = express.Router();
@@ -18,10 +20,13 @@ function createRouters(dependencies = {}) {
   const safe = (operation) => async (req, res) => {
     try { await operation(req, res); }
     catch (error) {
-      if (!res.headersSent) res.status(error.status || 503).json({ ok: false, error: error.status ? error.code : "AGENT_UNAVAILABLE" });
+      console.warn("[agent:request]", { requestId: req.agentRequestId, action: req.method, ...diagnostic(error) });
+      if (!res.headersSent) res.status(error.status || 503).json({ ok: false, error: error.status ? error.code : "AGENT_UNAVAILABLE", requestId: req.agentRequestId });
     }
   };
   publicRouter.use((req, res, next) => {
+    req.agentRequestId = UUID.test(req.body?.requestId || "") ? req.body.requestId : randomUUID();
+    res.set("x-agent-request-id", req.agentRequestId);
     try {
       const config = configOf();
       validateConfig(config);
@@ -29,7 +34,10 @@ function createRouters(dependencies = {}) {
       res.set("Cache-Control", "no-store");
       req.agentConfig = config;
       next();
-    } catch (error) { res.status(error.status || 503).json({ ok: false, error: error.code || "AGENT_UNAVAILABLE" }); }
+    } catch (error) {
+      console.warn("[agent:request]", { requestId: req.agentRequestId, phase: "access", ...diagnostic(error) });
+      res.status(error.status || 503).json({ ok: false, error: error.code || "AGENT_UNAVAILABLE", requestId: req.agentRequestId });
+    }
   });
   publicRouter.use(rateLimit({ windowMs: 60000, limit: 120, standardHeaders: true, legacyHeaders: false,
     message: { ok: false, error: "AGENT_ENTRY_RATE_LIMIT" } }));
@@ -65,61 +73,100 @@ function createRouters(dependencies = {}) {
     if (active >= config.maxConcurrent) throw failure("AGENT_BUSY", 429);
     active += 1;
     const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      controller.abort(failure("RUN_TIMEOUT", 504));
-      if (res.destroyed || res.writableEnded) return;
-      if (res.headersSent) { res.write('event: error\ndata: {"code":"RUN_TIMEOUT"}\n\n'); res.end(); }
-      else res.status(504).json({ ok: false, error: "RUN_TIMEOUT" });
-    }, config.timeoutMs);
-    const onClose = () => { if (!res.writableEnded) controller.abort(failure("CLIENT_DISCONNECTED", 499)); };
-    res.on("close", onClose);
     let state;
     let store;
     let heartbeat;
+    let checkpointPending = false;
+    let checkpointWrite = Promise.resolve();
     const startedAt = Date.now();
-    const metrics = {};
+    const metrics = { requestId: input.requestId, timeoutMs: config.timeoutMs, phases: [], streamEvents: 0, streamBytes: 0 };
+    const log = (event) => console.info("[agent:trace]", { requestId: input.requestId, runId: state?.runId, ...event });
+    const checkpoint = () => {
+      if (!store?.checkpoint || !state?.runId || state.finished || res.writableEnded || checkpointPending) return;
+      checkpointPending = true;
+      checkpointWrite = store.checkpoint(state.runId, structuredClone(metrics))
+        .catch(() => log({ phase: "checkpoint", status: "failed", code: "AUDIT_WRITE_FAILED" }))
+        .finally(() => { checkpointPending = false; });
+    };
+    const trace = createTrace(metrics, { startedAt, onChange: checkpoint, log });
+    const timeout = setTimeout(() => {
+      controller.abort(failure("RUN_TIMEOUT", 504));
+      if (res.destroyed || res.writableEnded) return;
+      const details = { code: "RUN_TIMEOUT", phase: metrics.currentPhase, requestId: input.requestId, runId: state?.runId };
+      if (res.headersSent) { res.write(`event: error\ndata: ${JSON.stringify(details)}\n\n`); res.end(); }
+      else res.status(504).json({ ok: false, error: "RUN_TIMEOUT", ...details });
+    }, config.timeoutMs);
+    const onClose = () => { if (!res.writableEnded) controller.abort(failure("CLIENT_DISCONNECTED", 499)); };
+    res.on("close", onClose);
     const emit = (event, data) => {
       if (!res.destroyed && !res.writableEnded && !controller.signal.aborted) {
         if (res.writableLength > 131072) { controller.abort(failure("SLOW_CLIENT", 499)); return; }
-        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+        const frame = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+        metrics.streamEvents += 1;
+        metrics.streamBytes += Buffer.byteLength(frame);
+        if (metrics.firstEventMs == null) metrics.firstEventMs = Date.now() - startedAt;
+        res.write(frame);
+        res.flush?.();
       }
     };
     try {
-      const pool = await resolvePool();
+      const pool = await trace.step("database_connect", () => resolvePool(), { signal: controller.signal, timeoutMs: 6000 });
       store = storeOf(pool);
-      state = await store.begin(req.params.id, identity.hash, input, config);
+      state = await trace.step("session_claim", () => store.begin(req.params.id, identity.hash, input, config), { signal: controller.signal, timeoutMs: 6000 });
       controller.signal.throwIfAborted();
-      res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", "X-Accel-Buffering": "no", Connection: "keep-alive" });
+      res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", "Content-Encoding": "identity", "X-Accel-Buffering": "no", Connection: "keep-alive" });
+      res.socket?.setNoDelay(true);
       res.flushHeaders();
-      heartbeat = setInterval(() => { if (!res.destroyed && !controller.signal.aborted) res.write(": heartbeat\n\n"); }, 10000);
-      emit("meta", { runId: state.runId || state.replay.id, sessionId: state.session.id, replay: Boolean(state.replay) });
+      heartbeat = setInterval(() => {
+        emit("progress", { phase: metrics.currentPhase, elapsedMs: Date.now() - startedAt });
+        checkpoint();
+      }, 2000);
+      emit("meta", { runId: state.runId || state.replay.id, requestId: input.requestId, sessionId: state.session.id, replay: Boolean(state.replay) });
+      emit("status", { phase: "accepted" });
+      checkpoint();
       if (state.replay) {
-        const result = await refreshResult(state.replay.result, pool, config, state.session.locale, controller.signal);
+        const result = await trace.step("refresh", (phaseSignal) => refreshResult(state.replay.result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
         emit("message_delta", { delta: result.message });
         emit("results", result);
       } else {
-        let result = await run({ pool, config, session: state.session, message: input.message, signal: controller.signal, emit, metrics });
-        if (!dependencies.skipRefresh) result = await refreshResult(result, pool, config, state.session.locale, controller.signal);
+        let result = await run({ pool, config, session: state.session, message: input.message, signal: controller.signal, emit, metrics, trace });
+        if (!dependencies.skipRefresh) result = await trace.step("refresh", (phaseSignal) => refreshResult(result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
         controller.signal.throwIfAborted();
         metrics.durationMs = Date.now() - startedAt;
-        await store.finish(state.session.id, state.runId, input.message, result, metrics);
-        state.finished = true;
+        emit("status", { phase: "saving" });
+        await checkpointWrite;
+        await trace.step("audit", async () => {
+          await store.finish(state.session.id, state.runId, input.message, result, metrics);
+          state.finished = true;
+        }, { timeoutMs: 8000 });
+        await checkpointWrite;
+        await store.checkpoint?.(state.runId, metrics, "completed").catch(() => log({ phase: "audit", code: "METRICS_FINALIZE_FAILED" }));
         emit("results", result);
       }
       emit("done", { ok: true });
+      log({ phase: "delivery", status: "completed", durationMs: Date.now() - startedAt, streamEvents: metrics.streamEvents, streamBytes: metrics.streamBytes });
       res.end();
+      if (state.finished && store.checkpoint) {
+        metrics.deliveryCompleted = true;
+        metrics.durationMs = Date.now() - startedAt;
+        await store.checkpoint(state.runId, metrics, "completed").catch(() => log({ phase: "delivery", code: "METRICS_FINALIZE_FAILED" }));
+      }
     } catch (error) {
       const reason = controller.signal.aborted ? controller.signal.reason : error;
       const code = reason?.status && /^[A-Z_]+$/.test(reason.code || "") ? reason.code : "AGENT_UPSTREAM_ERROR";
       metrics.durationMs = Date.now() - startedAt;
+      metrics.error = { ...diagnostic(reason), phase: reason.agentPhase || metrics.currentPhase };
+      metrics.usageComplete = metrics.usageReports === (metrics.modelCalls || 0) + (metrics.embeddingCalls || 0);
+      log({ phase: metrics.error.phase, status: "failed", ...metrics.error });
       if (state?.runId && !state.finished) {
+        await checkpointWrite;
         await store.finish(state.session.id, state.runId, input.message, null, metrics, code,
-          code === "RUN_TIMEOUT" ? "timeout" : controller.signal.aborted ? "cancelled" : "failed")
+          /TIMEOUT/.test(code) ? "timeout" : controller.signal.aborted ? "cancelled" : "failed")
           .catch(() => console.error("[agent:audit]", { runId: state.runId, code: "AUDIT_WRITE_FAILED" }));
       }
       if (res.headersSent) {
-        if (!res.destroyed && !res.writableEnded) { res.write(`event: error\ndata: ${JSON.stringify({ code })}\n\n`); res.end(); }
-      } else if (!res.destroyed) res.status(reason?.status && reason.status !== 499 ? reason.status : 503).json({ ok: false, error: code });
+        if (!res.destroyed && !res.writableEnded) { res.write(`event: error\ndata: ${JSON.stringify({ code, phase: metrics.error.phase, runId: state?.runId, requestId: input.requestId })}\n\n`); res.end(); }
+      } else if (!res.destroyed && !res.writableEnded) res.status(reason?.status && reason.status !== 499 ? reason.status : 503).json({ ok: false, error: code, phase: metrics.error.phase, requestId: input.requestId });
     } finally {
       clearTimeout(timeout);
       clearInterval(heartbeat);

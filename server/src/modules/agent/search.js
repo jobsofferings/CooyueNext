@@ -87,8 +87,8 @@ function fuse(keyword, dense) {
   return [...scores].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0])).map(([key]) => key);
 }
 
-async function searchPublicContent({ pool, config, provider, input, message, previousQuery, locale, signal, onUsage, contentLoader = loadContent }) {
-  const { items, newsUnavailable } = await contentLoader(pool, config, locale, signal);
+async function searchPublicContent({ pool, config, provider, input, message, previousQuery, locale, signal, onUsage, trace, contentLoader = loadContent }) {
+  const { items, newsUnavailable } = await contentLoader(pool, config, locale, signal, trace);
   const conditions = mergeConditions(input.query, message, previousQuery);
   const candidates = items.filter((item) => (input.type === "all" || item.type === input.type) && eligible(item, conditions));
   const queryFeatures = normalizeVector(features(input.query));

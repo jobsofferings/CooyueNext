@@ -8,7 +8,7 @@ const { createStore } = require("../src/modules/agent/store");
 
 test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, history, admin queries and retention", async (context) => {
   const database = new PGlite();
-  const pool = { query: (sql, values) => database.query(sql, values),
+  const pool = { query: (sql, values) => typeof sql === "string" ? database.query(sql, values) : database.query(sql.text, sql.values),
     async connect() { return { query: (sql, values) => database.query(sql, values), release() {} }; } };
   const store = createStore(pool);
   const config = { timeoutMs: 45000, model: "mock", dailyBudget: 100, visitorHourlyLimit: 50 };
@@ -34,9 +34,15 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       const message = input();
       const state = await store.begin(session.id, identity.hash, message, config);
       assert.ok(state.runId);
+      await store.checkpoint(state.runId, { currentPhase: "model_select", phases: [{ phase: "model_select", status: "running" }] });
+      assert.equal((await store.detail(state.runId)).metrics.currentPhase, "model_select");
       await assert.rejects(store.begin(session.id, identity.hash, message, config), /RUN_IN_PROGRESS/);
       await assert.rejects(store.begin(session.id, identity.hash, input(), config), /SESSION_BUSY/);
       await store.finish(session.id, state.runId, message.message, result, { durationMs: 100, totalTokens: 25 });
+      await store.checkpoint(state.runId, { currentPhase: "outdated" });
+      assert.equal((await store.detail(state.runId)).metrics.totalTokens, 25);
+      await store.checkpoint(state.runId, { durationMs: 100, totalTokens: 25, phases: [{ phase: "audit", status: "completed" }] }, "completed");
+      assert.equal((await store.detail(state.runId)).metrics.phases[0].status, "completed");
       const replay = await store.begin(session.id, identity.hash, message, config);
       assert.equal(replay.replay.id, state.runId);
       assert.equal(replay.replay.result.products[0].id, "pv400");

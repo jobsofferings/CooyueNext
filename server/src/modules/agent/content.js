@@ -62,21 +62,22 @@ function productItem(record, document) {
   return { key: `product:${record.slug}`, type: "product", card, text, hash: digest(JSON.stringify({ card, text, evidence })), evidence, declaredForm };
 }
 
-async function loadContent(pool, config, locale, signal) {
-  const { records, documents } = await readOnly(pool, async (client) => ({
+async function loadContent(pool, config, locale, signal, trace) {
+  const catalog = () => readOnly(pool, async (client) => ({
     records: await getCatalog(client, locale), documents: await getDocuments(client, locale),
   }));
+  const { records, documents } = await (trace ? trace.step("catalog_read", catalog, { signal, timeoutMs: 6500 }) : catalog());
   if (records.length > 2500) throw failure("CATALOG_CAPACITY_EXCEEDED", 503);
   let news = [];
   let newsUnavailable = false;
-  try { news = await readNews(config, locale, signal); }
+  try { news = await (trace ? trace.step("news_read", (newsSignal) => readNews(config, locale, newsSignal), { signal, timeoutMs: 4500 }) : readNews(config, locale, signal)); }
   catch { if (signal?.aborted) throw signal.reason; newsUnavailable = true; }
   const items = records.map((record) => productItem(record, documents.find((document) => document.product_slug === record.slug)));
   return { items: [...items, ...news], newsUnavailable };
 }
 
-async function refreshResult(result, pool, config, locale, signal) {
-  const { items, newsUnavailable } = await loadContent(pool, config, locale, signal);
+async function refreshResult(result, pool, config, locale, signal, trace) {
+  const { items, newsUnavailable } = await loadContent(pool, config, locale, signal, trace);
   const products = result.products.flatMap((product) => {
     const current = items.find((item) => item.key === `product:${product.id}`);
     return current && current.card.version === product.version ? [{ ...current.card, matchReasons: product.matchReasons, caveat: product.caveat }] : [];

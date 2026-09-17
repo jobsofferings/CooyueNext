@@ -13,9 +13,9 @@ function gateway(fetcher, environment = {}) {
   const compiled = typescript.transpileModule(source, { compilerOptions: { module: typescript.ModuleKind.CommonJS, target: typescript.ScriptTarget.ES2022 } }).outputText
   runInNewContext(compiled, {
     module, exports: module.exports,
-    require: (name) => { if (name !== 'next/server') throw new Error(name); return { NextRequest, NextResponse } },
+    require: (name) => { if (name === 'node:crypto') return { randomUUID }; if (name !== 'next/server') throw new Error(name); return { NextRequest, NextResponse } },
     fetch: fetcher, process: { env: { AGENT_PROXY_SECRET: 's'.repeat(40), AGENT_API_URL: 'http://backend.test', ...environment } },
-    URL, Response, Headers, ReadableStream, TextDecoder, AbortController, setTimeout, clearTimeout,
+    URL, Response, Headers, ReadableStream, TextDecoder, AbortController, setTimeout, clearTimeout, console,
   })
   return module.exports
 }
@@ -89,4 +89,26 @@ test('gateway streams bytes immediately and cancellation aborts upstream', async
   assert.equal(upstreamSignal.aborted, false)
   await reader.cancel()
   assert.equal(upstreamSignal.aborted, true)
+})
+
+test('HTTP IP access is restricted to explicit origins, ignores forged forwarding headers, and communicates cookie context privately', async () => {
+  let seen
+  const route = gateway(async (_url, options) => { seen = options; return Response.json({ ok: true }) }, {
+    NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://site.test', AGENT_HTTP_SITE_ORIGINS: 'http://192.0.2.5:3000',
+  })
+  const ipRequest = new NextRequest('http://localhost:3000/api/agent/sessions', { method: 'POST', headers: {
+    'Content-Type': 'application/json', 'x-cooyue-agent': '1', host: '192.0.2.5:3000', origin: 'http://192.0.2.5:3000',
+    'x-agent-browser-origin': 'https://forged.test', 'x-forwarded-proto': 'https',
+  }, body: '{"locale":"zh"}' })
+  const response = await route.POST(ipRequest, { params: { path: ['sessions'] } })
+  assert.equal(response.status, 200)
+  await response.json()
+  assert.equal(seen.headers['x-agent-browser-origin'], 'http://192.0.2.5:3000')
+  assert.equal(seen.headers['Accept-Encoding'], 'identity')
+  const attacker = new NextRequest('http://localhost:3000/api/agent/sessions', { method: 'POST', headers: {
+    'Content-Type': 'application/json', 'x-cooyue-agent': '1', host: '192.0.2.5:3000', origin: 'http://attacker.test',
+  }, body: '{"locale":"zh"}' })
+  assert.equal((await route.POST(attacker, { params: { path: ['sessions'] } })).status, 403)
+  const disabled = gateway(async () => { throw new Error('must not connect') }, { NODE_ENV: 'production', NEXT_PUBLIC_SITE_URL: 'https://site.test' })
+  assert.equal((await disabled.POST(ipRequest, { params: { path: ['sessions'] } })).status, 403)
 })

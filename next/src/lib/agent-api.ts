@@ -1,4 +1,5 @@
 import type { KnowledgeProduct } from './knowledge-api'
+import { agentError } from './agent-stream'
 
 export interface AgentResult {
   query: string
@@ -18,6 +19,6 @@ export async function agentRequest<T>(path: string, body?: unknown, signal?: Abo
     headers: { 'Content-Type': 'application/json', 'x-cooyue-agent': '1' }, body: body === undefined ? undefined : JSON.stringify(body),
   })
   const payload = await response.json().catch(() => null)
-  if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'AGENT_UNAVAILABLE')
+  if (!response.ok || !payload?.ok) throw agentError(payload?.error || 'AGENT_UNAVAILABLE', payload || {})
   return payload.data as T
 }

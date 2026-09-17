@@ -42,7 +42,9 @@ function visitor(req, res, config, create = false) {
   const token = randomBytes(32).toString("hex");
   const newExpiry = Math.floor(Date.now() / 1000) + RETENTION_SECONDS;
   const signed = `${token}.${newExpiry}.${sign(`${token}.${newExpiry}`, config.cookieSecret)}`;
-  res.append("Set-Cookie", `${COOKIE}=${signed}; Path=/api/agent; HttpOnly; SameSite=Lax; Max-Age=${RETENTION_SECONDS}${process.env.NODE_ENV === "production" ? "; Secure" : ""}`);
+  const browserOrigin = req.headers["x-agent-browser-origin"];
+  const allowedHttp = (config.httpSiteOrigins || []).includes(browserOrigin) && equal(req.headers["x-agent-proxy-secret"], config.proxySecret);
+  res.append("Set-Cookie", `${COOKIE}=${signed}; Path=/api/agent; HttpOnly; SameSite=Lax; Max-Age=${RETENTION_SECONDS}${process.env.NODE_ENV === "production" && !allowedHttp ? "; Secure" : ""}`);
   return { hash: digest(token), expiresAt: new Date(newExpiry * 1000) };
 }
 

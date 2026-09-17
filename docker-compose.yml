@@ -40,6 +40,7 @@ services:
       - SEO_API_URL=http://server:3001
       - AGENT_API_URL=http://server:3001
       - AGENT_PROXY_SECRET=${AGENT_PROXY_SECRET:-}
+      - AGENT_HTTP_SITE_ORIGINS=${AGENT_HTTP_SITE_ORIGINS:-}
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://43.139.70.61:3001}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-https://www.cooyue.tech}
     networks:

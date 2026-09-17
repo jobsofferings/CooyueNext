@@ -1,6 +1,6 @@
 import { PageContainer, ProTable, type ProColumns } from '@ant-design/pro-components';
-import { Alert, Button, Descriptions, Drawer, Space, Statistic, Tag, Typography } from 'antd';
-import { useState } from 'react';
+import { Alert, Button, Descriptions, Drawer, Space, Statistic, Table, Tag, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { getAgentRun, listAgentRuns, type AgentRun, type AgentSummary } from '@/services/management/agent';
 
 const statuses = {
@@ -11,13 +11,29 @@ const statuses = {
   timeout: { text: '超时', status: 'Warning' },
 };
 
+const phases: Record<string, string> = { database_connect: '数据库连接', session_claim: '会话与预算', model_select: '模型理解需求', search: '搜索工具', catalog_read: '公开产品查询', news_read: '新闻读取', embedding: '向量请求', model_explain: '模型流式说明', refresh: '结果公开状态复核', audit: '执行记录保存', idle: '阶段已结束' };
+
+function failurePhase(record: AgentRun) {
+  if (record.metrics.failedPhase) return phases[record.metrics.failedPhase] || record.metrics.failedPhase;
+  if (record.status === 'timeout' && record.metrics.modelCalls === 1 && record.metrics.toolCalls === 0) return '模型理解需求（旧记录推断）';
+  return '—';
+}
+
 export default function AgentRuns() {
   const [summary, setSummary] = useState<AgentSummary>();
   const [detail, setDetail] = useState<AgentRun>();
   const [error, setError] = useState('');
+  const [hasRunning, setHasRunning] = useState(false);
+  useEffect(() => {
+    if (detail?.status !== 'running') return;
+    const timer = window.setInterval(() => { getAgentRun(detail.id).then((response) => setDetail(response.data)).catch(() => setError('运行详情刷新失败。')); }, 3000);
+    return () => window.clearInterval(timer);
+  }, [detail?.id, detail?.status]);
   const columns: ProColumns<AgentRun>[] = [
     { title: '开始时间', dataIndex: 'created_at', valueType: 'dateTime', search: false, width: 180 },
     { title: '状态', dataIndex: 'status', valueEnum: statuses, width: 100 },
+    { title: '当前 / 异常阶段', search: false, renderText: (_, record) => record.status === 'running' ? phases[record.metrics.currentPhase || ''] || record.metrics.currentPhase || '启动中' : failurePhase(record) },
+    { title: '降级', search: false, render: (_, record) => record.metrics.selectionFallback || record.metrics.explanationFallback ? <Tag color="orange">模型降级</Tag> : '—' },
     { title: '脱敏需求', dataIndex: 'query_preview', search: false, ellipsis: true },
     { title: '检索模式', search: false, render: (_, record) => <Tag>{record.metrics.retrieval || '—'}</Tag> },
     { title: '耗时 / 首段', search: false, renderText: (_, record) => `${record.metrics.durationMs ?? '—'} / ${record.metrics.firstTextMs ?? '—'} ms` },
@@ -39,10 +55,11 @@ export default function AgentRuns() {
       <Statistic title="已知 Token" value={summary?.tokens ?? 0} />
       <Statistic title="用量未知的运行" value={summary?.unknown_usage ?? 0} />
     </Space>
-    <ProTable<AgentRun> rowKey="id" columns={columns} pagination={{ defaultPageSize: 20 }} scroll={{ x: 1200 }}
+    <ProTable<AgentRun> rowKey="id" columns={columns} pagination={{ defaultPageSize: 20 }} scroll={{ x: 1500 }} polling={hasRunning ? 5000 : false}
       request={async (params) => {
         try {
           const response = await listAgentRuns({ page: params.current || 1, pageSize: params.pageSize || 20, status: params.status });
+          setHasRunning(response.data.rows.some((row) => row.status === 'running' && Date.now() - new Date(row.created_at).getTime() < 120000));
           setSummary(response.data.summary); setError('');
           return { data: response.data.rows, total: response.data.summary.total, success: response.ok };
         } catch { setError('运行记录加载失败，请确认登录和数据库迁移。'); return { data: [], total: 0, success: false }; }
@@ -51,11 +68,27 @@ export default function AgentRuns() {
       {detail && <>
         <Descriptions column={1} bordered items={[
           { key: 'id', label: 'Run ID', children: detail.id },
+          { key: 'request', label: 'Request ID', children: detail.request_id || detail.metrics.requestId || '—' },
           { key: 'session', label: 'Session ID', children: detail.session_id },
           { key: 'model', label: '模型', children: detail.model },
           { key: 'query', label: '脱敏需求', children: detail.query_preview },
           { key: 'status', label: '状态', children: detail.status },
           { key: 'error', label: '错误码', children: detail.error_code || '—' },
+          { key: 'phase', label: '异常阶段', children: failurePhase(detail) },
+          { key: 'stream', label: '下发事件 / 字节', children: `${detail.metrics.streamEvents ?? '—'} / ${detail.metrics.streamBytes ?? '—'}` },
+        ]} />
+        <Typography.Title level={5}>分阶段执行时间线</Typography.Title>
+        {!detail.metrics.phases?.length && <Alert type="warning" message="旧记录未采集分阶段详情；阶段推断仅根据调用次数，不代表已知具体网络原因。" />}
+        <Table size="small" pagination={false} scroll={{ x: 1050 }} rowKey={(_, index) => String(index)} dataSource={detail.metrics.phases || []} columns={[
+          { title: '阶段', dataIndex: 'phase', render: (value: string) => phases[value] || value },
+          { title: '状态', dataIndex: 'status' },
+          { title: '开始偏移', dataIndex: 'offsetMs' },
+          { title: '耗时 ms', dataIndex: 'durationMs' },
+          { title: '上限 ms', dataIndex: 'timeoutMs' },
+          { title: '响应头 / 首包 ms', render: (_, row) => `${row.headersMs ?? '—'} / ${row.firstChunkMs ?? '—'}` },
+          { title: 'HTTP', dataIndex: 'httpStatus' },
+          { title: '分块数', dataIndex: 'chunks' },
+          { title: '错误', render: (_, row) => row.code || row.networkCode || '—' },
         ]} />
         <Typography.Title level={5}>工具轨迹与用量</Typography.Title>
         <pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(detail.metrics, null, 2)}</pre>

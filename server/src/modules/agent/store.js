@@ -30,6 +30,9 @@ function createStore(pool) {
         RETURNING id, locale, expires_at, clarification_count`, [visitor.hash, locale, visitor.expiresAt])).rows[0];
     },
     get(sessionId, visitorHash) { return owned(pool, sessionId, visitorHash); },
+    async checkpoint(runId, metrics, status = "running") {
+      await pool.query({ text: "UPDATE agent.runs SET metrics = $2 WHERE id = $1 AND status = $3", values: [runId, JSON.stringify(metrics), status], query_timeout: 4000 });
+    },
     async begin(sessionId, visitorHash, input, config) {
       return transaction(async (client) => {
         const session = await owned(client, sessionId, visitorHash, true);
@@ -72,7 +75,7 @@ function createStore(pool) {
         coalesce(sum((metrics->>'totalTokens')::bigint), 0)::text AS tokens,
         count(*) FILTER (WHERE metrics->>'totalTokens' IS NULL OR metrics->>'usageComplete' = 'false')::int AS unknown_usage
         FROM agent.runs WHERE created_at > now() - interval '30 days' AND ($1::text IS NULL OR status = $1)`, [filter])).rows[0];
-      const rows = (await pool.query(`SELECT id, session_id, status, query_preview, model, metrics, error_code, created_at, finished_at
+      const rows = (await pool.query(`SELECT id, session_id, request_id, status, query_preview, model, metrics, error_code, created_at, finished_at
         FROM agent.runs WHERE created_at > now() - interval '30 days' AND ($1::text IS NULL OR status = $1)
         ORDER BY created_at DESC LIMIT $2 OFFSET $3`, [filter, pageSize, (page - 1) * pageSize])).rows;
       return { rows, summary, page, pageSize };

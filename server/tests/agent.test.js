@@ -10,7 +10,8 @@ const { productItem, readOnly, readNews } = require("../src/modules/agent/conten
 const { execute } = require("../src/modules/agent/service");
 const { createRouters } = require("../src/modules/agent/routes");
 const { createStore } = require("../src/modules/agent/store");
-const { consumeAgentStream } = require("../../next/src/lib/agent-stream");
+const { consumeAgentStream, createAgentRequestId } = require("../../next/src/lib/agent-stream");
+const { createTrace } = require("../src/modules/agent/trace");
 const sources = require("../knowledge/gas-imaging-sources");
 const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
@@ -60,6 +61,94 @@ test("visitor identity is signed, unguessable, browser-scoped, fixed 30 days and
   assert.throws(() => visitor({ headers: { cookie: cookie.replace(/=./, "=z") } }, {}, config), /SESSION_NOT_FOUND/);
   assert.throws(() => visitor(request, {}, { ...config, cookieSecret: "different" }), /SESSION_NOT_FOUND/);
   assert.throws(() => requireProxy({ get: () => "wrong" }, config), /FORBIDDEN/);
+});
+
+test("production HTTP cookies require both the allowlisted site and authenticated internal proxy; HTTPS remains Secure", (context) => {
+  const environment = process.env.NODE_ENV;
+  process.env.NODE_ENV = "production";
+  context.after(() => { if (environment === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = environment; });
+  let cookie;
+  const response = { append(_name, value) { cookie = value; } };
+  const settings = { ...config, httpSiteOrigins: ["http://192.0.2.5:3000"] };
+  for (const headers of [ {}, { "x-agent-browser-origin": "http://192.0.2.5:3000" },
+    { "x-agent-browser-origin": "https://site.test", "x-agent-proxy-secret": config.proxySecret },
+    { "x-agent-browser-origin": "http://other.test", "x-agent-proxy-secret": config.proxySecret }]) {
+    visitor({ headers }, response, settings, true);
+    assert.match(cookie, /; Secure/);
+  }
+  visitor({ headers: { "x-agent-browser-origin": "http://192.0.2.5:3000", "x-agent-proxy-secret": config.proxySecret } }, response, settings, true);
+  assert.doesNotMatch(cookie, /; Secure/);
+  assert.match(cookie, /HttpOnly; SameSite=Lax/);
+});
+
+test("request IDs work in non-secure browser contexts using cryptographic random bytes", () => {
+  const ids = new Set(Array.from({ length: 50 }, () => createAgentRequestId({ getRandomValues: (bytes) => require("node:crypto").randomFillSync(bytes) })));
+  assert.equal(ids.size, 50);
+  for (const id of ids) assert.match(id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("phase timeouts abort upstream work, preserve diagnostics and never retain raw error text", async () => {
+  const metrics = {};
+  const events = [];
+  const trace = createTrace(metrics, { log: (event) => events.push(event) });
+  let aborted = false;
+  await assert.rejects(trace.step("model_select", async (signal, mark) => {
+    mark({ httpStatus: 200, headersMs: 2 });
+    signal.addEventListener("abort", () => { aborted = true; });
+    return new Promise(() => {});
+  }, { timeoutMs: 20 }), /PHASE_TIMEOUT/);
+  assert.equal(aborted, true);
+  assert.equal(metrics.phases[0].status, "timeout");
+  assert.equal(metrics.failedPhase, "model_select");
+  assert.equal(metrics.phases[0].httpStatus, 200);
+  await assert.rejects(trace.step("news_read", () => { throw Object.assign(new Error("api_key=private"), { status: 502 }); }));
+  assert.ok(events.some((event) => event.status === "started"));
+  assert.ok(!JSON.stringify({ metrics, events }).includes("private"));
+});
+
+test("a stalled model selection falls back once to safe search instead of consuming the whole run timeout", async () => {
+  const metrics = {};
+  const messages = [];
+  let toolCalls = 0;
+  const result = await execute({ pool: {}, config: { ...config, selectTimeoutMs: 20 }, metrics,
+    session: { locale: "zh", history: [], clarification_count: 0 }, message: "甲烷手持设备", signal: new AbortController().signal,
+    emit: (event, data) => messages.push({ event, data }), provider: { select: () => new Promise(() => {}) },
+    search: async ({ input }) => { toolCalls += 1; assert.equal(input.query, "甲烷手持设备"); return { query: input.query, status: "matches", products: [content()[0].card], news: [], retrieval: { mode: "keyword-only" } }; },
+  });
+  assert.equal(result.status, "matches");
+  assert.equal(toolCalls, 1);
+  assert.equal(metrics.modelCalls, 1);
+  assert.equal(metrics.selectionFallback.code, "PHASE_TIMEOUT");
+  assert.match(result.message, /只读检索/);
+  assert.ok(messages.some((entry) => entry.event === "status" && entry.data.phase === "search_fallback"));
+});
+
+test("explanation timeout preserves streamed content and verified cards with a recorded degraded stage", async () => {
+  const metrics = {};
+  const deltas = [];
+  let providerAborted = false;
+  const result = await execute({ pool: {}, config: { ...config, explainTimeoutMs: 20 }, metrics,
+    session: { locale: "zh", history: [], clarification_count: 0 }, message: "甲烷手持设备", signal: new AbortController().signal,
+    emit: (event, data) => { if (event === "message_delta") deltas.push(data.delta); },
+    provider: { select: async () => ({ input: { query: "甲烷", type: "product" } }), explain: async (_selection, _result, signal, emit) => {
+      emit("已审核的部分说明"); signal.addEventListener("abort", () => { providerAborted = true; }); return new Promise(() => {});
+    } },
+    search: async () => ({ query: "甲烷", status: "matches", products: [content()[0].card], news: [], retrieval: { mode: "keyword-only" } }),
+  });
+  assert.ok(providerAborted);
+  assert.equal(result.products.length, 1);
+  assert.equal(metrics.explanationFallback.code, "PHASE_TIMEOUT");
+  assert.equal(metrics.phases.find((phase) => phase.phase === "model_explain").status, "timeout");
+  assert.ok(deltas.length >= 3);
+  assert.match(result.message, /已审核的部分说明/);
+  assert.equal(metrics.modelCalls, 2);
+});
+
+test("SSE errors retain the request/run IDs and failing stage for browser diagnostics", async () => {
+  const requestId = randomUUID();
+  const runId = randomUUID();
+  const response = new Response(`event: error\ndata: ${JSON.stringify({ code: "PHASE_TIMEOUT", phase: "catalog_read", requestId, runId })}\n\n`, { headers: { "content-type": "text/event-stream" } });
+  await assert.rejects(consumeAgentStream(response, () => {}), (error) => error.code === "PHASE_TIMEOUT" && error.requestId === requestId && error.runId === runId && error.phase === "catalog_read");
 });
 
 test("message schemas prohibit caller-supplied tools/history/URLs and redact obvious sensitive content", () => {
@@ -287,7 +376,7 @@ test("HTTP gates reject untrusted public calls, anonymous admin access, unknown/
     const response = await fetch(`${base}/sessions/${sessionId}/messages`, { method: "POST", headers: { ...headers, cookie }, body: JSON.stringify({ message: "甲烷", requestId: randomUUID() }) });
     const frames = [];
     await consumeAgentStream(response, (event) => frames.push(event));
-    assert.deepEqual(frames, ["meta", "message_delta", "results", "done"]);
+    assert.deepEqual(frames, ["meta", "status", "message_delta", "status", "results", "done"]);
     assert.equal(audit.length, 1);
     assert.equal(audit[0][5], undefined);
     const foreign = await fetch(`${base}/sessions/${randomUUID()}/messages`, { method: "POST", headers: { ...headers, cookie }, body: JSON.stringify({ message: "甲烷", requestId: randomUUID() }) });
