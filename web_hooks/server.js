@@ -16,7 +16,7 @@ app.get('/health', (req, res) => {
 
 app.post('/webhook', (req, res) => {
   const deployScript = path.join(__dirname, '../deploy.sh');
-  const shellStr = `bash ${deployScript}`; 
+  const shellStr = `bash ${deployScript} --pull-only`;
   shell.exec(shellStr, { slient: false }, () => {
     shell.echo(`执行：${shellStr}，已经执行完毕`);
   });

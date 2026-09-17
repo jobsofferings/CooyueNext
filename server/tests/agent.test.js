@@ -5,6 +5,7 @@ const { randomUUID, createHmac } = require("node:crypto");
 const { getConfig, validateConfig } = require("../src/modules/agent/config");
 const { visitor, redact, messageInput, requireProxy } = require("../src/modules/agent/security");
 const { createProvider, validateCall } = require("../src/modules/agent/provider");
+const { publicMessage, publicResult } = require("../src/modules/agent/presentation");
 const { cosine, fuse, eligible, mergeConditions, searchPublicContent, embeddingVersion } = require("../src/modules/agent/search");
 const { productItem, readOnly, readNews } = require("../src/modules/agent/content");
 const { execute } = require("../src/modules/agent/service");
@@ -119,7 +120,10 @@ test("a stalled model selection falls back once to safe search instead of consum
   assert.equal(toolCalls, 1);
   assert.equal(metrics.modelCalls, 1);
   assert.equal(metrics.selectionFallback.code, "PHASE_TIMEOUT");
-  assert.match(result.message, /只读检索/);
+  assert.match(result.message, /PV400/);
+  assert.match(result.message, /工况适用性/);
+  assert.doesNotMatch(result.message, /超时|暂不可用|降级|只读检索|部分检索能力/);
+  assert.equal(result.retrieval.understandingFallback, true);
   assert.ok(messages.some((entry) => entry.event === "status" && entry.data.phase === "search_fallback"));
 });
 
@@ -141,6 +145,7 @@ test("explanation timeout preserves streamed content and verified cards with a r
   assert.equal(metrics.phases.find((phase) => phase.phase === "model_explain").status, "timeout");
   assert.ok(deltas.length >= 3);
   assert.match(result.message, /已审核的部分说明/);
+  assert.doesNotMatch(result.message, /超时|暂不可用|降级|部分检索能力/);
   assert.equal(metrics.modelCalls, 2);
 });
 
@@ -149,6 +154,20 @@ test("SSE errors retain the request/run IDs and failing stage for browser diagno
   const runId = randomUUID();
   const response = new Response(`event: error\ndata: ${JSON.stringify({ code: "PHASE_TIMEOUT", phase: "catalog_read", requestId, runId })}\n\n`, { headers: { "content-type": "text/event-stream" } });
   await assert.rejects(consumeAgentStream(response, () => {}), (error) => error.code === "PHASE_TIMEOUT" && error.requestId === requestId && error.runId === runId && error.phase === "catalog_read");
+});
+
+test("visitor presentation strips historical operational notices without hiding suitability caveats or changing audit data", () => {
+  const message = "找到产品。\n模型响应超时或暂不可用，已使用只读检索结果和资料摘要。相关性不等于工况适用性确认，气体和镜头配置请由工程师确认；您可以手动选择产品对比或询盘。\n部分检索能力暂不可用，结果按当前可用资料返回。";
+  const result = { message, products: [content()[0].card], news: [], retrieval: { degraded: true, reason: "embedding_not_configured" }, constraints: { gas: "methane" } };
+  const presented = publicResult(result);
+  assert.doesNotMatch(presented.message, /超时|暂不可用|只读检索|部分检索能力/);
+  assert.match(presented.message, /气体和镜头配置请由工程师确认/);
+  assert.equal(presented.products.length, 1);
+  assert.equal(presented.retrieval, undefined);
+  assert.equal(presented.constraints, undefined);
+  assert.equal(result.message, message);
+  assert.equal(result.retrieval.reason, "embedding_not_configured");
+  assert.equal(publicMessage("The model is slow or unavailable; read-only results and source summaries are shown instead. Confirm lens configuration.\nSome retrieval capabilities are unavailable; results use currently available content."), "Confirm lens configuration.");
 });
 
 test("message schemas prohibit caller-supplied tools/history/URLs and redact obvious sensitive content", () => {

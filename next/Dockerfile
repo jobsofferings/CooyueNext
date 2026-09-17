@@ -12,17 +12,15 @@ FROM base AS deps
 # RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-COPY package.json ./
-# COPY yarn.lock ./
-RUN yarn config set registry https://registry.npmmirror.com \
-  && yarn install --frozen-lockfile
+COPY package.json yarn.lock ./
+RUN SCARF_ANALYTICS=false DO_NOT_TRACK=1 yarn install --frozen-lockfile --registry https://registry.npmjs.org
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN NODE_OPTIONS=--max-old-space-size=1024 NEXT_TELEMETRY_DISABLED=1 npm run build
 
 RUN echo "Contents of /app after build:" && ls -la /app
 

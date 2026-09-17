@@ -2,6 +2,25 @@
 
 本文档说明如何在服务器上部署 Next.js 应用和 Webhook 自动部署服务。
 
+## 当前一键部署入口（2026-09-17）
+
+在这台服务器执行：
+
+```bash
+cd /root/CooyueNext
+bash deploy.sh --check
+bash deploy.sh
+```
+
+- `--check` 只检查目录、分支、远程仓库与待提交文件，不提交、不推送、不构建。
+- 默认命令会在独占锁内检查变更，执行 `git add -A`、`git commit -m "chore: deploy Cooyue"`、`git push origin HEAD`，然后 `git pull --ff-only origin main`、串行构建三个服务、等待健康检查、重启 Webhook 并执行公网冒烟测试。
+- 提交范围是**暂存区、未暂存修改和新增普通文件**，不是“只提交暂存区”；被 Git 忽略的 `.env`、依赖和构建产物不会加入。暂存区与工作区对同一文件内容不一致时，以执行 `git add -A` 后的工作区完整内容为准。
+- 没有改动时不创建空提交；如果上一次推送失败但本地提交已成功，下次会检查并重试推送未发布提交。任何提交、推送或健康检查失败都停止部署，不回滚或删除用户改动。
+- 敏感文件路径、疑似明文凭据、错误仓库/分支、检查过程中变动的文件会阻止自动提交。扫描只是安全防线，不能取代人工审查；不要将密钥写入普通源码。
+- Webhook 使用 `bash deploy.sh --pull-only`：只拉取部署，不替访客请求提交本地文件；工作区有改动时明确停止，不再自动 stash，因此不会默默漏掉暂存内容。
+- 旧版本的 `deploy.sh` 仅 stash 后拉取，不包含本地提交；该行为已替换。当前脚本限定 `/root/CooyueNext` 的 `main` 和既有 Cooyue `origin`。部署测试命令：`node --test server/tests/deploy-script.test.js`。
+- Next 使用 `next/Dockerfile`，构建会复制并遵守 `next/yarn.lock`；CopilotKit 安装时关闭 Scarf 统计。下面旧架构说明仅供背景参考，实际服务编排以根目录 `docker-compose.yml` 为准。
+
 ---
 
 ## 架构概览

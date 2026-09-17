@@ -8,6 +8,7 @@ const { createStore } = require("./store");
 const { execute } = require("./service");
 const { refreshResult, loadContent } = require("./content");
 const { createTrace, diagnostic } = require("./trace");
+const { publicResult } = require("./presentation");
 
 function createRouters(dependencies = {}) {
   const publicRouter = express.Router();
@@ -60,7 +61,7 @@ function createRouters(dependencies = {}) {
       const products = turn.result.products.filter((product) => snapshot?.items.some((item) => item.key === `product:${product.id}` && item.card.version === product.version));
       const news = turn.result.news.filter((item) => snapshot?.items.some((entry) => entry.key === `news:${item.id}`));
       const changed = products.length !== turn.result.products.length || news.length !== turn.result.news.length;
-      return { ...turn, result: { ...turn.result, products, news, message: changed ? (session.locale === "zh" ? "部分内容已更新或下架，请重新搜索。" : "Some content has changed. Please search again.") : turn.result.message } };
+      return { ...turn, result: publicResult({ ...turn.result, products, news, message: changed ? (session.locale === "zh" ? "部分内容已更新或下架，请重新搜索。" : "Some content has changed. Please search again.") : turn.result.message }) };
     });
     res.json({ ok: true, data: { id: session.id, locale: session.locale, history, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
   }));
@@ -126,8 +127,8 @@ function createRouters(dependencies = {}) {
       checkpoint();
       if (state.replay) {
         const result = await trace.step("refresh", (phaseSignal) => refreshResult(state.replay.result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
-        emit("message_delta", { delta: result.message });
-        emit("results", result);
+        emit("message_delta", { delta: publicResult(result).message });
+        emit("results", publicResult(result));
       } else {
         let result = await run({ pool, config, session: state.session, message: input.message, signal: controller.signal, emit, metrics, trace });
         if (!dependencies.skipRefresh) result = await trace.step("refresh", (phaseSignal) => refreshResult(result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
@@ -141,7 +142,7 @@ function createRouters(dependencies = {}) {
         }, { timeoutMs: 8000 });
         await checkpointWrite;
         await store.checkpoint?.(state.runId, metrics, "completed").catch(() => log({ phase: "audit", code: "METRICS_FINALIZE_FAILED" }));
-        emit("results", result);
+        emit("results", publicResult(result));
       }
       emit("done", { ok: true });
       log({ phase: "delivery", status: "completed", durationMs: Date.now() - startedAt, streamEvents: metrics.streamEvents, streamBytes: metrics.streamBytes });

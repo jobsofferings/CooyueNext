@@ -2,11 +2,14 @@
 
 import { useEffect, useState, type FormEvent } from 'react'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import type { Locale } from '@/i18n-config'
 import { knowledgeRequest, type KnowledgeProduct, type KnowledgeSearchResult, type InquiryDraft, type InitialProductSearch } from '@/lib/knowledge-api'
 import SearchProgress, { type SearchPhase } from './SearchProgress'
-import AgentSearch from './AgentSearch'
+import ProductCards from './ProductCards'
 import styles from './knowledge.module.css'
+
+const AgentSearch = dynamic(() => import('./AgentSearch'), { ssr: false })
 
 const copy = {
   zh: {
@@ -173,7 +176,7 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
       <div className={styles.container}>
         <Link className={styles.back} href={`/${locale}/products`}>← {labels.back}</Link>
         <header className={styles.header}><span className={styles.badge}>COOYUE · PRODUCT SEARCH</span><h1>{labels.title}</h1><p>{labels.intro}</p></header>
-        <AgentSearch locale={locale} disabled={disabled} onBusyChange={(active) => {
+        <AgentSearch locale={locale} disabled={Boolean(busy)} selected={selected} onToggle={toggle} onBusyChange={(active) => {
           setAgentBusy(active)
           if (active) { setAgentMode(true); setProducts(null); setSearching(false); resetDraft() }
         }} onResults={(result) => {
@@ -186,22 +189,14 @@ export default function ProductSearch({ locale, initialQuery = '', initialSearch
           <div className={styles.examples}>{labels.examples.map((example) => <button type="button" key={example} disabled={disabled} onClick={() => searchFor(example)}>{example}</button>)}</div>
         </form>
         {error && errorTarget === 'search' && <p role="alert" className={styles.error}>{error}</p>}
-        <section className={styles.card} aria-labelledby="product-results-title" aria-busy={searching}>
+        {!agentMode && <section className={styles.card} aria-labelledby="product-results-title" aria-busy={searching}>
           <h2 id="product-results-title">{labels.candidates}</h2><p>{labels.selectHint}</p>
           <p className={styles.hint}>{labels.caveat}</p>
           {searching ? <SearchProgress locale={locale} phase={searchPhase} /> : <p role="status">{products ? `${products.length} ${labels.results}` : !query ? labels.idle : ''}</p>}
           {products?.length === 0 && <p className={styles.notice}>{labels.empty}</p>}
-          <div className={styles.grid}>{products?.slice(0, visibleCount).map((product) => {
-            const checked = selected.some((item) => item.slug === product.slug)
-            return <article key={product.slug} className={`${styles.product} ${checked ? styles.selected : ''}`}>
-              <span className={styles.hint}>{product.categoryName}</span><h3>{product.name}</h3><p>{product.description}</p>
-              <ul>{product.specs.slice(0, 4).map((spec) => <li key={spec}>{spec}</li>)}</ul>
-              <div className={styles.links}><Link href={`/${locale}/products/${product.slug}`}>{labels.detail}</Link></div>
-              <label className={styles.check}><input type="checkbox" checked={checked} disabled={disabled || (!checked && selected.length >= 12)} onChange={() => toggle(product)} />{labels.select}</label>
-            </article>
-          })}</div>
+          <ProductCards products={products?.slice(0, visibleCount) || []} locale={locale} selected={selected} disabled={disabled} onToggle={toggle} />
           {products && products.length > visibleCount && <button type="button" className={styles.secondary} onClick={() => setVisibleCount((count) => count + 12)}>{labels.more} ({products.length - visibleCount})</button>}
-        </section>
+        </section>}
         {selected.length > 0 && <aside className={styles.selectionBar} aria-label={labels.selected}>
           <strong>{labels.selected} ({selected.length}/12)</strong>
           <div className={styles.examples}>{selected.map((product) => <button type="button" key={product.slug} disabled={disabled} onClick={() => toggle(product)} aria-label={`${labels.remove} ${product.name}`}>{product.model} ×</button>)}</div>

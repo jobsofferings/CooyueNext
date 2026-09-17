@@ -8,15 +8,18 @@
     "start": "next start",
     "lint": "next lint",
     "test:rendering": "node --test tests/rendering-data.test.cjs",
-    "test:agent": "node --test tests/agent-proxy.test.cjs"
+    "test:agent": "node --test tests/agent-*.test.cjs"
   },
   "dependencies": {
+    "@ag-ui/core": "0.0.59",
+    "@copilotkit/react-core": "1.72.0",
     "autoprefixer": "^10.4.27",
     "next": "14.2.15",
     "react": "^18",
     "react-dom": "^18",
     "server-only": "^0.0.1",
-    "three": "0.185.1"
+    "three": "0.185.1",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20",

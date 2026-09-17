@@ -59,8 +59,10 @@ async function execute({ pool, config, session, message, signal, emit, provider 
   };
   if (!result.products.length) text(`${emptyMessage(session.locale)}${session.locale === "zh" ? "。" : " "}`);
   if (result.status === "matches") {
-    text(session.locale === "zh" ? `已检索到 ${result.products.length} 款产品、${result.news.length} 篇新闻。正在整理匹配说明…\n\n`
-      : `Found ${result.products.length} products and ${result.news.length} articles. Preparing the explanation…\n\n`);
+    const counts = session.locale === "zh"
+      ? [result.products.length ? `${result.products.length} 款产品` : "", result.news.length ? `${result.news.length} 篇文章` : ""].filter(Boolean).join("、")
+      : [result.products.length ? `${result.products.length} products` : "", result.news.length ? `${result.news.length} articles` : ""].filter(Boolean).join(" and ");
+    text(session.locale === "zh" ? `为您找到 ${counts}，可以查看下方候选。\n\n` : `Found ${counts}. You can explore the candidates below.\n\n`);
     if (!selection.fallback) {
       metrics.modelCalls += 1;
       emit("status", { phase: "explaining" });
@@ -73,10 +75,12 @@ async function execute({ pool, config, session, message, signal, emit, provider 
       }
     }
     if (selection.fallback || metrics.explanationFallback) {
-      text(result.products.map((product) => `${product.name}：${(product.matchReasons || []).join("；")}`).join("\n"));
+      if (metrics.explanationFallback) text("\n\n");
+      text(result.products.map((product) => `${product.name}：${(product.matchReasons || []).join("；") || product.description || (session.locale === "zh" ? "公开资料与您的需求相关" : "Public information is relevant to your request")}`).join("\n"));
+      if (!result.products.length) text(result.news.map((item) => `${item.title}：${item.description || ""}`).join("\n"));
       text(session.locale === "zh"
-        ? "\n模型响应超时或暂不可用，已使用只读检索结果和资料摘要。相关性不等于工况适用性确认，气体和镜头配置请由工程师确认；您可以手动选择产品对比或询盘。"
-        : "\nThe model is slow or unavailable; read-only results and source summaries are shown instead. Relevance does not confirm suitability or lens configuration; compare or inquire manually.");
+        ? "\n\n您可以选择候选查看参数、手动对比或询盘。具体气体、镜头配置与工况适用性请由工程师确认。"
+        : "\n\nSelect candidates to view specifications, compare or inquire. Confirm gas, lens configuration and operating suitability with an engineer.");
     }
   } else if (session.clarification_count < 10) {
     result.status = "needs_clarification";
@@ -86,7 +90,6 @@ async function execute({ pool, config, session, message, signal, emit, provider 
     };
     text(`\n${result.clarification.question}`);
   }
-  if (result.retrieval.degraded) text(session.locale === "zh" ? "\n部分检索能力暂不可用，结果按当前可用资料返回。" : "\nSome retrieval capabilities are unavailable; results use currently available content.");
   result.message = redact(explanation);
   result.query = redact(result.query);
   metrics.usageComplete = metrics.usageReports === metrics.modelCalls + metrics.embeddingCalls;

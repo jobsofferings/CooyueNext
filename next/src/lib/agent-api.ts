@@ -8,7 +8,6 @@ export interface AgentResult {
   products: Array<KnowledgeProduct & { id: string; type: 'product'; matchReasons: string[]; caveat: string }>
   news: Array<{ id: string; type: 'news'; title: string; description: string; detailPath: string }>
   clarification: { question: string; remaining: number } | null
-  retrieval: { mode: 'hybrid' | 'keyword-only'; degraded: boolean; reason: string | null; newsUnavailable: boolean }
 }
 
 export interface AgentTurn { user: string; result: AgentResult; createdAt: string }
