@@ -95,7 +95,7 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 ## 线上验收与测试（2026-09-17）
 
 - 已执行 `deploy.sh`，退出码 0；官网、管理后台、后端容器均健康，`AGENT_ENABLED=true`。模型密钥仅存在服务端环境文件，不提交 Git、不暴露给浏览器。
-- 公网入口为 `https://www.cooyue.tech/zh/search`，英文为 `https://www.cooyue.tech/en/search`；访问 `http://43.139.70.61/zh/search` 会跳转到官网 HTTPS 域名。不要用裸 IP 的 3000 端口 HTTP 页面测试生产匿名 Cookie。
+- 公网入口为 `https://www.cooyue.tech/zh/search`，英文为 `https://www.cooyue.tech/en/search`；同日后续修复已允许 `http://43.139.70.61/zh/search` 和 `http://43.139.70.61:3000/zh/search` 直接测试，不再要求 IP 跳转域名。仅显式允许的 HTTP 网站使用非 Secure 匿名 Cookie，正式访客仍建议使用 HTTPS 域名。
 - 已在真实浏览器完成搜索、产品卡片展示、同浏览器刷新恢复历史、勾选两款产品手动对比，以及后台运行列表和详情验证。未发送询盘邮件或改动产品业务数据。
 - 当前为模型理解需求、关键词检索的 `keyword-only/degraded` 模式：中转未提供已验证的 Embedding 模型，因此不是完整 Hybrid Search。网页会显示“关键词检索 · 降级模式”。
 - 真实公网测试中，甲烷手持需求返回 GF77、PV400；随后改为 SF6 返回 G306、GF77。两轮均先流式解释再返回卡片，单轮约 13 秒；实际响应时间取决于中转，不是耗时保证。
@@ -112,9 +112,9 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 
 ### 本机运维落点
 
-- 网站 Nginx 已为 `/api/agent/` 配置转发到 Next 的独立 location，关闭缓冲、缓存及该入口 access log，读取超时 75 秒；`/api/agent-content` 也转发到 Next。配置位于 `/www/server/panel/vhost/nginx/cooyue.tech.conf`，修改前备份并通过 `nginx -t` 后 reload。
+- 网站 Nginx 已为 `/api/agent/` 配置转发到 Next 的独立 location，关闭压缩、缓冲、缓存及该入口 access log，读取超时 75 秒；`/api/agent-content` 也转发到 Next。域名配置位于 `/www/server/panel/vhost/nginx/cooyue.tech.conf`，IP 的 80 端口入口位于同目录的 `cooyue-agent-ip.conf`；修改既有配置前备份，通过 `nginx -t` 后 reload。这两份是服务器运维配置，不在 Git 中，迁移主机时需单独同步。
 - `/etc/cron.d/cooyue-agent-cleanup` 每小时第 7 分钟在后端容器运行 `node scripts/agent.js cleanup --apply`，使用独占锁，结果写入系统日志标签 `cooyue-agent-cleanup`。只清理 Agent 的过期数据和超时执行记录；会话到期立即不可读，物理删除在下次任务完成。
-- 用户授权的 HTTP 例外只针对后端到指定中转的完整地址，官网 HTTPS 与 Secure Cookie 不变。此中转链路仍是明文，应后续升级为 HTTPS；不能将“网页 HTTPS”误解为中转链路也被加密。
+- 后端中转 HTTP 例外只针对指定中转的完整地址，与网站 `AGENT_HTTP_SITE_ORIGINS` 是两项独立配置；官网 HTTPS 域名的 Secure Cookie 不变。HTTP 网站的消息与匿名 Cookie、HTTP 中转链路的内容与 API key 均没有传输加密，应后续升级为 HTTPS；不能将“网页 HTTPS”误解为中转链路也被加密。
 
 ## IP、流式与诊断修复（2026-09-17）
 
@@ -125,6 +125,14 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 - 总预算 60 秒，`AGENT_SELECT_TIMEOUT_MS` 默认 18 秒、`AGENT_EXPLAIN_TIMEOUT_MS` 默认 15 秒。需求模型超时/不可用时使用用户原始需求和服务端跨轮硬约束做一次只读检索；说明阶段超时保留已有文字与已验证候选，并明确告知降级。不会自动重试模型请求或发送询盘，仍最多两次模型调用、一次搜索工具调用。
 - 运行日志新增阶段时间线：数据库连接、会话占用、模型理解、产品查询、新闻读取、Embedding、结果复核、模型说明、记录保存；包含开始偏移、截止时间、耗时、上游 HTTP 状态、响应头/首包延迟、分块数量、脱敏错误分类。模型首包、阶段开始/结束及定期心跳会更新正在执行的记录，后台不必等到运行结束才看见进度。
 - 后台详情显示 Request ID、Run ID、异常阶段、模型降级、时间线和流事件数量；执行中自动刷新。旧日志缺失的阶段不会伪造补齐。失败进入数据库前，网关/后端只输出脱敏结构化诊断，分别使用 `[agent:gateway]`、`[agent:request]`、`[agent:trace]` 标签，不输出密钥、请求正文或原始供应商错误内容。
+
+### 修复后线上验证
+
+- IP 与 HTTPS 域名均已在真实浏览器提交甲烷手持示例，分别约 14.4 秒、15.7 秒完成，返回 GF77、PV400；这是本次实测值，不是响应时间保证。两者刷新后均恢复同一浏览器的历史，IP 的 3000 端口也可正常初始化。
+- 点击后约 0.1 秒内展示进度，首个 SSE 事件约 0.2～0.3 秒到达；两轮分别收到 85、82 个文字增量事件，页面出现多次可见文字更新，并非等结束后一次展示。模型说明首段仍需等待上游模型，等待期间会显示阶段和计时。
+- 后台列表、详情页面实测通过；新记录包含 11 个阶段条目，记录模型 HTTP 200、响应头和首包延迟、分块数与最终流投递完成状态。域名测试 Run ID 为 `2c4754e4-1949-46cc-b6b7-db7e31bf3d74`，IP 测试 Run ID 为 `429d3eff-6409-4c4a-92e1-84e191d79c2e`。
+- 隔离注入一个永不返回的模型调用，以短测试时限触发降级，真实生产只读目录仍返回两款候选，阶段记录为 `model_select / PHASE_TIMEOUT`；该验证未调用付费模型、未修改生产超时配置或写入业务数据。
+- 未授权 Origin 返回 403；官网公共代理拒绝管理接口，未登录的管理端返回 401。Agent 测试 40 项、Next 代理测试 5 项、原搜索与询盘测试 32 项、页面渲染测试 7 项均通过。生产构建成功；管理后台全量类型检查仍存在既有 Dashboard/Mail/Products/Seo 报错，本次未扩展修复无关代码。
 
 ### 已知边界
 
