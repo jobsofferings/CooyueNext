@@ -191,6 +191,10 @@ test("only the named read-only tool is callable; unknown actions and extra argum
   for (const argumentsText of ["{", "null", '[]', '{"query":"hello","type":"all","url":"http://localhost"}']) {
     assert.throws(() => validateCall({ ...call, function: { ...call.function, arguments: argumentsText } }));
   }
+  for (const intent of ["new_search", "refine"]) assert.equal(validateCall({ ...call, function: { ...call.function,
+    arguments: JSON.stringify({ query: "LE", type: "product", intent }) } }).intent, intent);
+  for (const intent of ["delete", "reset_history", {}, null]) assert.throws(() => validateCall({ ...call, function: { ...call.function,
+    arguments: JSON.stringify({ query: "LE", type: "product", intent }) } }), /INVALID_TOOL_ARGUMENTS/);
 });
 
 test("methane/handheld intent keeps PV400 and GF77, never substitutes G306; model cannot drop hard constraints", () => {
@@ -200,6 +204,120 @@ test("methane/handheld intent keeps PV400 and GF77, never substitutes G306; mode
   assert.equal(content().filter((item) => eligible(item, followup)).length, 2);
   const changed = mergeConditions("SF6 手持", "换成 SF6", "甲烷 手持");
   assert.deepEqual(content().filter((item) => eligible(item, changed)).map((item) => item.card.id), ["flir-g306", "flir-gf77"]);
+});
+
+function conversationCatalog() {
+  return [...content().map((item) => ({ ...item, card: { ...item.card, categoryName: "气体红外成像" } })), ...[
+    { slug: "imaging-kit", name: "开放式成像组件套件", category_slug: "imaging-kits", category_name: "成像组件",
+      extra: { model: "GLA07512K-T2 + ITZ1212IP" }, description: "包含 K10 SDI 转以太网模块和散热底座，不是统一外壳手持相机。" },
+    { slug: "le10", name: "HIKMICRO LE10 3.0", category_slug: "thermal-monoculars", category_name: "热成像单筒", extra: { model: "LE10 3.0" } },
+    { slug: "le15", name: "HIKMICRO LE15 3.0", category_slug: "thermal-monoculars", category_name: "热成像单筒", extra: { model: "LE15 3.0" } },
+    { slug: "unrelated", name: "Portable camera", category_slug: "thermal", category_name: "测温热像仪",
+      extra: { model: "K100" }, description: "热成像，不能凭此说明确认甲烷适用性。" },
+  ].map((record) => productItem({ ...record, locale: "zh" }))];
+}
+
+async function conversationSearch(message, query = message, previous, intent) {
+  return searchPublicContent({ pool: readPool(), config: { ...config, embeddingModel: "" }, provider: {},
+    input: { query, type: "product", ...(intent ? { intent } : {}) }, message,
+    previousQuery: previous?.query, previousConditions: previous?.constraints, locale: "zh",
+    signal: new AbortController().signal, contentLoader: async () => ({ items: conversationCatalog(), newsUnavailable: false }) });
+}
+
+test("the reported four-turn sequence changes targets even with contaminated model rewrites", async () => {
+  let previous = await conversationSearch("我要找用于甲烷巡检的手持设备，帮我对比候选");
+  const turns = [
+    { message: "放弃这几个产品，我需要看 K10", query: "K10 甲烷巡检产品", expected: ["imaging-kit"] },
+    { message: "所有气体红外成像", query: "K10 所有气体红外成像巡检产品", expected: ["flir-g306", "flir-gf77", "guide-sensmart-pv400"] },
+    { message: "LE", query: "K10 LE 所有气体红外成像巡检产品", expected: ["le10", "le15"] },
+    { message: "甲烷巡检", query: "K10 LE 甲烷巡检 红外成像产品", expected: ["flir-gf77", "guide-sensmart-pv400"] },
+  ];
+  for (const turn of turns) {
+    const result = await conversationSearch(turn.message, turn.query, previous, "refine");
+    assert.deepEqual(result.products.map((product) => product.id).sort(), turn.expected, turn.message);
+    assert.equal(result.retrieval.intent.mode, "new_search", turn.message);
+    assert.equal(result.retrieval.intent.queryRepaired, true, turn.message);
+    assert.equal(publicResult(result).retrieval, undefined);
+    previous = result;
+  }
+});
+
+test("model references in public component descriptions and bounded series names are searchable", async () => {
+  const component = await conversationSearch("K10");
+  assert.deepEqual(component.products.map((product) => product.id), ["imaging-kit"]);
+  assert.match(component.products[0].matchReasons.join(" "), /K10/i);
+  assert.match(component.products[0].matchReasons.join(" "), /组件|关联/);
+  for (const message of ["LE", "le 系列", "请找 LE 系列产品"]) {
+    const series = await conversationSearch(message);
+    assert.deepEqual(series.products.map((product) => product.id).sort(), ["le10", "le15"], message);
+  }
+  const unknown = await conversationSearch("K1000");
+  assert.equal(unknown.products.length, 0);
+});
+
+test("actual refinements retain the subject while explicit replacements remove only that condition", async () => {
+  const first = await conversationSearch("甲烷巡检手持设备");
+  const refined = await conversationSearch("只要手持", "手持", first, "refine");
+  assert.equal(refined.retrieval.intent.mode, "refine");
+  assert.deepEqual(refined.products.map((product) => product.id).sort(), ["flir-gf77", "guide-sensmart-pv400"]);
+  const replaced = await conversationSearch("换成 SF6", "甲烷 SF6 手持", refined, "refine");
+  assert.deepEqual(replaced.products.map((product) => product.id).sort(), ["flir-g306", "flir-gf77"]);
+  assert.equal(replaced.constraints.matched.some((condition) => condition.key === "methane"), false);
+  assert.equal(replaced.constraints.matched.some((condition) => condition.key === "handheld"), true);
+  const selected = await conversationSearch("这些里面只看 GF77", "GF77", first, "refine");
+  assert.equal(selected.products.length, 1);
+  assert.equal(selected.constraints.matched.some((condition) => condition.key === "methane"), true);
+});
+
+test("discarding old results is not a technical exclusion and does not relax new safety requirements", async () => {
+  const previous = await conversationSearch("甲烷巡检手持设备");
+  for (const message of ["不要这些产品了，我想看 K10", "重新搜索 K10", "Forget those products, show me K10"]) {
+    assert.deepEqual((await conversationSearch(message, "K10 甲烷", previous)).products.map((product) => product.id), ["imaging-kit"], message);
+  }
+  const changed = await conversationSearch("这些都先放一边，我想了解 K10", "K10", previous, "new_search");
+  assert.deepEqual(changed.products.map((product) => product.id), ["imaging-kit"]);
+  assert.equal(changed.retrieval.intent.reason, "model_intent");
+  assert.deepEqual((await conversationSearch("换成 K10", "K10", previous, "new_search")).products.map((product) => product.id), ["imaging-kit"]);
+  for (const message of ["重新搜索 K10 不要手持", "K10 甲烷巡检", "甲烷 防爆", "LE 氢气检测", "LE 500g以下"]) {
+    assert.equal((await conversationSearch(message, "LE", previous)).products.length, 0, message);
+  }
+});
+
+test("keyword and embedding retrieval use the same repaired query, not the stale model plan", async () => {
+  const items = conversationCatalog();
+  const rows = items.map((item) => ({ content_key: item.key, content_hash: item.hash, embedding: [1, 0] }));
+  const queries = [];
+  const previous = await conversationSearch("甲烷手持设备");
+  const result = await searchPublicContent({ pool: readPool(rows), config: { ...config, embeddingModel: "mock" },
+    provider: { async embed(texts) { queries.push(...texts); return { vectors: [[1, 0]] }; } },
+    input: { query: "K10 甲烷巡检", type: "product", intent: "refine" }, message: "放弃这几个产品，我需要看 K10",
+    previousQuery: previous.query, previousConditions: previous.constraints, locale: "zh",
+    contentLoader: async () => ({ items, newsUnavailable: false }) });
+  assert.deepEqual(queries, [result.query]);
+  assert.doesNotMatch(result.query, /甲烷|methane|手持|handheld/);
+  assert.equal(result.retrieval.mode, "hybrid");
+  assert.deepEqual(result.products.map((product) => product.id), ["imaging-kit"]);
+});
+
+test("model timeout still resolves the four targets with one read-only tool and diagnostic intent records", async () => {
+  const session = { locale: "zh", history: [], clarification_count: 0 };
+  const turns = [["甲烷手持设备", 2], ["放弃这几个产品，我需要看 K10", 1], ["所有气体红外成像", 3], ["LE", 2], ["甲烷巡检", 2]];
+  for (const [message, expected] of turns) {
+    const metrics = {};
+    const result = await execute({ pool: readPool(), config: { ...config, embeddingModel: "" }, session, message, metrics,
+      signal: new AbortController().signal, emit() {},
+      provider: { async select() { throw Object.assign(new Error("timed out"), { code: "PHASE_TIMEOUT" }); } },
+      search: (options) => searchPublicContent({ ...options, contentLoader: async () => ({ items: conversationCatalog(), newsUnavailable: false }) }),
+    });
+    assert.equal(result.products.length, expected, message);
+    assert.equal(metrics.modelCalls, 1);
+    assert.equal(metrics.toolCalls, 1);
+    assert.equal(metrics.events[0].retrieval.intent.mode, "new_search");
+    assert.equal(metrics.events[0].retrieval.counts.returnedProducts, expected);
+    assert.deepEqual(metrics.events[0].retrieval.filters, result.constraints);
+    assert.doesNotMatch(result.message, /超时|降级|PHASE_TIMEOUT/);
+    session.history.push({ user: message, result });
+  }
 });
 
 test("unsupported gases, incomplete gases, unverified ranges and exclusions never become partial matches", () => {
