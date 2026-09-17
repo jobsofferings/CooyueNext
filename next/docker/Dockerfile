@@ -14,9 +14,9 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # 仅复制依赖声明文件，最大化利用缓存
-COPY package.json yarn.lock* ./
+COPY package.json yarn.lock ./
 # 使用 frozen-lockfile 确保依赖版本一致性
-RUN yarn install --frozen-lockfile
+RUN SCARF_ANALYTICS=false DO_NOT_TRACK=1 yarn install --frozen-lockfile --registry https://registry.npmjs.org
 
 # ================================
 # 阶段 2: 构建应用
@@ -37,7 +37,7 @@ COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # 执行生产构建 (需要 next.config.mjs 配置 output: 'standalone')
-RUN yarn build
+RUN NODE_OPTIONS=--max-old-space-size=1024 yarn build
 
 # ================================
 # 阶段 3: 生产运行时

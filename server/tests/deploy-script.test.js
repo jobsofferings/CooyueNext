@@ -97,3 +97,13 @@ test('entry rejects wrong repository and script only fast-forwards without stash
   const help = execFileSync('bash', [path.resolve(__dirname, '../../deploy.sh'), '--help'], { encoding: 'utf8' });
   assert.match(help, /暂存区/);
 });
+
+test('Compose uses the production Dockerfile with locked dependencies and bounded build memory', () => {
+  const root = path.resolve(__dirname, '../..');
+  const compose = readFileSync(path.join(root, 'docker-compose.yml'), 'utf8');
+  assert.match(compose, /next-app:\s+build:\s+context: \.\/next\s+dockerfile: docker\/Dockerfile/);
+  const dockerfile = readFileSync(path.join(root, 'next/docker/Dockerfile'), 'utf8');
+  assert.match(dockerfile, /COPY package\.json yarn\.lock \.\//);
+  assert.match(dockerfile, /SCARF_ANALYTICS=false DO_NOT_TRACK=1 yarn install --frozen-lockfile/);
+  assert.match(dockerfile, /NODE_OPTIONS=--max-old-space-size=1024 yarn build/);
+});

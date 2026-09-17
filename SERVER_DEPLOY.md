@@ -19,7 +19,7 @@ bash deploy.sh
 - 敏感文件路径、疑似明文凭据、错误仓库/分支、检查过程中变动的文件会阻止自动提交。扫描只是安全防线，不能取代人工审查；不要将密钥写入普通源码。
 - Webhook 使用 `bash deploy.sh --pull-only`：只拉取部署，不替访客请求提交本地文件；工作区有改动时明确停止，不再自动 stash，因此不会默默漏掉暂存内容。
 - 旧版本的 `deploy.sh` 仅 stash 后拉取，不包含本地提交；该行为已替换。当前脚本限定 `/root/CooyueNext` 的 `main` 和既有 Cooyue `origin`。部署测试命令：`node --test server/tests/deploy-script.test.js`。
-- Next 使用 `next/Dockerfile`，构建会复制并遵守 `next/yarn.lock`；CopilotKit 安装时关闭 Scarf 统计。下面旧架构说明仅供背景参考，实际服务编排以根目录 `docker-compose.yml` 为准。
+- Compose 实际使用 `next/docker/Dockerfile`，不是根层备用的 `next/Dockerfile`；两者均复制并遵守 `next/yarn.lock`，关闭 Scarf 安装统计，并限制构建 Node 堆内存为 1024MB，避免小内存服务器构建失控。实际服务编排以根目录 `docker-compose.yml` 为准。
 
 ---
 
