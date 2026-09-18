@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
 import type { ChatEntry } from '@/lib/agent-presentation'
 import { scrollChatTarget } from '@/lib/agent-scroll'
-import { knowledgeRequest, type KnowledgeProduct } from '@/lib/knowledge-api'
+import { knowledgeRequest, MAX_SELECTED_PRODUCTS, type KnowledgeProduct } from '@/lib/knowledge-api'
 import ProductCards from './ProductCards'
 import ProductComparison from './ProductComparison'
 import ProductInquiry from './ProductInquiry'
@@ -24,6 +24,7 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
   const [error, setError] = useState('')
   const [scrollRequest, setScrollRequest] = useState<{ action: 'compare' | 'inquiry' } | null>(null)
   const followups = useRef<HTMLDivElement | null>(null)
+  const selectAll = useRef<HTMLInputElement | null>(null)
   const controller = useRef<AbortController | null>(null)
   const mounted = useRef(true)
   const notify = useRef(onBusyChange)
@@ -33,6 +34,10 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
   const staleComparison = Boolean(comparison && comparedSelection !== selection)
   const staleInquiry = Boolean(inquiry && signature(inquiry) !== selection)
   const locked = disabled || comparing
+  const products = entry.result?.products || []
+  const allSelected = products.length > 0 && products.every((product) => selected.some((item) => item.slug === product.slug))
+
+  useEffect(() => { if (selectAll.current) selectAll.current.indeterminate = selected.length > 0 && !allSelected }, [selected.length, allSelected])
 
   useEffect(() => {
     mounted.current = true
@@ -51,7 +56,7 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
   function toggle(product: KnowledgeProduct) {
     if (locked) return
     setSelected((previous) => previous.some((item) => item.slug === product.slug)
-      ? previous.filter((item) => item.slug !== product.slug) : previous.length < 12 ? [...previous, product] : previous)
+      ? previous.filter((item) => item.slug !== product.slug) : previous.length < MAX_SELECTED_PRODUCTS ? [...previous, product] : previous)
   }
 
   async function compare() {
@@ -78,7 +83,10 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
         {entry.content && <p className={styles.messageText} data-stream-text>{entry.content}{active && <span className={styles.cursor} aria-hidden="true">▍</span>}</p>}
         {active && <div className={styles.progress} role="status"><span className={styles.pulse} aria-hidden="true" />{phase}<span>{elapsed}s</span></div>}
         {entry.result && <div className={styles.results}>
-          {entry.result.products.length > 0 && <><h3>{chinese ? '候选产品' : 'Candidate products'} · {entry.result.products.length}</h3><ProductCards products={entry.result.products} locale={locale} selected={selected} disabled={locked} onToggle={toggle} /></>}
+          {products.length > 0 && <><div className={styles.resultsHeading}><h3>{chinese ? '候选产品' : 'Candidate products'} · {products.length}</h3>
+            <label className={styles.selectAll}><input ref={selectAll} type="checkbox" checked={allSelected} disabled={locked} aria-label={chinese ? '全选本轮产品' : 'Select all products in this reply'}
+              onChange={() => { if (!locked) setSelected(allSelected ? [] : products.slice(0, MAX_SELECTED_PRODUCTS)) }} />{chinese ? '全选' : 'Select all'}</label>
+          </div><ProductCards products={products} locale={locale} selected={selected} disabled={locked} onToggle={toggle} /></>}
           {entry.result.news.length > 0 && <div className={styles.news}>{entry.result.news.map((item) => <article key={item.id}><h3><Link href={item.detailPath} target="_blank" rel="noopener noreferrer">{item.title}</Link></h3><p>{item.description}</p></article>)}</div>}
         </div>}
       </div>
@@ -89,7 +97,7 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
         <button type="button" className={styles.floatingButton} disabled={locked || !selected.length} onClick={() => { setInquiry([...selected]); show('inquiry') }} aria-controls={`${entry.id}-inquiry`}>
           <span aria-hidden="true">✉</span>{inquiry ? chinese ? '更新询盘' : 'Update inquiry' : chinese ? '询盘所选产品' : 'Inquire about selected products'}
         </button>
-        <span className={styles.selectionCount}>{chinese ? '本轮已选' : 'Selected'} {selected.length}/12 · {chinese ? '至少 2 款可对比' : 'Select 2+ to compare'}</span>
+        <span className={styles.selectionCount}>{chinese ? '本轮已选' : 'Selected'} {selected.length}/{MAX_SELECTED_PRODUCTS} · {chinese ? '至少 2 款可对比' : 'Select 2+ to compare'}</span>
       </div>}
       {actions.length > 0 && <div ref={followups} className={styles.followups} data-message-followups>{actions.map((action) => <section key={action} id={`${entry.id}-${action}`} className={styles.followup} data-chat-action={action} tabIndex={-1} aria-labelledby={`${entry.id}-${action}-title`}>
         <div className={styles.followupHeading}><h3 id={`${entry.id}-${action}-title`}>{action === 'compare' ? chinese ? '产品对比' : 'Product comparison' : chinese ? '产品询盘' : 'Product inquiry'}</h3></div>

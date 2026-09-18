@@ -11,6 +11,8 @@ const products = ['GF77', 'PV400', 'G306'].map((model) => ({
   facts: { gases: ['methane'], formFactor: 'handheld', resolution: '320×256' },
   detailPath: `/zh/products/${model.toLowerCase()}`, version: `fixture-${model}`, matchReasons: ['审核资料记录甲烷'],
 }))
+const allProducts = [...products, ...Array.from({ length: 17 }, (_, index) => ({ ...products[0],
+  id: `extra-${index}`, slug: `extra-${index}`, name: `Fixture device ${index + 4}`, model: `EX${index + 4}`, version: `fixture-extra-${index}` }))]
 
 async function verify(browser, mobile) {
   const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 1050 } })
@@ -25,12 +27,29 @@ async function verify(browser, mobile) {
   let contextId = randomUUID()
   let contextChanges = 0
   const sentContexts = []
+  const titles = new Map()
+  const contextList = () => {
+    const grouped = new Map()
+    for (const turn of history) {
+      const previous = grouped.get(turn.contextId)
+      grouped.set(turn.contextId, { id: turn.contextId, title: titles.get(turn.contextId), turnCount: (previous?.turnCount || 0) + 1, updatedAt: turn.createdAt })
+    }
+    if (!grouped.has(contextId)) grouped.set(contextId, { id: contextId, title: '新对话', turnCount: 0, updatedAt: null })
+    return [...grouped.values()]
+  }
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route('**/api/agent/**', async (route) => {
     const request = route.request()
     const path = new URL(request.url()).pathname
     if (path === '/api/agent/sessions') return route.fulfill({ json: { ok: true, data: { id: 'test-session', contextId } } })
-    if (request.method() === 'GET') return route.fulfill({ json: { ok: true, data: { history, contextId } } })
+    if (request.method() === 'GET') return route.fulfill({ json: { ok: true, data: { history: history.filter((turn) => turn.contextId === contextId), contextId, contexts: contextList() } } })
+    if (path.endsWith('/activate')) {
+      assert.equal(request.postDataJSON().contextId, contextId)
+      const target = path.split('/').at(-2)
+      assert(history.some((turn) => turn.contextId === target))
+      contextId = target
+      return route.fulfill({ json: { ok: true, data: { contextId } } })
+    }
     if (path.endsWith('/contexts')) {
       assert.equal(request.postDataJSON().contextId, contextId)
       contextId = randomUUID(); contextChanges += 1
@@ -42,9 +61,11 @@ async function verify(browser, mobile) {
     if (failSearch) return route.fulfill({ status: 503, json: { ok: false, error: 'AGENT_UPSTREAM_ERROR' } })
     const message = request.postDataJSON().message
     if (responseGate) await responseGate
-    const result = { query: message, status: 'matches', message: '找到相关候选，请在本轮选择产品，再手动对比或询盘。'.repeat(5), products, news: [], clarification: null }
+    const result = { query: message, status: 'matches', message: '找到相关候选，请在本轮选择产品，再手动对比或询盘。'.repeat(5), products: message === '全部20款' ? allProducts : products, news: [], clarification: null }
+    if (!titles.has(contextId)) titles.set(contextId, message === '甲烷巡检' ? '甲烷巡检手持设备' : `${message}产品选型`)
     history.push({ user: message, result, contextId, createdAt: `turn-${searches}` })
-    const frames = [['status', { phase: 'explaining' }], ['message_delta', { delta: result.message }], ['results', result], ['done', { ok: true }]]
+    history = history.slice(-10)
+    const frames = [['status', { phase: 'explaining' }], ['message_delta', { delta: result.message }], ['context', { contextId, contexts: contextList() }], ['results', result], ['done', { ok: true }]]
     return route.fulfill({ contentType: 'text/event-stream', body: frames.map(([event, data]) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join('') })
   })
   await page.route('**/api/knowledge/**', async (route) => {
@@ -54,11 +75,11 @@ async function verify(browser, mobile) {
     if (path === 'compare') {
       if (failCompare) return route.fulfill({ status: 503, json: { ok: false, error: 'internal_failure' } })
       await new Promise((resolve) => setTimeout(resolve, 150))
-      return route.fulfill({ json: { ok: true, data: { products: products.filter((product) => body.productSlugs.includes(product.slug)) } } })
+      return route.fulfill({ json: { ok: true, data: { products: allProducts.filter((product) => body.productSlugs.includes(product.slug)) } } })
     }
     if (path === 'inquiries/draft') return route.fulfill({ json: { ok: true, data: {
       id: `draft-${calls.length}`, confirmationToken: 'fixture-preview-only', expiresAt: '2030-01-01T00:00:00Z',
-      summary: { query: body.query, requirements: body.requirements, products: products.filter((product) => body.productSlugs.includes(product.slug)) },
+      summary: { query: body.query, requirements: body.requirements, products: allProducts.filter((product) => body.productSlugs.includes(product.slug)) },
     } } })
     if (/^inquiries\/draft-\d+\/confirm$/.test(path)) return route.fulfill({ json: { ok: true, data: { delivery: 'sent' } } })
     throw new Error(`Unexpected request: ${path}`)
@@ -93,6 +114,20 @@ async function verify(browser, mobile) {
     await ready()
     await atBottom()
   }
+  const selectHistory = async (id) => {
+    const item = page.locator(`[data-history-context="${id}"]`)
+    if (!await item.isVisible()) await page.getByRole('button', { name: /^历史会话/ }).click()
+    await item.click()
+    await ready()
+    assert.equal(contextId, id)
+  }
+  await page.goto(`${origin}/zh`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  assert.equal(await page.locator('.main-header .main-menu__search').getAttribute('href'), '/zh/search')
+  assert.equal(await page.locator('.stricky-header .main-menu__search').getAttribute('href'), '/zh/search')
+  await page.locator('.main-header .main-menu__search').click()
+  await page.waitForURL('**/zh/search')
+  await ready()
+  assert.equal(await page.locator('.search-popup, .search-toggler').count(), 0)
   await page.goto(`${origin}/zh/search?keywords=K10`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await ready()
   assert.equal(await page.locator('#agent-message').inputValue(), 'K10')
@@ -114,7 +149,14 @@ async function verify(browser, mobile) {
   const inquiry = first.getByRole('button', { name: '询盘所选产品', exact: true })
   assert.equal(await compare.isDisabled(), true)
   assert.equal(await inquiry.isDisabled(), true)
+  const selectAll = first.getByRole('checkbox', { name: '全选本轮产品', exact: true })
+  await selectAll.check()
+  assert.equal(await first.locator('[data-product-id] input:checked').count(), 3)
+  assert.equal(calls.length, 0)
+  await selectAll.uncheck()
+  assert.equal(await first.locator('[data-product-id] input:checked').count(), 0)
   for (const slug of ['gf77', 'pv400']) await first.locator(`[data-product-id="${slug}"] input`).check()
+  assert.equal(await selectAll.evaluate((element) => element.indeterminate), true)
   assert.equal(await first.locator('[data-message-actions]').evaluate((element) => element.closest('[class*="bubble"]') === null), true)
   await compare.click()
   await first.locator('[data-chat-action="compare"] table').waitFor()
@@ -199,37 +241,80 @@ async function verify(browser, mobile) {
   assert.equal(contextChanges, 1)
   assert.notEqual(contextId, oldContext)
   assert.equal(await page.locator('#agent-message').inputValue(), '')
-  assert.equal(await page.locator('[data-context-boundary]').count(), 1)
-  assert.equal(await page.locator('[data-product-id]').count(), 6)
+  assert.equal(await page.locator('[data-context-boundary]').count(), 0)
+  assert.equal(await page.locator('[data-message-id]').count(), 0)
+  assert.equal(await page.locator('[data-product-id]').count(), 0)
+  assert.equal(await page.locator(`[data-history-context="${oldContext}"]`).getAttribute('aria-label'), '甲烷巡检手持设备')
   assert.equal(await newContext.isDisabled(), true)
   if (!mobile) {
     const widths = await page.evaluate(() => ({ messages: document.querySelector('[data-testid="copilot-scroll-content"]').getBoundingClientRect().width,
       composer: document.querySelector('#agent-message').closest('[class*="composer"]').getBoundingClientRect().width }))
-    assert.equal(widths.messages, 720)
-    assert.equal(widths.composer, 720)
+    assert.equal(widths.messages, 900)
+    assert.equal(widths.composer, 900)
+    assert.equal(await page.getByRole('log').evaluate((element) => element.getBoundingClientRect().width), 900)
   }
   const dimensions = await page.evaluate(() => ({ viewport: innerWidth, document: document.documentElement.scrollWidth }))
   assert(dimensions.document <= dimensions.viewport + 2, JSON.stringify(dimensions))
-  await first.locator('[data-message-actions]').scrollIntoViewIfNeeded()
-  await page.screenshot({ path: join(process.env.COOYUE_SCREENSHOT_DIR || '/tmp', `cooyue-chat-actions-${mobile ? 'mobile' : 'desktop'}.png`) })
   await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
   await ready()
+  assert.equal(await page.locator('[data-product-id]').count(), 0)
+  assert.equal(await page.locator('[data-message-id]').count(), 0)
+  await selectHistory(oldContext)
   assert.equal(await page.locator('[data-product-id]').count(), 6)
   assert.equal(await page.locator('[data-message-actions]').count(), 2)
   assert.equal(await page.locator('[data-chat-action]').count(), 0)
-  assert.equal(await page.locator('[data-context-boundary]').count(), 1)
+  assert.equal(await page.locator('[data-context-boundary]').count(), 0)
+  assert.equal(await page.locator('[data-product-id] input:checked').count(), 0)
   assert.equal(await page.locator('input[type="email"]').count(), 0)
+  await send('只要手持')
+  assert.equal(sentContexts.at(-1), oldContext)
+  assert.equal(await page.locator('[data-role="user"]').count(), 3)
+  assert.equal(await page.locator(`[data-history-context="${oldContext}"]`).getAttribute('aria-label'), '甲烷巡检手持设备')
+  await newContext.click()
+  await ready()
+  assert.equal(await page.locator('[data-message-id]').count(), 0)
   await page.evaluate(() => window.dispatchEvent(new CustomEvent('cooyue:search-keywords', { detail: { keywords: '所有气体红外成像' } })))
   assert.equal(await page.locator('#agent-message').inputValue(), '所有气体红外成像')
   await send('K10')
+  const k10Context = contextId
+  assert.equal(await page.locator('[data-role="user"]').count(), 1)
+  assert.equal(await page.locator('[data-product-id]').count(), 3)
   assert.equal(sentContexts.at(-1), contextId)
   assert.notEqual(sentContexts[0], sentContexts.at(-1))
+  await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 })
+  await ready()
+  assert.equal(await page.locator('[data-role="user"]').count(), 1)
+  assert.equal(await page.locator('[data-product-id]').count(), 3)
+  await selectHistory(oldContext)
+  assert.equal(await page.locator('[data-role="user"]').count(), 3)
+  assert.equal(await page.locator('[data-product-id]').count(), 9)
+  await selectHistory(k10Context)
+  assert.equal(await page.locator('[data-role="user"]').count(), 1)
+  await send('全部20款')
+  const largeReply = page.locator('[data-message-id][data-role="assistant"]').last()
+  const selectTwenty = largeReply.getByRole('checkbox', { name: '全选本轮产品', exact: true })
+  await selectTwenty.check()
+  assert.equal(await largeReply.locator('[data-product-id] input:checked').count(), 20)
+  await largeReply.locator('[data-product-id] input').last().uncheck()
+  assert.equal(await selectTwenty.evaluate((element) => element.indeterminate), true)
+  await selectTwenty.check()
+  await largeReply.getByRole('button', { name: '对比所选产品', exact: true }).click()
+  await largeReply.locator('table thead th').nth(20).waitFor()
+  await ready()
+  assert.equal(calls.filter((call) => call.path === 'compare').at(-1).body.productSlugs.length, 20)
+  assert.equal(await largeReply.locator('table thead th').count(), 21)
+  await selectTwenty.uncheck()
+  assert.equal(await largeReply.locator('[data-product-id] input:checked').count(), 0)
+  assert.equal(calls.filter((call) => call.path.endsWith('/confirm')).length, 1)
+  await largeReply.locator('[data-message-actions]').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: join(process.env.COOYUE_SCREENSHOT_DIR || '/tmp', `cooyue-chat-history-${mobile ? 'mobile' : 'desktop'}.png`) })
   failSearch = true
   await send('故障测试')
   assert.doesNotMatch(await page.locator('section[aria-labelledby="agent-search-title"]').getByRole('alert').innerText(), /AGENT_UPSTREAM_ERROR|普通搜索|下方/)
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ mobile, passed: true, updatedComparison: true, updatedInquiry: true, consentReconfirmed: true,
-    replySelectionsIndependent: true, historyCardsRestored: true, newContextPreservesHistory: true, actionScrollPositioned: true,
+    replySelectionsIndependent: true, historyCardsRestored: true, historyIsolatedAndSwitchable: true, summaryTitlesPersist: true,
+    selectAllTwenty: true, menuOpensChat: true, newContextPreservesHistory: true, actionScrollPositioned: true,
     sendScrollsToBottom: true, streamedReplyStaysAtBottom: true, detailsOpenInNewTab: true, alignedWidth: true, overflow: false, mockedDeliveries: 1, realEmailsSent: 0 }))
   await context.close()
 }

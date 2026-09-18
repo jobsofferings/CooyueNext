@@ -9,6 +9,7 @@ const { execute } = require("./service");
 const { refreshResult, loadContent } = require("./content");
 const { createTrace, diagnostic } = require("./trace");
 const { publicResult } = require("./presentation");
+const { publicContexts } = require("./contexts");
 
 function createRouters(dependencies = {}) {
   const publicRouter = express.Router();
@@ -60,19 +61,29 @@ function createRouters(dependencies = {}) {
     res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
   }));
 
+  publicRouter.post("/sessions/:id/contexts/:contextId/activate", rateLimit({ windowMs: 60000, limit: 30, standardHeaders: true, legacyHeaders: false,
+    message: { ok: false, error: "CONTEXT_RATE_LIMIT" } }), safe(async (req, res) => {
+    if (!UUID.test(req.params.id) || !UUID.test(req.params.contextId) || !req.body || Array.isArray(req.body) || Object.keys(req.body).length !== 1
+      || typeof req.body.contextId !== "string" || !UUID.test(req.body.contextId)) throw failure("INVALID_CONTEXT");
+    const identity = visitor(req, res, req.agentConfig);
+    const session = await storeOf(await resolvePool()).activateContext(req.params.id, identity.hash, req.params.contextId, req.body.contextId);
+    res.json({ ok: true, data: { id: session.id, contextId: session.context_id } });
+  }));
+
   publicRouter.get("/sessions/:id", safe(async (req, res) => {
     if (!UUID.test(req.params.id)) throw failure("SESSION_NOT_FOUND", 404);
     const identity = visitor(req, res, req.agentConfig);
     const pool = await resolvePool();
     const session = await storeOf(pool).get(req.params.id, identity.hash);
-    const snapshot = session.history.length ? await loadContent(pool, req.agentConfig, session.locale, AbortSignal.timeout(8000)) : null;
-    const history = session.history.map((turn) => {
+    const activeHistory = session.history.filter((turn) => (turn.contextId || session.id) === (session.context_id || session.id));
+    const snapshot = activeHistory.length ? await loadContent(pool, req.agentConfig, session.locale, AbortSignal.timeout(8000)) : null;
+    const history = activeHistory.map((turn) => {
       const products = turn.result.products.filter((product) => snapshot?.items.some((item) => item.key === `product:${product.id}` && item.card.version === product.version));
       const news = turn.result.news.filter((item) => snapshot?.items.some((entry) => entry.key === `news:${item.id}`));
       const changed = products.length !== turn.result.products.length || news.length !== turn.result.news.length;
       return { ...turn, contextId: turn.contextId || session.id, result: publicResult({ ...turn.result, products, news, message: changed ? (session.locale === "zh" ? "部分内容已更新或下架，请重新搜索。" : "Some content has changed. Please search again.") : turn.result.message }) };
     });
-    res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, history, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
+    res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, history, contexts: publicContexts(session), expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
   }));
 
   publicRouter.post("/sessions/:id/messages", safe(async (req, res) => {
@@ -140,6 +151,7 @@ function createRouters(dependencies = {}) {
         const result = await trace.step("refresh", (phaseSignal) => refreshResult(state.replay.result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
         emit("message_delta", { delta: publicResult(result).message });
         emit("results", publicResult(result));
+        emit("context", { contextId: state.session.context_id, contexts: publicContexts(state.session) });
       } else {
         let result = await run({ pool, config, session: state.session, message: input.message, signal: controller.signal, emit, metrics, trace });
         if (!dependencies.skipRefresh) result = await trace.step("refresh", (phaseSignal) => refreshResult(result, pool, config, state.session.locale, phaseSignal, trace), { signal: controller.signal });
@@ -148,8 +160,9 @@ function createRouters(dependencies = {}) {
         emit("status", { phase: "saving" });
         await checkpointWrite;
         await trace.step("audit", async () => {
-          await store.finish(state.session.id, state.runId, input.message, result, metrics);
+          const context = await store.finish(state.session.id, state.runId, input.message, result, metrics);
           state.finished = true;
+          if (context) emit("context", context);
         }, { timeoutMs: 8000 });
         await checkpointWrite;
         await store.checkpoint?.(state.runId, metrics, "completed").catch(() => log({ phase: "audit", code: "METRICS_FINALIZE_FAILED" }));

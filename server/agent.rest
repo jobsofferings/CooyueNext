@@ -2,6 +2,7 @@
 @baseUrl = http://127.0.0.1:3001
 @sessionId = replace-with-session-id
 @contextId = replace-with-current-context-id
+@historyContextId = replace-with-history-context-id
 @visitorCookie = replace-with-signed-cookie
 @adminSession = replace-with-management-session-cookie
 
@@ -28,7 +29,15 @@ Cookie: cooyue_agent_visitor={{visitorCookie}}
 
 {"contextId":"{{contextId}}"}
 
-### Same-browser history, no delete endpoint
+### Activate an owned retained conversation; expected current context protects other tabs
+POST {{siteUrl}}/api/agent/sessions/{{sessionId}}/contexts/{{historyContextId}}/activate
+Content-Type: application/json
+x-cooyue-agent: 1
+Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+{"contextId":"{{contextId}}"}
+
+### Current conversation history plus title list for switching; no delete endpoint
 GET {{siteUrl}}/api/agent/sessions/{{sessionId}}
 x-cooyue-agent: 1
 Cookie: cooyue_agent_visitor={{visitorCookie}}

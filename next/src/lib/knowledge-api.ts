@@ -1,3 +1,5 @@
+export const MAX_SELECTED_PRODUCTS = 20
+
 export interface KnowledgeProduct {
   slug: string
   name: string

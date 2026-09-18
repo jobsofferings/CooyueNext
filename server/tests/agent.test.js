@@ -13,6 +13,7 @@ const { createRouters } = require("../src/modules/agent/routes");
 const { createStore } = require("../src/modules/agent/store");
 const { consumeAgentStream, createAgentRequestId } = require("../../next/src/lib/agent-stream");
 const { createTrace } = require("../src/modules/agent/trace");
+const { contextTitle, publicContexts } = require("../src/modules/agent/contexts");
 const sources = require("../knowledge/gas-imaging-sources");
 const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
@@ -185,6 +186,10 @@ test("message schemas prohibit caller-supplied tools/history/URLs and redact obv
 test("only the named read-only tool is callable; unknown actions and extra arguments fail", () => {
   const call = { id: "call_1", function: { name: "search_public_content", arguments: JSON.stringify({ query: "甲烷 手持", type: "product" }) } };
   assert.equal(validateCall(call).type, "product");
+  const titled = validateCall({ ...call, function: { ...call.function, arguments: JSON.stringify({ query: "甲烷 手持", type: "product", title: "甲烷巡检手持设备" }) } });
+  assert.equal(titled.title, "甲烷巡检手持设备");
+  assert.equal(titled.query, "甲烷 手持");
+  assert.equal(validateCall({ ...call, function: { ...call.function, arguments: JSON.stringify({ query: "甲烷", type: "product", title: {} }) } }).title, undefined);
   for (const name of ["send_email", "execute_sql", "http_get", "delete_product", "confirm_inquiry"]) {
     assert.throws(() => validateCall({ ...call, function: { ...call.function, name } }), /INVALID_TOOL_CALL/);
   }
@@ -451,12 +456,13 @@ test("one search tool, up to two model calls, explanatory deltas before typed re
   const metrics = {};
   const base = { pool: {}, config, session: { locale: "zh", history: [], clarification_count: 0 }, message: "甲烷",
     signal: new AbortController().signal, emit: (event, data) => events.push({ event, data }), metrics,
-    provider: { async select() { return { input: { query: "甲烷", type: "all" } }; }, async explain(_selection, _result, _signal, emit) { emit("按已审核气体条件检索到候选。 "); } },
+    provider: { async select() { return { input: { query: "甲烷", type: "all", title: "甲烷巡检手持设备" } }; }, async explain(_selection, _result, _signal, emit) { emit("按已审核气体条件检索到候选。 "); } },
     search: async () => ({ query: "甲烷", status: "matches", products: [content()[0].card], news: [], clarification: null, retrieval: { mode: "keyword-only" } }) };
   const result = await execute(base);
   assert.match(result.message, /审核/);
   assert.equal(metrics.modelCalls, 2);
   assert.equal(metrics.toolCalls, 1);
+  assert.equal(metrics.contextTitle, "甲烷巡检手持设备");
   assert.ok(events.some((entry) => entry.event === "message_delta"));
   const noResults = async () => ({ query: "甲烷", status: "no_matches", products: [], news: [], clarification: null, retrieval: {} });
   const tenth = await execute({ ...base, metrics: {}, session: { ...base.session, clarification_count: 9 }, search: noResults });
@@ -492,6 +498,15 @@ test("new context API is browser-owned, bounded and cannot delete history or inv
   let changes = 0;
   const store = {
     async session(identity) { owner = identity.hash; return session; },
+    async get(id, visitorHash) { assert.equal(id, session.id); assert.equal(visitorHash, owner); return session; },
+    async activateContext(id, visitorHash, target, expected) {
+      assert.equal(id, session.id);
+      assert.equal(visitorHash, owner);
+      if (expected !== session.context_id) throw Object.assign(new Error("CONTEXT_CHANGED"), { code: "CONTEXT_CHANGED", status: 409 });
+      if (!session.history.some((turn) => turn.contextId === target)) throw Object.assign(new Error("CONTEXT_NOT_FOUND"), { code: "CONTEXT_NOT_FOUND", status: 404 });
+      session.context_id = target;
+      return session;
+    },
     async newContext(id, visitorHash, expected) {
       assert.equal(id, session.id);
       assert.equal(visitorHash, owner);
@@ -523,6 +538,22 @@ test("new context API is browser-owned, bounded and cannot delete history or inv
     assert.equal((await fetch(url, { method: "POST", headers, body: JSON.stringify({ contextId: firstContext }) })).status, 409);
     assert.equal((await fetch(url, { method: "DELETE", headers })).status, 404);
     assert.equal(changes, 1);
+    session.history.push({ contextId: firstContext, user: "旧会话完整内容", result: { query: "甲烷巡检", message: "旧会话完整回答", products: [], news: [] }, createdAt: new Date().toISOString() });
+    const empty = (await (await fetch(`${base}/sessions/${session.id}`, { headers })).json()).data;
+    assert.deepEqual(empty.history, []);
+    assert.equal(empty.contexts.find((context) => context.id === firstContext).title, "甲烷巡检");
+    assert.doesNotMatch(JSON.stringify(empty), /旧会话完整/);
+    const activate = `${url}/${firstContext}/activate`;
+    for (const body of [{ contextId: "invalid" }, { contextId: session.context_id, deleteHistory: true }, []]) {
+      assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify(body) })).status, 400);
+    }
+    assert.equal((await fetch(activate, { method: "POST", headers: { ...headers, cookie: "" }, body: JSON.stringify({ contextId: session.context_id }) })).status, 404);
+    assert.equal((await fetch(`${url}/${randomUUID()}/activate`, { method: "POST", headers, body: JSON.stringify({ contextId: session.context_id }) })).status, 404);
+    const expected = session.context_id;
+    assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify({ contextId: expected }) })).status, 200);
+    assert.equal(session.context_id, firstContext);
+    assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify({ contextId: expected }) })).status, 409);
+    assert.equal((await fetch(activate, { method: "DELETE", headers })).status, 404);
     assert.doesNotThrow(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: session.context_id }));
     assert.throws(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: "invalid" }), /INVALID_MESSAGE/);
   } finally { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); }
@@ -534,7 +565,7 @@ test("HTTP gates reject untrusted public calls, anonymous admin access, unknown/
   const store = {
     async session() { return { id: sessionId, locale: "zh", expires_at: new Date(), clarification_count: 0 }; },
     async begin(id) { if (id !== sessionId) throw Object.assign(new Error("SESSION_NOT_FOUND"), { status: 404, code: "SESSION_NOT_FOUND" }); return { session: { id, locale: "zh", history: [] }, runId: randomUUID() }; },
-    async finish(...args) { audit.push(args); },
+    async finish(...args) { audit.push(args); return { contextId: sessionId, contexts: [{ id: sessionId, title: "甲烷巡检", turnCount: 1, updatedAt: new Date().toISOString() }] }; },
   };
   const routers = createRouters({ configOf: () => config, resolvePool: async () => ({}), storeOf: () => store, skipRefresh: true,
     execute: async ({ emit }) => { emit("message_delta", { delta: "结果" }); return { status: "matches", products: [], news: [] }; } });
@@ -555,7 +586,7 @@ test("HTTP gates reject untrusted public calls, anonymous admin access, unknown/
     const response = await fetch(`${base}/sessions/${sessionId}/messages`, { method: "POST", headers: { ...headers, cookie }, body: JSON.stringify({ message: "甲烷", requestId: randomUUID() }) });
     const frames = [];
     await consumeAgentStream(response, (event) => frames.push(event));
-    assert.deepEqual(frames, ["meta", "status", "message_delta", "status", "results", "done"]);
+    assert.deepEqual(frames, ["meta", "status", "message_delta", "status", "context", "results", "done"]);
     assert.equal(audit.length, 1);
     assert.equal(audit[0][5], undefined);
     const foreign = await fetch(`${base}/sessions/${randomUUID()}/messages`, { method: "POST", headers: { ...headers, cookie }, body: JSON.stringify({ message: "甲烷", requestId: randomUUID() }) });
@@ -567,8 +598,9 @@ test("store binds session to owner and expiry, rolls history to ten turns and co
   const statements = [];
   const history = Array.from({ length: 10 }, (_, index) => ({ user: String(index), result: {} }));
   const runId = randomUUID();
+  const sessionId = randomUUID();
   const pool = { async query(sql, values) { statements.push([sql, values]); return { rows: [] }; },
-    async connect() { return { async query(sql, values) { statements.push([sql, values]); return { rows: sql.startsWith("SELECT history") ? [{ history, active_run: runId }] : [] }; }, release() {} }; } };
+    async connect() { return { async query(sql, values) { statements.push([sql, values]); return { rows: sql.startsWith("SELECT *") ? [{ id: sessionId, context_id: sessionId, locale: "zh", history, clarification_count: 0, active_run: runId }] : [] }; }, release() {} }; } };
   const store = createStore(pool);
   await assert.rejects(store.get(randomUUID(), "wrong-owner"), /SESSION_NOT_FOUND/);
   assert.match(statements[0][0], /visitor_hash = \$2 AND expires_at > now\(\)/);
@@ -577,6 +609,16 @@ test("store binds session to owner and expiry, rolls history to ten turns and co
   assert.equal(JSON.parse(update[1][1]).length, 10);
   assert.equal(JSON.parse(update[1][1])[0].user, "1");
   assert.equal(update[1][2], 1);
+});
+
+test("conversation titles summarize the need, redact private strings and remain bounded", () => {
+  assert.equal(contextTitle("我要找用于甲烷巡检的手持设备，帮我对比候选", "zh"), "甲烷巡检的手持设备");
+  assert.equal(contextTitle("Please find handheld methane cameras", "en"), "handheld methane cameras");
+  assert.doesNotMatch(contextTitle("甲烷 a@example.test 13812345678 https://private.example/lookup", "zh"), /example|13812345678|https/);
+  assert.equal(contextTitle("", "zh"), "产品与资料查询");
+  assert.equal(Array.from(contextTitle("甲烷🔍".repeat(100), "zh")).length, 31);
+  assert.deepEqual(publicContexts({ id: "legacy", context_id: "empty", locale: "zh", history: [{ user: "我要看 K10", result: {}, createdAt: "2026-09-18T00:00:00Z" }] }).map((context) => [context.id, context.title]),
+    [["empty", "新对话"], ["legacy", "K10"]]);
 });
 
 test("source-level boundaries retain independent original APIs and deny agent admin proxy/deletion", () => {

@@ -3,11 +3,12 @@
 import { createContext, useContext, useEffect, useRef, useState, type FormEvent } from 'react'
 import { CopilotChatView, type CopilotChatInput, type CopilotChatMessageView } from '@copilotkit/react-core/v2'
 import type { Locale } from '@/i18n-config'
-import { agentRequest, type AgentResult, type AgentTurn } from '@/lib/agent-api'
+import { agentRequest, type AgentContext, type AgentResult, type AgentSession } from '@/lib/agent-api'
 import { consumeAgentStream, createAgentRequestId } from '@/lib/agent-stream'
-import { appendChatTurn, chatHistory, contextEntry, createTextReveal, type ChatEntry } from '@/lib/agent-presentation'
+import { appendChatTurn, chatHistory, createTextReveal, type ChatEntry } from '@/lib/agent-presentation'
 import { scrollChatTarget } from '@/lib/agent-scroll'
 import AgentReply from './AgentReply'
+import AgentHistory from './AgentHistory'
 import '@copilotkit/react-core/v2/styles.css'
 import styles from './agent.module.css'
 
@@ -32,9 +33,6 @@ function ChatMessages() {
       <div className={styles.bubble}><strong>Cooyue {chinese ? '选型助手' : 'Assistant'}</strong><p>{chinese ? '您好！告诉我使用场景、目标气体或产品型号，我会帮您找到相关产品和资料。' : 'Hello! Tell me the application, target gas or model. I’ll help you find relevant products and information.'}</p></div>
     </article>
     {state.entries.map((entry) => {
-      if (entry.kind === 'context') return <div key={entry.id} id={entry.id} className={styles.contextBoundary} data-context-boundary role="status">
-        {chinese ? '新对话已开始，不沿用之前的需求。历史记录仍保留。' : 'New context started. Previous requirements will not carry over; history is retained.'}
-      </div>
       const active = state.busy && entry.id === state.activeId
       if (entry.role === 'assistant') return <AgentReply key={entry.id} entry={entry} locale={state.locale} active={active} phase={phase} elapsed={state.elapsed} disabled={state.disabled || state.busy} onBusyChange={state.onActionBusy} />
       return <article key={entry.id} className={styles.user} data-role="user" data-message-id={entry.id}>
@@ -71,7 +69,7 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
   const [sessionId, setSessionId] = useState('')
   const [contextId, setContextId] = useState('')
   const [switching, setSwitching] = useState(false)
-  const [scrollContextId, setScrollContextId] = useState('')
+  const [contexts, setContexts] = useState<AgentContext[]>([])
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [input, setInput] = useState(initialQuery)
   const [actionBusy, setActionBusy] = useState(false)
@@ -102,22 +100,16 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
     let disposed = false
     const abort = new AbortController()
     const timeout = window.setTimeout(() => abort.abort(), 15000)
-    setSessionId(''); setContextId(''); setEntries([]); setError(''); setSwitching(false)
+    setSessionId(''); setContextId(''); setContexts([]); setEntries([]); setError(''); setSwitching(false)
     agentRequest<{ id: string }>('sessions', { locale }, abort.signal).then(async (session) => {
-      const previous = await agentRequest<{ history: AgentTurn[]; contextId: string }>(`sessions/${session.id}`, undefined, abort.signal)
+      const previous = await agentRequest<AgentSession>(`sessions/${session.id}`, undefined, abort.signal)
       if (abort.signal.aborted) return
-      setSessionId(session.id); setContextId(previous.contextId); setEntries(chatHistory(previous.history, previous.contextId))
+      setSessionId(session.id); setContextId(previous.contextId); setContexts(previous.contexts || []); setEntries(chatHistory(previous.history, previous.contextId))
     }).catch(() => {
       if (!disposed) setError(chinese ? '暂时无法连接助手，请稍后重试。' : 'Unable to connect. Please retry shortly.')
     }).finally(() => window.clearTimeout(timeout))
     return () => { disposed = true; mounted.current = false; window.clearTimeout(timeout); abort.abort(); controller.current?.abort(); contextController.current?.abort() }
   }, [locale, chinese, retry])
-
-  useEffect(() => {
-    if (!scrollContextId) return
-    document.getElementById('agent-message')?.focus({ preventScroll: true })
-    return scrollChatTarget(document.getElementById(`context-${scrollContextId}`), { focus: false })
-  }, [scrollContextId])
 
   useEffect(() => {
     if (!activeId) return
@@ -156,6 +148,7 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
         const data = payload as Record<string, unknown>
         if (name === 'message_delta' && typeof data.delta === 'string') reveal.push(data.delta)
         if (name === 'status' && typeof data.phase === 'string') setPhase(data.phase)
+        if (name === 'context' && data.contextId === contextId && Array.isArray(data.contexts)) setContexts(data.contexts as AgentContext[])
         if (name === 'results') {
           result = payload as AgentResult
           updateEntry({ result })
@@ -180,20 +173,21 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
     }
   }
 
-  async function newContext() {
-    if (!sessionId || !contextId || busy || actionBusy || switching || contextController.current) return
+  async function switchContext(target?: string) {
+    if (!sessionId || !contextId || busy || actionBusy || switching || contextController.current || target === contextId) return
     const abort = new AbortController()
     contextController.current = abort
     const timeout = window.setTimeout(() => abort.abort(), 15000)
     setSwitching(true); setError('')
     try {
-      const next = await agentRequest<{ contextId: string }>(`sessions/${sessionId}/contexts`, { contextId }, abort.signal)
+      await agentRequest(`sessions/${sessionId}/contexts${target ? `/${target}/activate` : ''}`, { contextId }, abort.signal)
+      const next = await agentRequest<AgentSession>(`sessions/${sessionId}`, undefined, abort.signal)
       if (!mounted.current || abort.signal.aborted) return
-      setContextId(next.contextId); setInput(''); setEntries((previous) => [...previous, contextEntry(next.contextId)]); setScrollContextId(next.contextId)
+      setContextId(next.contextId); setContexts(next.contexts || []); setInput(''); setEntries(chatHistory(next.history, next.contextId)); setActiveId('')
     } catch (failure) {
       if (mounted.current) {
         if ((failure as { code?: string }).code === 'CONTEXT_CHANGED') setRetry((value) => value + 1)
-        else setError(chinese ? '暂时无法开始新对话，请稍后重试。原对话仍保留。' : 'Unable to start a new context. Try again shortly; your conversation is retained.')
+        else setError(chinese ? '暂时无法切换会话，请稍后重试。原对话仍保留。' : 'Unable to switch conversations. Try again shortly; your conversation is retained.')
       }
     } finally {
       window.clearTimeout(timeout); contextController.current = null
@@ -204,13 +198,16 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
   const state: ChatState = { locale, entries, busy, activeId, phase, elapsed, input, ready: Boolean(sessionId && contextId), error, disabled: actionBusy || switching,
     onInput: setInput, onSubmit: submit, onRetry: () => setRetry((value) => value + 1), onActionBusy: setActionBusy }
   return <section className={styles.panel} aria-labelledby="agent-search-title">
-    <header className={styles.heading}><h1 id="agent-search-title">{chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates'}</h1>
-      <button type="button" className={styles.newContext} onClick={() => void newContext()} disabled={!sessionId || busy || actionBusy || switching || !entries.some((entry) => entry.role === 'user' && entry.contextId === contextId)}
+    <header className={styles.heading}><h1 id="agent-search-title">{contexts.find((context) => context.id === contextId && context.turnCount)?.title || (chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates')}</h1>
+      <button type="button" className={styles.newContext} onClick={() => void switchContext()} disabled={!sessionId || busy || actionBusy || switching || !entries.some((entry) => entry.role === 'user')}
         aria-label={chinese ? 'New · 开始新上下文' : 'New · Start a new context'} title={chinese ? '开始新上下文，不删除历史' : 'Start a new context without deleting history'}><span aria-hidden="true">＋</span>{switching ? '···' : 'New'}</button>
     </header>
-    <ChatContext.Provider value={state}>
-      <CopilotChatView className={styles.chat} messages={entries} isRunning={busy} autoScroll="pin-to-bottom" welcomeScreen={false}
-        messageView={ChatMessages as unknown as typeof CopilotChatMessageView} input={ChatInput as unknown as typeof CopilotChatInput} />
-    </ChatContext.Provider>
+    <div className={styles.workspace}>
+      <AgentHistory locale={locale} contexts={contexts} activeId={contextId} disabled={!sessionId || busy || actionBusy || switching} onSelect={(id) => void switchContext(id)} />
+      <ChatContext.Provider value={state}>
+        <CopilotChatView key={contextId} className={styles.chat} messages={entries} isRunning={busy} autoScroll="pin-to-bottom" welcomeScreen={false}
+          messageView={ChatMessages as unknown as typeof CopilotChatMessageView} input={ChatInput as unknown as typeof CopilotChatInput} />
+      </ChatContext.Provider>
+    </div>
   </section>
 }

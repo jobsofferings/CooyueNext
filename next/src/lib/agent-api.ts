@@ -11,6 +11,8 @@ export interface AgentResult {
 }
 
 export interface AgentTurn { user: string; result: AgentResult; createdAt: string; contextId?: string }
+export interface AgentContext { id: string; title: string; turnCount: number; updatedAt: string | null }
+export interface AgentSession { id: string; contextId: string; history: AgentTurn[]; contexts: AgentContext[] }
 
 export async function agentRequest<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api/agent/${path}`, {

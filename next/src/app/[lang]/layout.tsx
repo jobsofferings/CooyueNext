@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Header, Footer, MobileNav, SearchPopup, ScrollToTop } from '@/components/layout'
+import { Header, Footer, MobileNav, ScrollToTop } from '@/components/layout'
 import { NavigationProvider } from '@/components/layout/NavigationProvider'
 import { getProductCategories } from '@/lib/products-api'
 import { notFound } from 'next/navigation'
@@ -42,7 +42,6 @@ export default async function LocaleLayout({
         <Footer />
       </div>
       <MobileNav />
-      <SearchPopup />
       <ScrollToTop />
     </NavigationProvider>
   )

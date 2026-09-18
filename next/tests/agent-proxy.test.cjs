@@ -46,6 +46,25 @@ test('the context endpoint is same-origin POST only; it cannot expose deletion o
   assert.equal(calls, 1)
 })
 
+test('history activation is exact same-origin POST only, without exposing arbitrary context actions', async () => {
+  const path = ['sessions', randomUUID(), 'contexts', randomUUID(), 'activate']
+  let calls = 0
+  const route = gateway(async (url, options) => {
+    calls += 1
+    assert.equal(url, `http://backend.test/api/agent/${path.join('/')}`)
+    assert.equal(options.method, 'POST')
+    return Response.json({ ok: true })
+  })
+  assert.equal((await route.POST(request(path.join('/'), { contextId: randomUUID() }), { params: { path } })).status, 200)
+  assert.equal((await route.POST(request(path.join('/'), {}, { origin: 'https://attacker.test' }), { params: { path } })).status, 403)
+  assert.equal((await route.GET(new NextRequest(`https://site.test/api/agent/${path.join('/')}`), { params: { path } })).status, 404)
+  for (const action of ['delete', 'export', 'messages']) {
+    const forbidden = [...path.slice(0, -1), action]
+    assert.equal((await route.POST(request(forbidden.join('/')), { params: { path: forbidden } })).status, 404)
+  }
+  assert.equal(calls, 1)
+})
+
 test('agent gateway denies cross-site requests, missing client headers and unavailable configuration', async () => {
   let calls = 0
   const route = gateway(async () => { calls += 1; return Response.json({ ok: true }) })

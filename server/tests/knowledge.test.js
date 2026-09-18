@@ -57,7 +57,7 @@ test("reviewed source manifest has stable, unique bilingual source and chunk key
 test("invalid locale, duplicate selection, oversized selection and SQL-looking slugs are rejected", () => {
   assert.throws(() => localeOf("fr"));
   assert.throws(() => slugsOf(["flir-g306", "flir-g306"]));
-  assert.throws(() => slugsOf(Array.from({ length: 13 }, (_, index) => `product-${index}`)));
+  assert.throws(() => slugsOf(Array.from({ length: 21 }, (_, index) => `product-${index}`)));
   assert.throws(() => slugsOf(["' OR 1=1 --"]));
 });
 

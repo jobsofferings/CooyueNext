@@ -22,9 +22,9 @@ function localeOf(value) {
 }
 
 function slugsOf(value, minimum = 1) {
-  if (!Array.isArray(value) || value.length < minimum || value.length > 12
+  if (!Array.isArray(value) || value.length < minimum || value.length > 20
     || value.some((slug) => typeof slug !== "string" || !/^[a-z0-9-]{1,120}$/.test(slug))
-    || new Set(value).size !== value.length) fail("Select up to twelve distinct products");
+    || new Set(value).size !== value.length) fail("Select up to twenty distinct products");
   return value;
 }
 

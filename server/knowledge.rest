@@ -21,7 +21,7 @@ Content-Type: application/json
 
 {"locale":"zh","query":"气体成像"}
 
-### Compare 2-12 published products; no prices, internal product details
+### Compare 2-20 published products; no prices, internal product details
 POST {{baseUrl}}/api/knowledge/compare
 Content-Type: application/json
 

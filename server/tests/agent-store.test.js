@@ -5,6 +5,7 @@ const { readFileSync } = require("node:fs");
 const { join } = require("node:path");
 const { PGlite } = require("@electric-sql/pglite");
 const { createStore } = require("../src/modules/agent/store");
+const { publicContexts } = require("../src/modules/agent/contexts");
 
 test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, history, admin queries and retention", async (context) => {
   const database = new PGlite();
@@ -24,6 +25,9 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
     const contextsMigration = readFileSync(join(__dirname, "../migrations/products/010_agent_contexts.sql"), "utf8");
     await database.exec(contextsMigration);
     await database.exec(contextsMigration);
+    const summariesMigration = readFileSync(join(__dirname, "../migrations/products/011_agent_context_summaries.sql"), "utf8");
+    await database.exec(summariesMigration);
+    await database.exec(summariesMigration);
     await context.test("same browser/locale reuses identity and expiry; owner and expired sessions cannot read", async () => {
       session = await store.session(identity, "zh");
       assert.equal((await store.session(identity, "zh")).id, session.id);
@@ -108,7 +112,8 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       const state = await store.begin(session.id, identity.hash, { ...input(), contextId: next.context_id }, config);
       assert.deepEqual(state.session.history, []);
       await assert.rejects(store.newContext(session.id, identity.hash, next.context_id), /SESSION_BUSY/);
-      await store.finish(session.id, state.runId, "K10", result, {});
+      const finished = await store.finish(session.id, state.runId, "K10", result, { contextTitle: "K10 产品选型" });
+      assert.equal(finished.contexts.find((context) => context.id === next.context_id).title, "K10 产品选型");
       const stored = await store.get(session.id, identity.hash);
       assert.equal(stored.history.length, 10);
       assert.equal(stored.history.at(-1).contextId, next.context_id);
@@ -116,6 +121,46 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       assert.equal(followup.session.history.length, 1);
       assert.equal(followup.session.history[0].user, "K10");
       await store.finish(session.id, followup.runId, "more", null, {}, "CLIENT_DISCONNECTED", "cancelled");
+    });
+    await context.test("switching restores only owned context history, stable titles and clarification counts", async () => {
+      const saved = await store.get(session.id, identity.hash);
+      const currentId = saved.context_id;
+      const previousId = saved.history[0].contextId;
+      await assert.rejects(store.activateContext(session.id, "foreign", previousId, currentId), /SESSION_NOT_FOUND/);
+      await assert.rejects(store.activateContext(session.id, identity.hash, previousId, randomUUID()), /CONTEXT_CHANGED/);
+      await assert.rejects(store.activateContext(session.id, identity.hash, randomUUID(), currentId), /CONTEXT_NOT_FOUND/);
+      const switched = await store.activateContext(session.id, identity.hash, previousId, currentId);
+      assert.equal(switched.clarification_count, 10);
+      assert.deepEqual(switched.history, saved.history);
+      const state = await store.begin(session.id, identity.hash, { ...input(), contextId: previousId }, config);
+      assert(state.session.history.every((turn) => turn.contextId === previousId));
+      assert(!state.session.history.some((turn) => turn.user === "K10"));
+      await assert.rejects(store.activateContext(session.id, identity.hash, currentId, previousId), /SESSION_BUSY/);
+      await store.finish(session.id, state.runId, "cancel", null, {}, "CLIENT_DISCONNECTED", "cancelled");
+      const restored = await store.activateContext(session.id, identity.hash, currentId, previousId);
+      assert.equal(restored.clarification_count, 0);
+      const followup = await store.begin(session.id, identity.hash, { ...input(), contextId: currentId }, config);
+      const finished = await store.finish(session.id, followup.runId, "继续比较", result, { contextTitle: "不替换原来的标题" });
+      assert.equal(finished.contexts.find((context) => context.id === currentId).title, "K10 产品选型");
+      await assert.rejects(store.begin(session.id, identity.hash, input(), { ...config, visitorHourlyLimit: 1 }), /VISITOR_RATE_LIMIT/);
+    });
+    await context.test("titles follow ten-turn retention and expired context IDs cannot be reactivated", async () => {
+      const visitor = { hash: "retention-visitor", expiresAt: identity.expiresAt };
+      const first = await store.session(visitor, "zh");
+      const firstRun = await store.begin(first.id, visitor.hash, input(), config);
+      await store.finish(first.id, firstRun.runId, "旧需求", result, { contextTitle: "旧需求" });
+      const next = await store.newContext(first.id, visitor.hash, first.context_id);
+      for (let index = 0; index < 10; index += 1) {
+        const state = await store.begin(first.id, visitor.hash, { ...input(), contextId: next.context_id }, config);
+        await store.finish(first.id, state.runId, `新需求 ${index}`, result, { contextTitle: "新需求" });
+      }
+      const retained = await store.get(first.id, visitor.hash);
+      assert.equal(retained.history.length, 10);
+      assert.deepEqual(publicContexts(retained).map((context) => context.id), [next.context_id]);
+      assert.deepEqual(Object.keys(retained.context_summaries), [next.context_id]);
+      await assert.rejects(store.activateContext(first.id, visitor.hash, first.context_id, next.context_id), /CONTEXT_NOT_FOUND/);
+      await database.exec(summariesMigration);
+      assert.equal((await store.get(first.id, visitor.hash)).history.length, 10);
     });
     await context.test("legacy migration preserves existing history and tags its original context", async () => {
       const legacy = randomUUID();

@@ -111,14 +111,16 @@ test("sparse features support bilingual component aliases and model boundaries",
   assert.match(catalogScope(), /product.visibility = 'published'/);
 });
 
-test("comparison handles twelve products and uses only internal product details without prices", async () => {
+test("comparison and inquiry drafts accept all twenty returned products but reject twenty-one", async () => {
   const pool = fixturePool();
-  pool.products.push(...Array.from({ length: 8 }, (_, index) => ({ ...pool.products[0], slug: `board-${index}` })));
+  pool.products.push(...Array.from({ length: 16 }, (_, index) => ({ ...pool.products[0], slug: `board-${index}` })));
   const result = await createService(pool).compare({ locale: "zh", productSlugs: pool.products.map((product) => product.slug) });
-  assert.equal(result.products.length, 12);
+  assert.equal(result.products.length, 20);
   assert.ok(result.products.every((product) => product.detailPath.startsWith("/zh/products/") && !("price" in product)));
   assert.ok(result.products.every((product) => product.metrics.every((metric) => !metric.label.includes("价格"))));
-  assert.throws(() => slugsOf(Array.from({ length: 13 }, (_, index) => `board-${index}`)));
+  assert.throws(() => slugsOf(Array.from({ length: 21 }, (_, index) => `board-${index}`)));
+  const draft = await createService(pool).draft({ locale: "zh", query: "板卡", productSlugs: pool.products.map((product) => product.slug) });
+  assert.equal(draft.summary.products.length, 20);
 });
 
 test("draft enforces a combined 1000-character manual-content limit before storing", async () => {

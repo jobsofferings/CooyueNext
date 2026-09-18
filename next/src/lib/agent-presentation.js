@@ -43,20 +43,13 @@ function createTextReveal(onChange, { intervalMs = 20, reducedMotion = false, sc
   };
 }
 
-function contextEntry(contextId) {
-  return { id: `context-${contextId}`, role: "assistant", kind: "context", contextId, content: "" };
-}
-
 function chatHistory(history, currentContextId) {
   const entries = [];
-  let previousContext;
-  for (const [index, turn] of history.entries()) {
-    if (index > 0 && turn.contextId !== previousContext) entries.push(contextEntry(turn.contextId));
+  const current = currentContextId ? history.filter((turn) => !turn.contextId || turn.contextId === currentContextId) : history;
+  for (const [index, turn] of current.entries()) {
     entries.push({ id: `history-${turn.createdAt}-${index}-user`, role: "user", content: turn.user, contextId: turn.contextId },
       { id: `history-${turn.createdAt}-${index}-assistant`, role: "assistant", content: turn.result.message, result: turn.result, contextId: turn.contextId });
-    previousContext = turn.contextId;
   }
-  if (history.length && currentContextId && currentContextId !== previousContext) entries.push(contextEntry(currentContextId));
   return entries;
 }
 
@@ -66,4 +59,4 @@ function appendChatTurn(entries, user, assistant) {
   return [...entries.slice(start), user, assistant];
 }
 
-module.exports = { createTextReveal, chatHistory, contextEntry, appendChatTurn };
+module.exports = { createTextReveal, chatHistory, appendChatTurn };

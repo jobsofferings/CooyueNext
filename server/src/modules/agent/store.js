@@ -1,6 +1,7 @@
 const { randomUUID } = require("crypto");
 const { failure } = require("./config");
 const { redact } = require("./security");
+const { contextTitle, contextsOf, contextMetadata, publicContexts } = require("./contexts");
 
 function createStore(pool) {
   async function transaction(operation) {
@@ -36,8 +37,21 @@ function createStore(pool) {
         if (session.context_id !== expectedContext) throw failure("CONTEXT_CHANGED", 409);
         if (session.busy_until && new Date(session.busy_until) > new Date()) throw failure("SESSION_BUSY", 409);
         if (session.active_run) await client.query("UPDATE agent.runs SET status = 'timeout', error_code = 'WORKER_INTERRUPTED', finished_at = now() WHERE id = $1 AND status = 'running'", [session.active_run]);
-        return (await client.query(`UPDATE agent.sessions SET context_id = $2, clarification_count = 0, active_run = NULL, busy_until = NULL
-          WHERE id = $1 RETURNING id, locale, context_id, expires_at, clarification_count`, [sessionId, randomUUID()])).rows[0];
+        return (await client.query(`UPDATE agent.sessions SET context_id = $2, clarification_count = 0, active_run = NULL, busy_until = NULL, context_summaries = $3
+          WHERE id = $1 RETURNING *`, [sessionId, randomUUID(), JSON.stringify(contextMetadata(session))])).rows[0];
+      });
+    },
+    async activateContext(sessionId, visitorHash, contextId, expectedContext) {
+      return transaction(async (client) => {
+        const session = await owned(client, sessionId, visitorHash, true);
+        if (session.context_id !== expectedContext) throw failure("CONTEXT_CHANGED", 409);
+        if (session.busy_until && new Date(session.busy_until) > new Date()) throw failure("SESSION_BUSY", 409);
+        const target = contextsOf(session).find((context) => context.id === contextId);
+        if (!target) throw failure("CONTEXT_NOT_FOUND", 404);
+        if (session.active_run) await client.query("UPDATE agent.runs SET status = 'timeout', error_code = 'WORKER_INTERRUPTED', finished_at = now() WHERE id = $1 AND status = 'running'", [session.active_run]);
+        return (await client.query(`UPDATE agent.sessions SET context_id = $2, clarification_count = $3, context_summaries = $4,
+          active_run = NULL, busy_until = NULL WHERE id = $1 RETURNING *`,
+        [sessionId, contextId, target.clarificationCount, JSON.stringify(contextMetadata(session))])).rows[0];
       });
     },
     async checkpoint(runId, metrics, status = "running") {
@@ -70,13 +84,19 @@ function createStore(pool) {
     },
     async finish(sessionId, runId, user, result, metrics, errorCode, status = "completed") {
       return transaction(async (client) => {
-        const session = (await client.query("SELECT history, clarification_count, active_run, context_id FROM agent.sessions WHERE id = $1 FOR UPDATE", [sessionId])).rows[0];
+        const session = (await client.query("SELECT * FROM agent.sessions WHERE id = $1 FOR UPDATE", [sessionId])).rows[0];
         if (!session || session.active_run !== runId) throw failure("RUN_LEASE_LOST", 409);
         const history = result ? [...session.history, { user: redact(user), result, contextId: session.context_id, createdAt: new Date().toISOString() }].slice(-10) : session.history;
         await client.query(`UPDATE agent.runs SET status = $2, result = $3, metrics = $4, error_code = $5, finished_at = now()
           WHERE id = $1 AND status = 'running'`, [runId, status, result ? JSON.stringify(result) : null, JSON.stringify({ ...metrics, contextId: session.context_id }), errorCode || null]);
-        await client.query(`UPDATE agent.sessions SET history = $2, clarification_count = LEAST(10, clarification_count + $3),
-          active_run = NULL, busy_until = NULL WHERE id = $1`, [sessionId, JSON.stringify(history), result?.clarification ? 1 : 0]);
+        const updated = { ...session, history, clarification_count: Math.min(10, session.clarification_count + (result?.clarification ? 1 : 0)) };
+        updated.context_summaries = contextMetadata(updated);
+        if (result && !session.history.some((turn) => (turn.contextId || session.id) === session.context_id)) {
+          updated.context_summaries[session.context_id].title = contextTitle(metrics.contextTitle || result.query || user, session.locale);
+        }
+        await client.query(`UPDATE agent.sessions SET history = $2, clarification_count = $3, context_summaries = $4,
+          active_run = NULL, busy_until = NULL WHERE id = $1`, [sessionId, JSON.stringify(history), updated.clarification_count, JSON.stringify(updated.context_summaries)]);
+        return { contextId: session.context_id, contexts: publicContexts(updated) };
       });
     },
     async list({ status, page, pageSize }) {

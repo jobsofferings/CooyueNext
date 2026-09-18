@@ -2,6 +2,7 @@ const { createProvider } = require("./provider");
 const { searchPublicContent } = require("./search");
 const { redact } = require("./security");
 const { createTrace, diagnostic } = require("./trace");
+const { contextTitle } = require("./contexts");
 
 function emptyMessage(locale) {
   return locale === "zh" ? "当前资料没有确认符合条件的产品" : "The current evidence does not confirm products matching these requirements.";
@@ -45,6 +46,7 @@ async function execute({ pool, config, session, message, signal, emit, provider 
   const result = await trace.step("search", (phaseSignal) => search({ pool, config, provider: searchProvider, input: selection.input, message,
     previousQuery: previous?.query, previousConditions: previous?.constraints, locale: session.locale, signal: phaseSignal, onUsage: usage, trace }), { signal, timeoutMs: 12000 });
   if (selection.fallback) result.retrieval = { ...result.retrieval, degraded: true, understandingFallback: true };
+  if (!session.history.length) metrics.contextTitle = contextTitle(selection.input.title || result.query || message, session.locale);
   signal.throwIfAborted();
   metrics.events.push({ tool: "search_public_content", durationMs: Date.now() - searchStarted, products: result.products.length, news: result.news.length, retrieval: result.retrieval });
   metrics.retrieval = result.retrieval.mode;
