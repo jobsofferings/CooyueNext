@@ -499,10 +499,9 @@ test("new context API is browser-owned, bounded and cannot delete history or inv
   const store = {
     async session(identity) { owner = identity.hash; return session; },
     async get(id, visitorHash) { assert.equal(id, session.id); assert.equal(visitorHash, owner); return session; },
-    async activateContext(id, visitorHash, target, expected) {
+    async activateContext(id, visitorHash, target) {
       assert.equal(id, session.id);
       assert.equal(visitorHash, owner);
-      if (expected !== session.context_id) throw Object.assign(new Error("CONTEXT_CHANGED"), { code: "CONTEXT_CHANGED", status: 409 });
       if (!session.history.some((turn) => turn.contextId === target)) throw Object.assign(new Error("CONTEXT_NOT_FOUND"), { code: "CONTEXT_NOT_FOUND", status: 404 });
       session.context_id = target;
       return session;
@@ -540,9 +539,10 @@ test("new context API is browser-owned, bounded and cannot delete history or inv
     assert.equal(changes, 1);
     session.history.push({ contextId: firstContext, user: "旧会话完整内容", result: { query: "甲烷巡检", message: "旧会话完整回答", products: [], news: [] }, createdAt: new Date().toISOString() });
     const empty = (await (await fetch(`${base}/sessions/${session.id}`, { headers })).json()).data;
-    assert.deepEqual(empty.history, []);
+    assert.equal(empty.history.length, 1);
+    assert.equal(empty.history[0].contextId, firstContext);
     assert.equal(empty.contexts.find((context) => context.id === firstContext).title, "甲烷巡检");
-    assert.doesNotMatch(JSON.stringify(empty), /旧会话完整/);
+    assert.equal(empty.history[0].user, "旧会话完整内容");
     const activate = `${url}/${firstContext}/activate`;
     for (const body of [{ contextId: "invalid" }, { contextId: session.context_id, deleteHistory: true }, []]) {
       assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify(body) })).status, 400);
@@ -552,7 +552,7 @@ test("new context API is browser-owned, bounded and cannot delete history or inv
     const expected = session.context_id;
     assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify({ contextId: expected }) })).status, 200);
     assert.equal(session.context_id, firstContext);
-    assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify({ contextId: expected }) })).status, 409);
+    assert.equal((await fetch(activate, { method: "POST", headers, body: JSON.stringify({ contextId: expected }) })).status, 200);
     assert.equal((await fetch(activate, { method: "DELETE", headers })).status, 404);
     assert.doesNotThrow(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: session.context_id }));
     assert.throws(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: "invalid" }), /INVALID_MESSAGE/);

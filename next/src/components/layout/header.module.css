@@ -1,0 +1,15 @@
+.navigation { --contact-width: 322px; }
+.navigation :global(.main-menu__call) { right: 0; width: var(--contact-width); padding: 0 12px; box-sizing: border-box; justify-content: center; gap: 10px; }
+.navigation :global(.main-menu__call-icon) { flex: 0 0 44px; width: 44px; height: 44px; line-height: 1; }
+.navigation :global(.main-menu__call-icon span) { display: flex; align-items: center; justify-content: center; line-height: 1; }
+.navigation :global(.main-menu__call-content) { margin-left: 0; }
+.navigation :global(.main-menu__call-number) { white-space: nowrap; }
+@media (min-width: 768px) and (max-width: 1680px) {
+  .navigation { --contact-width: 250px; }
+}
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .navigation { --contact-width: 200px; }
+  .navigation :global(.main-menu__call) { gap: 8px; padding-inline: 8px; }
+  .navigation :global(.main-menu__call-icon) { flex-basis: 36px; width: 36px; height: 36px; }
+  .navigation :global(.main-menu__call-number) { font-size: 14px; }
+}

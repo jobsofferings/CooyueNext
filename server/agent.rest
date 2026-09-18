@@ -29,7 +29,7 @@ Cookie: cooyue_agent_visitor={{visitorCookie}}
 
 {"contextId":"{{contextId}}"}
 
-### Activate an owned retained conversation; expected current context protects other tabs
+### Remember an owned conversation; does not cancel runs or lock other contexts
 POST {{siteUrl}}/api/agent/sessions/{{sessionId}}/contexts/{{historyContextId}}/activate
 Content-Type: application/json
 x-cooyue-agent: 1
@@ -37,10 +37,18 @@ Cookie: cooyue_agent_visitor={{visitorCookie}}
 
 {"contextId":"{{contextId}}"}
 
-### Current conversation history plus title list for switching; no delete endpoint
+### All retained turns (10 total) and context titles; cache and render only the selected context
 GET {{siteUrl}}/api/agent/sessions/{{sessionId}}
 x-cooyue-agent: 1
 Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+### A second context may search concurrently; max 2 per visitor, one per context
+POST {{siteUrl}}/api/agent/sessions/{{sessionId}}/messages
+Content-Type: application/json
+x-cooyue-agent: 1
+Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+{"requestId":"5485a58c-0bb4-4d51-a749-bcb0c1382fd2","contextId":"{{historyContextId}}","message":"LE"}
 
 ### Published news feed; no credentials and no draft/private content
 GET {{siteUrl}}/api/agent-content?locale=zh

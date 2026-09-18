@@ -3,7 +3,7 @@ function scrollChatTarget(target, { focus = true, bottom = false } = {}) {
   let frame;
   const timer = window.setTimeout(() => {
     frame = window.requestAnimationFrame(() => {
-      if (!target.isConnected) return;
+      if (!target.isConnected || target.closest('[hidden]')) return;
       const panel = target.closest('section[aria-labelledby="agent-search-title"]');
       let scroller = target.parentElement;
       while (scroller && scroller !== panel) {

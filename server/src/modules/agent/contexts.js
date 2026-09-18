@@ -29,9 +29,14 @@ function contextsOf(session) {
       Number.isInteger(turn.result.clarification.remaining) ? 10 - turn.result.clarification.remaining : 1);
   }
   const current = session.context_id || session.id;
+  for (const context of session.open_contexts || []) {
+    if (!contexts.has(context.id)) contexts.set(context.id, { id: context.id,
+      title: session.locale === "zh" ? "新对话" : "New conversation", turnCount: 0, updatedAt: null });
+    Object.assign(contexts.get(context.id), { clarificationCount: context.clarification_count, running: Boolean(context.active_run) });
+  }
   if (!contexts.has(current)) contexts.set(current, { id: current, title: session.locale === "zh" ? "新对话" : "New conversation",
     turnCount: 0, clarificationCount: 0, updatedAt: null });
-  contexts.get(current).clarificationCount = session.clarification_count || 0;
+  if (!session.open_contexts) contexts.get(current).clarificationCount = session.clarification_count || 0;
   return [...contexts.values()].sort((first, second) => {
     if (!first.turnCount) return -1;
     if (!second.turnCount) return 1;
@@ -45,7 +50,7 @@ function contextMetadata(session) {
 }
 
 function publicContexts(session) {
-  return contextsOf(session).map(({ id, title, turnCount, updatedAt }) => ({ id, title, turnCount, updatedAt }));
+  return contextsOf(session).map(({ id, title, turnCount, updatedAt, running }) => ({ id, title, turnCount, updatedAt, running: Boolean(running) }));
 }
 
 module.exports = { contextTitle, contextsOf, contextMetadata, publicContexts };

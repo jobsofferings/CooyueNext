@@ -7,6 +7,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { siteConfig } from '@/config/site.config'
 import { useDictionary } from '@/hooks/useDictionary'
 import { useNavigation } from './NavigationProvider'
+import styles from './header.module.css'
 
 export default function Header() {
   const params = useParams()
@@ -26,7 +27,7 @@ export default function Header() {
   }, [])
 
   const menuContent = (
-        <div className="main-menu__wrapper">
+        <div className={`main-menu__wrapper ${styles.navigation}`}>
           <div className="main-menu__wrapper-inner">
             <div className="main-menu__logo">
               <Link href={getLocalizedHref('/')}>

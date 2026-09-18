@@ -18,7 +18,7 @@ function setup(context, reducedMotion = false) {
   const scroller = { parentElement: panel, overflowY: 'auto', scrollHeight: 2000, clientHeight: 600, scrollTop: 200,
     getBoundingClientRect: () => ({ top: 100 }), scrollTo: (options) => calls.push(options) }
   const content = { parentElement: scroller, overflowY: 'auto', scrollHeight: 2000, clientHeight: 2000 }
-  const target = { parentElement: content, isConnected: true, closest: () => panel,
+  const target = { parentElement: content, isConnected: true, closest: (selector) => selector === '[hidden]' ? null : panel,
     getBoundingClientRect: () => ({ top: 800 }), focus: (options) => calls.push({ focus: options }) }
   return { target, scroller, calls, flush: () => { context.mock.timers.tick(80); context.mock.timers.tick(16) } }
 }
@@ -61,6 +61,14 @@ test('cancelled or disconnected targets do not scroll', (context) => {
   flush()
   scrollChatTarget(target)
   target.isConnected = false
+  flush()
+  assert.deepEqual(calls, [])
+})
+
+test('background conversations never steal focus or scroll the active page', (context) => {
+  const { target, calls, flush } = setup(context)
+  target.closest = () => ({ hidden: true })
+  scrollChatTarget(target)
   flush()
   assert.deepEqual(calls, [])
 })

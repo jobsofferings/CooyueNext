@@ -5,8 +5,8 @@ import type { Locale } from '@/i18n-config'
 import type { AgentContext } from '@/lib/agent-api'
 import styles from './agent.module.css'
 
-export default function AgentHistory({ locale, contexts, activeId, disabled, onSelect }: {
-  locale: Locale; contexts: AgentContext[]; activeId: string; disabled: boolean; onSelect: (id: string) => void
+export default function AgentHistory({ locale, contexts, activity, activeId, disabled, onSelect }: {
+  locale: Locale; contexts: AgentContext[]; activity: Record<string, boolean>; activeId: string; disabled: boolean; onSelect: (id: string) => void
 }) {
   const chinese = locale === 'zh'
   const [open, setOpen] = useState(false)
@@ -20,7 +20,7 @@ export default function AgentHistory({ locale, contexts, activeId, disabled, onS
       {contexts.map((context) => <button key={context.id} type="button" className={styles.historyItem} data-history-context={context.id}
         aria-current={context.id === activeId ? 'true' : undefined} aria-label={context.title} title={context.title}
         disabled={disabled || context.id === activeId} onClick={() => onSelect(context.id)}>
-        <span>{context.title}</span><small>{context.turnCount ? chinese ? `${context.turnCount} 轮对话` : `${context.turnCount} turns` : chinese ? '尚未发送消息' : 'No messages yet'}</small>
+        <span>{context.title}</span><small>{activity[context.id] ? chinese ? '正在处理…' : 'Working…' : context.turnCount ? chinese ? `${context.turnCount} 轮对话` : `${context.turnCount} turns` : chinese ? '尚未发送消息' : 'No messages yet'}</small>
       </button>)}
       <p>{chinese ? '同一浏览器保留最近 10 轮，最长 30 天。切换会话后可继续提问。' : 'Keeps the last 10 turns across conversations for up to 30 days in this browser. Switch to continue a conversation.'}</p>
     </nav>

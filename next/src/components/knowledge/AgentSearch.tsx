@@ -1,213 +1,165 @@
 'use client'
 
-import { createContext, useContext, useEffect, useRef, useState, type FormEvent } from 'react'
-import { CopilotChatView, type CopilotChatInput, type CopilotChatMessageView } from '@copilotkit/react-core/v2'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Locale } from '@/i18n-config'
-import { agentRequest, type AgentContext, type AgentResult, type AgentSession } from '@/lib/agent-api'
-import { consumeAgentStream, createAgentRequestId } from '@/lib/agent-stream'
-import { appendChatTurn, chatHistory, createTextReveal, type ChatEntry } from '@/lib/agent-presentation'
-import { scrollChatTarget } from '@/lib/agent-scroll'
-import AgentReply from './AgentReply'
+import { agentRequest, type AgentContext, type AgentSession, type AgentTurn } from '@/lib/agent-api'
+import AgentConversation from './AgentConversation'
 import AgentHistory from './AgentHistory'
-import '@copilotkit/react-core/v2/styles.css'
 import styles from './agent.module.css'
-
-interface ChatState {
-  locale: Locale; entries: ChatEntry[]; busy: boolean; activeId: string; phase: string; elapsed: number
-  input: string; ready: boolean; error: string; disabled: boolean
-  onInput: (value: string) => void; onSubmit: (event: FormEvent) => void; onRetry: () => void; onActionBusy: (busy: boolean) => void
-}
-
-const ChatContext = createContext<ChatState | null>(null)
-
-function ChatMessages() {
-  const state = useContext(ChatContext)!
-  const chinese = state.locale === 'zh'
-  const phase = ['connecting', 'accepted', 'understanding'].includes(state.phase)
-    ? chinese ? '正在理解您的需求' : 'Understanding your needs'
-    : state.phase === 'explaining' ? chinese ? '正在整理候选说明' : 'Preparing candidate details'
-      : chinese ? '正在查找相关内容' : 'Finding relevant content'
-  return <div className={styles.messages} role="log" aria-label={chinese ? '选型助手对话' : 'Product assistant conversation'} aria-live="polite" aria-relevant="additions text">
-    <article className={styles.assistant} data-role="assistant">
-      <span className={styles.avatar} aria-hidden="true">C</span>
-      <div className={styles.bubble}><strong>Cooyue {chinese ? '选型助手' : 'Assistant'}</strong><p>{chinese ? '您好！告诉我使用场景、目标气体或产品型号，我会帮您找到相关产品和资料。' : 'Hello! Tell me the application, target gas or model. I’ll help you find relevant products and information.'}</p></div>
-    </article>
-    {state.entries.map((entry) => {
-      const active = state.busy && entry.id === state.activeId
-      if (entry.role === 'assistant') return <AgentReply key={entry.id} entry={entry} locale={state.locale} active={active} phase={phase} elapsed={state.elapsed} disabled={state.disabled || state.busy} onBusyChange={state.onActionBusy} />
-      return <article key={entry.id} className={styles.user} data-role="user" data-message-id={entry.id}>
-        <div className={styles.bubble}>
-          <span className={styles.speaker}>{chinese ? '您' : 'You'}</span>
-          <p className={styles.messageText}>{entry.content}</p>
-        </div>
-      </article>
-    })}
-  </div>
-}
-
-function ChatInput() {
-  const state = useContext(ChatContext)!
-  const chinese = state.locale === 'zh'
-  const disabled = !state.ready || state.disabled || state.busy
-  return <div className={styles.composer}>
-    {state.error && <div className={styles.error} role="alert">{state.error}{!state.ready && <button type="button" onClick={state.onRetry}>{chinese ? '重新连接' : 'Reconnect'}</button>}</div>}
-    <form onSubmit={state.onSubmit}>
-      <label htmlFor="agent-message" className={styles.inputLabel}>{chinese ? '描述需求，或继续补充条件' : 'Describe your needs or add a detail'}</label>
-      <div className={styles.inputRow}>
-        <textarea id="agent-message" rows={2} maxLength={1000} required disabled={disabled} value={state.input} onChange={(event) => state.onInput(event.target.value)}
-          placeholder={chinese ? '例如：我要找用于甲烷巡检的手持设备' : 'For example: handheld devices for methane inspections'}
-          onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); if (!disabled && state.input.trim()) event.currentTarget.form?.requestSubmit() } }} />
-        <button type="submit" disabled={disabled || !state.input.trim()} aria-label={chinese ? '发送消息' : 'Send message'}>{state.busy ? '···' : chinese ? '发送 ↑' : 'Send ↑'}</button>
-      </div>
-    </form>
-    <p className={styles.note}>{chinese ? '同一浏览器保留最近 10 轮、最长 30 天。请勿输入个人信息或密钥。' : 'Keeps the last 10 turns for up to 30 days in this browser. Avoid personal information or credentials.'}</p>
-  </div>
-}
 
 export default function AgentSearch({ locale, initialQuery = '' }: { locale: Locale; initialQuery?: string }) {
   const chinese = locale === 'zh'
   const [sessionId, setSessionId] = useState('')
   const [contextId, setContextId] = useState('')
-  const [switching, setSwitching] = useState(false)
   const [contexts, setContexts] = useState<AgentContext[]>([])
-  const [entries, setEntries] = useState<ChatEntry[]>([])
-  const [input, setInput] = useState(initialQuery)
-  const [actionBusy, setActionBusy] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [phase, setPhase] = useState('')
-  const [elapsed, setElapsed] = useState(0)
-  const [activeId, setActiveId] = useState('')
+  const [panes, setPanes] = useState<Record<string, { history: AgentTurn[]; query?: string; visited?: boolean }>>({})
+  const [activity, setActivity] = useState<Record<string, boolean>>({})
+  const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
-  const controller = useRef<AbortController | null>(null)
-  const contextController = useRef<AbortController | null>(null)
-  const mounted = useRef(true)
+  const active = useRef('')
+  const running = useRef<Record<string, boolean>>({})
+  const revision = useRef(-1)
+  const lifecycle = useRef<AbortController | null>(null)
+  const pendingActivation = useRef('')
+  const activation = useRef<Promise<void> | null>(null)
+  const creatingRef = useRef(false)
+  const selection = useRef(0)
+  const query = useRef(initialQuery)
+  query.current = initialQuery
 
-  useEffect(() => { setInput(initialQuery.slice(0, 1000)) }, [initialQuery])
   useEffect(() => {
-    const externalSearch = (event: Event) => setInput(((event as CustomEvent<{ keywords?: string }>).detail?.keywords || '').slice(0, 1000))
-    const historySearch = () => {
-      const parameters = new URL(window.location.href).searchParams
-      setInput((parameters.get('keywords') || parameters.get('query') || '').slice(0, 1000))
-    }
-    window.addEventListener('cooyue:search-keywords', externalSearch)
-    window.addEventListener('popstate', historySearch)
-    return () => { window.removeEventListener('cooyue:search-keywords', externalSearch); window.removeEventListener('popstate', historySearch) }
+    const id = active.current
+    if (id) setPanes((previous) => previous[id] ? { ...previous, [id]: { ...previous[id], query: initialQuery } } : previous)
+  }, [initialQuery])
+
+  const onActivity = useCallback((id: string, busy: boolean) => {
+    running.current = { ...running.current, [id]: busy }
+    setActivity((previous) => previous[id] === busy ? previous : { ...previous, [id]: busy })
+  }, [])
+
+  const onContexts = useCallback((next: AgentContext[], nextRevision?: number) => {
+    if (nextRevision !== undefined && nextRevision < revision.current) return
+    if (nextRevision !== undefined) revision.current = nextRevision
+    setContexts((previous) => {
+      const retained = previous.filter((context) => !next.some((item) => item.id === context.id) && (context.id === active.current || running.current[context.id]))
+      return [...next.map((context) => {
+        const local = previous.find((item) => item.id === context.id)
+        return running.current[context.id] && !context.turnCount && local
+          ? { ...context, title: local.title, turnCount: local.turnCount } : context
+      }), ...retained]
+    })
+    setPanes((previous) => Object.fromEntries(Object.entries(previous).filter(([id]) =>
+      next.some((context) => context.id === id) || id === active.current || running.current[id])))
+  }, [])
+
+  const onStart = useCallback((id: string, message: string) => {
+    setContexts((previous) => previous.map((context) => context.id === id && !context.turnCount
+      ? { ...context, title: Array.from(message).slice(0, 30).join(''), turnCount: 1 } : context))
   }, [])
 
   useEffect(() => {
-    mounted.current = true
-    let disposed = false
     const abort = new AbortController()
+    lifecycle.current = abort
     const timeout = window.setTimeout(() => abort.abort(), 15000)
-    setSessionId(''); setContextId(''); setContexts([]); setEntries([]); setError(''); setSwitching(false)
+    active.current = ''; running.current = {}; revision.current = -1; pendingActivation.current = ''; activation.current = null; creatingRef.current = false
+    setSessionId(''); setContextId(''); setContexts([]); setPanes({}); setActivity({}); setError(''); setCreating(false)
     agentRequest<{ id: string }>('sessions', { locale }, abort.signal).then(async (session) => {
       const previous = await agentRequest<AgentSession>(`sessions/${session.id}`, undefined, abort.signal)
       if (abort.signal.aborted) return
-      setSessionId(session.id); setContextId(previous.contextId); setContexts(previous.contexts || []); setEntries(chatHistory(previous.history, previous.contextId))
+      active.current = previous.contextId; revision.current = previous.revision ?? -1
+      setSessionId(session.id); setContextId(previous.contextId); setContexts(previous.contexts)
+      setPanes(Object.fromEntries(previous.contexts.map((context) => [context.id, {
+        history: previous.history.filter((turn) => (turn.contextId || previous.contextId) === context.id),
+        query: context.id === previous.contextId ? query.current : '',
+        visited: context.id === previous.contextId,
+      }])))
     }).catch(() => {
-      if (!disposed) setError(chinese ? '暂时无法连接助手，请稍后重试。' : 'Unable to connect. Please retry shortly.')
+      if (lifecycle.current === abort) setError(chinese ? '暂时无法连接助手，请稍后重试。' : 'Unable to connect. Please retry shortly.')
     }).finally(() => window.clearTimeout(timeout))
-    return () => { disposed = true; mounted.current = false; window.clearTimeout(timeout); abort.abort(); controller.current?.abort(); contextController.current?.abort() }
+    return () => { window.clearTimeout(timeout); abort.abort(); if (lifecycle.current === abort) lifecycle.current = null }
   }, [locale, chinese, retry])
 
+  const cached = Boolean(panes[contextId])
   useEffect(() => {
-    if (!activeId) return
-    return scrollChatTarget(document.querySelector<HTMLElement>(`[data-message-id="${activeId}"]`), { focus: false, bottom: true })
-  }, [activeId])
-
-  useEffect(() => {
-    if (!busy) return
-    const started = Date.now()
-    const timer = window.setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
-    return () => window.clearInterval(timer)
-  }, [busy])
-
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (busy || actionBusy || switching || controller.current || !input.trim() || !sessionId || !contextId) return
-    const message = input.trim()
-    const requestId = createAgentRequestId()
-    const assistantId = `${requestId}-assistant`
+    if (!sessionId || !contextId || cached || !lifecycle.current) return
     const abort = new AbortController()
-    controller.current = abort
-    const timeout = window.setTimeout(() => abort.abort(), 80000)
-    const updateEntry = (patch: Partial<ChatEntry>) => { if (mounted.current) setEntries((previous) => previous.map((entry) => entry.id === assistantId ? { ...entry, ...patch } : entry)) }
-    const reveal = createTextReveal((content) => updateEntry({ content }), { reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches })
-    abort.signal.addEventListener('abort', reveal.cancel, { once: true })
-    setEntries((previous) => appendChatTurn(previous, { id: `${requestId}-user`, role: 'user', content: message, contextId }, { id: assistantId, role: 'assistant', content: '', contextId }))
-    setInput(''); setBusy(true); setPhase('connecting'); setActiveId(assistantId); setElapsed(0); setError('')
-    let result: AgentResult | undefined
-    try {
-      const response = await fetch(`/api/agent/sessions/${sessionId}/messages`, {
-        method: 'POST', credentials: 'same-origin', signal: abort.signal,
-        headers: { 'Content-Type': 'application/json', 'x-cooyue-agent': '1' }, body: JSON.stringify({ message, requestId, contextId }),
-      })
-      await consumeAgentStream(response, (name, payload) => {
-        if (abort.signal.aborted || !mounted.current) return
-        const data = payload as Record<string, unknown>
-        if (name === 'message_delta' && typeof data.delta === 'string') reveal.push(data.delta)
-        if (name === 'status' && typeof data.phase === 'string') setPhase(data.phase)
-        if (name === 'context' && data.contextId === contextId && Array.isArray(data.contexts)) setContexts(data.contexts as AgentContext[])
-        if (name === 'results') {
-          result = payload as AgentResult
-          updateEntry({ result })
+    const signal = AbortSignal.any([abort.signal, lifecycle.current.signal, AbortSignal.timeout(15000)])
+    agentRequest<AgentSession>(`sessions/${sessionId}`, undefined, signal).then((snapshot) => {
+      if (signal.aborted) return
+      onContexts(snapshot.contexts, snapshot.revision)
+      setPanes((previous) => ({ ...Object.fromEntries(snapshot.contexts.map((context) => [context.id,
+        { history: snapshot.history.filter((turn) => turn.contextId === context.id), visited: context.id === active.current }])), ...previous }))
+    }).catch(() => {
+      if (!abort.signal.aborted) setError(chinese ? '暂时无法加载该对话，您仍可切换其他对话。' : 'Unable to load this conversation. You can still switch to another one.')
+    })
+    return () => abort.abort()
+  }, [sessionId, contextId, cached, chinese, onContexts])
+
+  function remember(target: string) {
+    pendingActivation.current = target
+    if (activation.current) return
+    const lifetime = lifecycle.current
+    const task = async () => {
+      while (pendingActivation.current && lifetime && !lifetime.signal.aborted) {
+        const next = pendingActivation.current
+        pendingActivation.current = ''
+        try {
+          await agentRequest(`sessions/${sessionId}/contexts/${next}/activate`, { contextId: next }, AbortSignal.any([lifetime.signal, AbortSignal.timeout(8000)]))
+        } catch {
+          if (!lifetime.signal.aborted && active.current === next) setError(chinese ? '对话已切换，但暂未保存当前位置；您可以继续使用。' : 'Conversation switched, but the position could not be saved. You can continue chatting.')
         }
-      })
-      window.clearTimeout(timeout)
-      await reveal.finish(result?.message)
-    } catch (failure) {
-      reveal.cancel()
-      if (mounted.current) {
-        const detail = failure as { code?: string; phase?: string; runId?: string }
-        setError(detail.code === 'CONTEXT_CHANGED'
-          ? chinese ? '上下文已在其他页面更新，请刷新后重试。' : 'The context changed in another tab. Refresh before retrying.'
-          : chinese ? '这次搜索未完成，请稍后重试。' : 'This search could not finish. Please retry shortly.')
-        setInput(message)
-        console.warn('[agent:chat]', { requestId, code: detail.code || 'NETWORK_ERROR', phase: detail.phase, runId: detail.runId })
       }
-    } finally {
-      window.clearTimeout(timeout); reveal.cancel(); controller.current = null
-      abort.signal.removeEventListener('abort', reveal.cancel)
-      if (mounted.current) setBusy(false)
     }
+    const promise = task().finally(() => { if (activation.current === promise) activation.current = null })
+    activation.current = promise
   }
 
-  async function switchContext(target?: string) {
-    if (!sessionId || !contextId || busy || actionBusy || switching || contextController.current || target === contextId) return
-    const abort = new AbortController()
-    contextController.current = abort
-    const timeout = window.setTimeout(() => abort.abort(), 15000)
-    setSwitching(true); setError('')
+  function switchContext(target: string) {
+    if (!sessionId || target === active.current) return
+    selection.current += 1
+    const leaving = active.current
+    active.current = target; setContextId(target); setError('')
+    setPanes((previous) => Object.fromEntries(Object.entries(previous).map(([id, pane]) => [id, id === leaving || id === target ? { ...pane, visited: true } : pane])))
+    remember(target)
+  }
+
+  async function newContext() {
+    if (!sessionId || creatingRef.current || !lifecycle.current) return
+    creatingRef.current = true; setCreating(true); setError('')
+    const leaving = active.current
+    setPanes((previous) => previous[leaving] ? { ...previous, [leaving]: { ...previous[leaving], visited: true } } : previous)
+    const lifetime = lifecycle.current
+    const selected = ++selection.current
     try {
-      await agentRequest(`sessions/${sessionId}/contexts${target ? `/${target}/activate` : ''}`, { contextId }, abort.signal)
-      const next = await agentRequest<AgentSession>(`sessions/${sessionId}`, undefined, abort.signal)
-      if (!mounted.current || abort.signal.aborted) return
-      setContextId(next.contextId); setContexts(next.contexts || []); setInput(''); setEntries(chatHistory(next.history, next.contextId)); setActiveId('')
-    } catch (failure) {
-      if (mounted.current) {
-        if ((failure as { code?: string }).code === 'CONTEXT_CHANGED') setRetry((value) => value + 1)
-        else setError(chinese ? '暂时无法切换会话，请稍后重试。原对话仍保留。' : 'Unable to switch conversations. Try again shortly; your conversation is retained.')
-      }
+      const next = await agentRequest<AgentSession>(`sessions/${sessionId}/contexts`, { contextId: active.current }, AbortSignal.any([lifetime.signal, AbortSignal.timeout(10000)]))
+      if (lifetime.signal.aborted) return
+      if (selection.current === selected) { active.current = next.contextId; setContextId(next.contextId) }
+      onContexts(next.contexts, next.revision)
+      setPanes((previous) => ({ ...previous, [next.contextId]: { history: [], visited: active.current === next.contextId } }))
+      remember(active.current)
+    } catch {
+      if (!lifetime.signal.aborted) setError(chinese ? '暂时无法新建对话，现有对话仍可使用。' : 'Unable to create a conversation. Existing conversations remain available.')
     } finally {
-      window.clearTimeout(timeout); contextController.current = null
-      if (mounted.current) setSwitching(false)
+      if (lifecycle.current === lifetime) { creatingRef.current = false; setCreating(false) }
     }
   }
 
-  const state: ChatState = { locale, entries, busy, activeId, phase, elapsed, input, ready: Boolean(sessionId && contextId), error, disabled: actionBusy || switching,
-    onInput: setInput, onSubmit: submit, onRetry: () => setRetry((value) => value + 1), onActionBusy: setActionBusy }
   return <section className={styles.panel} aria-labelledby="agent-search-title">
     <header className={styles.heading}><h1 id="agent-search-title">{contexts.find((context) => context.id === contextId && context.turnCount)?.title || (chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates')}</h1>
-      <button type="button" className={styles.newContext} onClick={() => void switchContext()} disabled={!sessionId || busy || actionBusy || switching || !entries.some((entry) => entry.role === 'user')}
-        aria-label={chinese ? 'New · 开始新上下文' : 'New · Start a new context'} title={chinese ? '开始新上下文，不删除历史' : 'Start a new context without deleting history'}><span aria-hidden="true">＋</span>{switching ? '···' : 'New'}</button>
+      <button type="button" className={styles.newContext} onClick={() => void newContext()} disabled={!sessionId || creating || !contexts.find((context) => context.id === contextId)?.turnCount}
+        aria-label={chinese ? 'New · 开始新上下文' : 'New · Start a new context'} title={chinese ? '开始新上下文，不删除历史' : 'Start a new context without deleting history'}><span aria-hidden="true">＋</span>{creating ? '···' : 'New'}</button>
     </header>
+    {error && <div className={styles.connectionError} role="alert">{error}{!sessionId && <button type="button" onClick={() => setRetry((value) => value + 1)}>{chinese ? '重新连接' : 'Reconnect'}</button>}</div>}
     <div className={styles.workspace}>
-      <AgentHistory locale={locale} contexts={contexts} activeId={contextId} disabled={!sessionId || busy || actionBusy || switching} onSelect={(id) => void switchContext(id)} />
-      <ChatContext.Provider value={state}>
-        <CopilotChatView key={contextId} className={styles.chat} messages={entries} isRunning={busy} autoScroll="pin-to-bottom" welcomeScreen={false}
-          messageView={ChatMessages as unknown as typeof CopilotChatMessageView} input={ChatInput as unknown as typeof CopilotChatInput} />
-      </ChatContext.Provider>
+      <AgentHistory locale={locale} contexts={contexts} activity={activity} activeId={contextId} disabled={!sessionId} onSelect={switchContext} />
+      <div className={styles.conversations}>
+        {(!sessionId || !cached) && <p className={styles.connecting} role="status">{chinese ? '正在连接助手…' : 'Connecting…'}</p>}
+        {Object.entries(panes).filter(([id, pane]) => id === contextId || pane.visited).map(([id, pane]) => <div key={`${sessionId}-${id}`} hidden={id !== contextId} data-agent-context={id} data-agent-active={id === contextId}>
+          <AgentConversation locale={locale} sessionId={sessionId} contextId={id} history={pane.history} initialQuery={pane.query}
+            visible={id === contextId} onContexts={onContexts} onActivity={onActivity} onStart={onStart} />
+        </div>)}
+      </div>
     </div>
   </section>
 }

@@ -19,6 +19,11 @@
 .historyItem:disabled:not([aria-current='true']) { opacity: .5; cursor: not-allowed; }
 .historyList > p { margin: 12px 10px; color: #7b899a; font-size: 11px; line-height: 1.8; }
 .chat { min-width: 0; height: var(--chat-height); }
+.conversations { min-width: 0; }
+.conversations > [hidden] { display: none; }
+.connecting { padding: 32px; color: #647a91; }
+.connectionError { padding: 12px 24px; font-size: 13px; color: #943a37; }
+.connectionError button { margin-left: 10px; border: none; background: none; color: #23568b; text-decoration: underline; }
 .chat [data-testid='copilot-scroll-content'] { width: 100%; max-width: var(--chat-width); margin-inline: auto; }
 .chat [data-testid='copilot-scroll-content'] > div { max-width: none; }
 .messages { display: grid; gap: 24px; padding: 22px 0; }
@@ -88,6 +93,7 @@
 .inputRow { display: flex; gap: 10px; align-items: flex-end; padding: 10px; border: 1px solid #b9ccdf; border-radius: 12px; background: #fff; }
 .inputRow:focus-within { border-color: #375f8c; box-shadow: 0 0 0 3px #375f8c12; }
 .inputRow textarea { flex: 1; min-width: 0; max-height: 120px; border: none; padding: 4px; outline: none; resize: vertical; color: #172c46; background: transparent; font-size: 15px; line-height: 1.6; }
+.inputRow textarea::placeholder, .inquiryForm input::placeholder, .inquiryForm textarea::placeholder { color: #8190a2; opacity: 1; font-weight: 400; }
 .inputRow button { flex-shrink: 0; padding: 9px 16px; border: none; border-radius: 8px; background: #19456f; color: white; font-size: 14px; }
 .inputRow button:disabled { opacity: .45; cursor: not-allowed; }
 .note { font-size: 11px; color: #7b899a; margin: 8px 0 0; line-height: 1.6; }
