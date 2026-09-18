@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { createTextReveal, chatHistory } = require('../src/lib/agent-presentation')
+const { createTextReveal, chatHistory, contextEntry, appendChatTurn } = require('../src/lib/agent-presentation')
 
 function clock() {
   let sequence = 0
@@ -90,4 +90,24 @@ test('history automatically restores every turn with its own product and news ca
   assert.equal(messages[1].result, first)
   assert.equal(messages[3].result, second)
   assert.equal(messages[2].content, '资料')
+})
+
+test('context boundaries preserve history and restore an empty new context', () => {
+  const result = { message: '候选', products: [], news: [] }
+  const history = [{ user: '甲烷', createdAt: 'first', contextId: 'old', result }, { user: 'K10', createdAt: 'second', contextId: 'new', result }]
+  const entries = chatHistory(history, 'empty')
+  assert.deepEqual(entries.filter(entry => entry.role === 'user').map(entry => entry.content), ['甲烷', 'K10'])
+  assert.deepEqual(entries.filter(entry => entry.kind === 'context').map(entry => entry.contextId), ['new', 'empty'])
+  assert.deepEqual(entries.at(-1), contextEntry('empty'))
+})
+
+test('new context separators do not consume any of the ten retained conversation turns', () => {
+  let entries = []
+  for (let index = 0; index < 12; index += 1) {
+    entries.push(contextEntry(`context-${index}`))
+    entries = appendChatTurn(entries, { id: `user-${index}`, role: 'user', content: String(index) }, { id: `reply-${index}`, role: 'assistant', content: 'answer' })
+  }
+  assert.equal(entries.filter(entry => entry.role === 'user').length, 10)
+  assert.equal(entries.find(entry => entry.role === 'user').content, '2')
+  assert.equal(entries.at(-1).id, 'reply-11')
 })

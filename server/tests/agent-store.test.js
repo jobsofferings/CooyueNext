@@ -21,6 +21,9 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
     const migration = readFileSync(join(__dirname, "../migrations/products/009_agent.sql"), "utf8");
     await database.exec(migration);
     await database.exec(migration);
+    const contextsMigration = readFileSync(join(__dirname, "../migrations/products/010_agent_contexts.sql"), "utf8");
+    await database.exec(contextsMigration);
+    await database.exec(contextsMigration);
     await context.test("same browser/locale reuses identity and expiry; owner and expired sessions cannot read", async () => {
       session = await store.session(identity, "zh");
       assert.equal((await store.session(identity, "zh")).id, session.id);
@@ -86,6 +89,46 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       assert.equal(detail.history, undefined);
       const failed = await store.list({ status: "timeout", page: 1, pageSize: 20 });
       assert.equal(failed.rows.length, 1);
+    });
+    await context.test("new context preserves history and budgets, isolates prompts and rejects cross-owner/stale tabs", async () => {
+      const previous = await store.get(session.id, identity.hash);
+      await assert.rejects(store.newContext(session.id, "b".repeat(64), previous.context_id), /SESSION_NOT_FOUND/);
+      await assert.rejects(store.newContext(session.id, identity.hash, randomUUID()), /CONTEXT_CHANGED/);
+      const next = await store.newContext(session.id, identity.hash, previous.context_id);
+      assert.notEqual(next.context_id, previous.context_id);
+      assert.equal(next.clarification_count, 0);
+      assert.deepEqual((await store.get(session.id, identity.hash)).history, previous.history);
+      assert.equal(new Date(next.expires_at).toISOString(), identity.expiresAt.toISOString());
+      assert.equal((await store.session(identity, "zh")).context_id, next.context_id);
+      await assert.rejects(store.newContext(session.id, identity.hash, previous.context_id), /CONTEXT_CHANGED/);
+      await assert.rejects(store.begin(session.id, identity.hash, { ...input(), contextId: previous.context_id }, config), /CONTEXT_CHANGED/);
+      await assert.rejects(store.begin(session.id, identity.hash, input(), { ...config, visitorHourlyLimit: 1 }), /VISITOR_RATE_LIMIT/);
+      const oldRequest = (await database.query("SELECT request_id FROM agent.runs WHERE id=$1", [completedRun])).rows[0].request_id;
+      await assert.rejects(store.begin(session.id, identity.hash, { ...input(), requestId: oldRequest, contextId: next.context_id }, config), /CONTEXT_CHANGED/);
+      const state = await store.begin(session.id, identity.hash, { ...input(), contextId: next.context_id }, config);
+      assert.deepEqual(state.session.history, []);
+      await assert.rejects(store.newContext(session.id, identity.hash, next.context_id), /SESSION_BUSY/);
+      await store.finish(session.id, state.runId, "K10", result, {});
+      const stored = await store.get(session.id, identity.hash);
+      assert.equal(stored.history.length, 10);
+      assert.equal(stored.history.at(-1).contextId, next.context_id);
+      const followup = await store.begin(session.id, identity.hash, { ...input(), contextId: next.context_id }, config);
+      assert.equal(followup.session.history.length, 1);
+      assert.equal(followup.session.history[0].user, "K10");
+      await store.finish(session.id, followup.runId, "more", null, {}, "CLIENT_DISCONNECTED", "cancelled");
+    });
+    await context.test("legacy migration preserves existing history and tags its original context", async () => {
+      const legacy = randomUUID();
+      await database.exec("ALTER TABLE agent.sessions ALTER COLUMN context_id DROP NOT NULL");
+      await database.query("INSERT INTO agent.sessions(id, visitor_hash, locale, expires_at, context_id, history) VALUES($1,$2,'zh',$3,NULL,$4)",
+        [legacy, "legacy-visitor", identity.expiresAt, JSON.stringify([{ user: "legacy query", result }])]);
+      await database.exec(contextsMigration);
+      const saved = await store.get(legacy, "legacy-visitor");
+      assert.equal(saved.context_id, legacy);
+      assert.equal(saved.history[0].user, "legacy query");
+      const started = await store.begin(legacy, "legacy-visitor", input(), config);
+      assert.equal(started.session.history.length, 1);
+      await store.finish(legacy, started.runId, "end", null, {}, "CLIENT_DISCONNECTED", "cancelled");
     });
     await context.test("expired session cleanup cascades to associated traces", async () => {
       await database.query("UPDATE agent.sessions SET expires_at = now() - interval '1 second' WHERE id=$1", [session.id]);

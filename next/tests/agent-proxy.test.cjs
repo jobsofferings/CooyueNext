@@ -28,6 +28,24 @@ function request(path = 'sessions', body = { locale: 'zh' }, headers = {}) {
   })
 }
 
+test('the context endpoint is same-origin POST only; it cannot expose deletion or arbitrary session actions', async () => {
+  const sessionId = randomUUID()
+  const contextId = randomUUID()
+  let calls = 0
+  const route = gateway(async (url, options) => {
+    calls += 1
+    assert.equal(url, `http://backend.test/api/agent/sessions/${sessionId}/contexts`)
+    assert.equal(options.method, 'POST')
+    assert.deepEqual(JSON.parse(options.body), { contextId })
+    return Response.json({ ok: true, data: { contextId: randomUUID() } })
+  })
+  const path = ['sessions', sessionId, 'contexts']
+  assert.equal((await route.POST(request(path.join('/'), { contextId }), { params: { path } })).status, 200)
+  assert.equal((await route.GET(new NextRequest(`https://site.test/api/agent/${path.join('/')}`), { params: { path } })).status, 404)
+  assert.equal((await route.POST(request(path.join('/'), { contextId }, { origin: 'https://attacker.test' }), { params: { path } })).status, 403)
+  assert.equal(calls, 1)
+})
+
 test('agent gateway denies cross-site requests, missing client headers and unavailable configuration', async () => {
   let calls = 0
   const route = gateway(async () => { calls += 1; return Response.json({ ok: true }) })

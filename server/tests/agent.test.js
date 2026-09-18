@@ -486,6 +486,48 @@ async function listen(app) {
   return new Promise((resolve, reject) => { const server = app.listen(0, "127.0.0.1", (error) => error ? reject(error) : resolve(server)); });
 }
 
+test("new context API is browser-owned, bounded and cannot delete history or invoke a model", async () => {
+  const session = { id: randomUUID(), context_id: randomUUID(), locale: "zh", history: [], clarification_count: 0 };
+  let owner;
+  let changes = 0;
+  const store = {
+    async session(identity) { owner = identity.hash; return session; },
+    async newContext(id, visitorHash, expected) {
+      assert.equal(id, session.id);
+      assert.equal(visitorHash, owner);
+      if (expected !== session.context_id) throw Object.assign(new Error("CONTEXT_CHANGED"), { code: "CONTEXT_CHANGED", status: 409 });
+      changes += 1;
+      session.context_id = randomUUID();
+      return session;
+    },
+  };
+  const app = express();
+  app.use(express.json());
+  app.use(createRouters({ configOf: () => config, resolvePool: async () => ({}), storeOf: () => store,
+    execute: () => { throw new Error("New context must not call a model"); } }).publicRouter);
+  const server = await listen(app);
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const headers = { "content-type": "application/json", "x-agent-proxy-secret": config.proxySecret };
+  try {
+    const initialized = await fetch(`${base}/sessions`, { method: "POST", headers, body: '{"locale":"zh"}' });
+    const firstContext = (await initialized.json()).data.contextId;
+    const url = `${base}/sessions/${session.id}/contexts`;
+    assert.equal((await fetch(url, { method: "POST", headers, body: JSON.stringify({ contextId: firstContext }) })).status, 404);
+    headers.cookie = initialized.headers.get("set-cookie").split(";")[0];
+    for (const body of [{ contextId: "invalid" }, { contextId: firstContext, deleteHistory: true }, []]) {
+      assert.equal((await fetch(url, { method: "POST", headers, body: JSON.stringify(body) })).status, 400);
+    }
+    const changed = await fetch(url, { method: "POST", headers, body: JSON.stringify({ contextId: firstContext }) });
+    assert.equal(changed.status, 200);
+    assert.notEqual((await changed.json()).data.contextId, firstContext);
+    assert.equal((await fetch(url, { method: "POST", headers, body: JSON.stringify({ contextId: firstContext }) })).status, 409);
+    assert.equal((await fetch(url, { method: "DELETE", headers })).status, 404);
+    assert.equal(changes, 1);
+    assert.doesNotThrow(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: session.context_id }));
+    assert.throws(() => messageInput({ message: "K10", requestId: randomUUID(), contextId: "invalid" }), /INVALID_MESSAGE/);
+  } finally { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); }
+});
+
 test("HTTP gates reject untrusted public calls, anonymous admin access, unknown/destructive routes; SSE audits before done", async () => {
   const sessionId = randomUUID();
   const audit = [];

@@ -27,17 +27,29 @@ function createStore(pool) {
     async session(visitor, locale) {
       return (await pool.query(`INSERT INTO agent.sessions(visitor_hash, locale, expires_at) VALUES ($1, $2, $3)
         ON CONFLICT(visitor_hash, locale) DO UPDATE SET visitor_hash = EXCLUDED.visitor_hash
-        RETURNING id, locale, expires_at, clarification_count`, [visitor.hash, locale, visitor.expiresAt])).rows[0];
+        RETURNING id, locale, expires_at, clarification_count, context_id`, [visitor.hash, locale, visitor.expiresAt])).rows[0];
     },
     get(sessionId, visitorHash) { return owned(pool, sessionId, visitorHash); },
+    async newContext(sessionId, visitorHash, expectedContext) {
+      return transaction(async (client) => {
+        const session = await owned(client, sessionId, visitorHash, true);
+        if (session.context_id !== expectedContext) throw failure("CONTEXT_CHANGED", 409);
+        if (session.busy_until && new Date(session.busy_until) > new Date()) throw failure("SESSION_BUSY", 409);
+        if (session.active_run) await client.query("UPDATE agent.runs SET status = 'timeout', error_code = 'WORKER_INTERRUPTED', finished_at = now() WHERE id = $1 AND status = 'running'", [session.active_run]);
+        return (await client.query(`UPDATE agent.sessions SET context_id = $2, clarification_count = 0, active_run = NULL, busy_until = NULL
+          WHERE id = $1 RETURNING id, locale, context_id, expires_at, clarification_count`, [sessionId, randomUUID()])).rows[0];
+      });
+    },
     async checkpoint(runId, metrics, status = "running") {
-      await pool.query({ text: "UPDATE agent.runs SET metrics = $2 WHERE id = $1 AND status = $3", values: [runId, JSON.stringify(metrics), status], query_timeout: 4000 });
+      await pool.query({ text: "UPDATE agent.runs SET metrics = metrics || $2::jsonb WHERE id = $1 AND status = $3", values: [runId, JSON.stringify(metrics), status], query_timeout: 4000 });
     },
     async begin(sessionId, visitorHash, input, config) {
       return transaction(async (client) => {
         const session = await owned(client, sessionId, visitorHash, true);
+        if (input.contextId && input.contextId !== session.context_id) throw failure("CONTEXT_CHANGED", 409);
         const duplicate = (await client.query("SELECT * FROM agent.runs WHERE session_id = $1 AND request_id = $2", [sessionId, input.requestId])).rows[0];
         if (duplicate) {
+          if ((duplicate.metrics.contextId || session.id) !== session.context_id) throw failure("CONTEXT_CHANGED", 409);
           if (duplicate.status === "completed") return { session, replay: duplicate };
           throw failure(duplicate.status === "running" ? "RUN_IN_PROGRESS" : "REQUEST_ALREADY_USED", 409);
         }
@@ -50,19 +62,19 @@ function createStore(pool) {
         if (counts.daily >= config.dailyBudget) throw failure("DAILY_BUDGET_EXCEEDED", 429);
         if (counts.hourly >= config.visitorHourlyLimit) throw failure("VISITOR_RATE_LIMIT", 429);
         const runId = randomUUID();
-        await client.query(`INSERT INTO agent.runs(id, session_id, request_id, visitor_hash, query_preview, model)
-          VALUES ($1,$2,$3,$4,$5,$6)`, [runId, sessionId, input.requestId, visitorHash, redact(input.message).slice(0, 160), config.model]);
+        await client.query(`INSERT INTO agent.runs(id, session_id, request_id, visitor_hash, query_preview, model, metrics)
+          VALUES ($1,$2,$3,$4,$5,$6,$7)`, [runId, sessionId, input.requestId, visitorHash, redact(input.message).slice(0, 160), config.model, JSON.stringify({ contextId: session.context_id })]);
         await client.query("UPDATE agent.sessions SET active_run = $2, busy_until = now() + ($3 * interval '1 millisecond') WHERE id = $1", [sessionId, runId, config.timeoutMs + 10000]);
-        return { session, runId };
+        return { session: { ...session, history: session.history.filter((turn) => (turn.contextId || session.id) === session.context_id) }, runId };
       });
     },
     async finish(sessionId, runId, user, result, metrics, errorCode, status = "completed") {
       return transaction(async (client) => {
-        const session = (await client.query("SELECT history, clarification_count, active_run FROM agent.sessions WHERE id = $1 FOR UPDATE", [sessionId])).rows[0];
+        const session = (await client.query("SELECT history, clarification_count, active_run, context_id FROM agent.sessions WHERE id = $1 FOR UPDATE", [sessionId])).rows[0];
         if (!session || session.active_run !== runId) throw failure("RUN_LEASE_LOST", 409);
-        const history = result ? [...session.history, { user: redact(user), result, createdAt: new Date().toISOString() }].slice(-10) : session.history;
+        const history = result ? [...session.history, { user: redact(user), result, contextId: session.context_id, createdAt: new Date().toISOString() }].slice(-10) : session.history;
         await client.query(`UPDATE agent.runs SET status = $2, result = $3, metrics = $4, error_code = $5, finished_at = now()
-          WHERE id = $1 AND status = 'running'`, [runId, status, result ? JSON.stringify(result) : null, JSON.stringify(metrics), errorCode || null]);
+          WHERE id = $1 AND status = 'running'`, [runId, status, result ? JSON.stringify(result) : null, JSON.stringify({ ...metrics, contextId: session.context_id }), errorCode || null]);
         await client.query(`UPDATE agent.sessions SET history = $2, clarification_count = LEAST(10, clarification_count + $3),
           active_run = NULL, busy_until = NULL WHERE id = $1`, [sessionId, JSON.stringify(history), result?.clarification ? 1 : 0]);
       });

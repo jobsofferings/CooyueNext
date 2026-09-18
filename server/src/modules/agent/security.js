@@ -56,10 +56,11 @@ function requireProxy(req, config) {
 
 function messageInput(body) {
   if (!body || typeof body !== "object" || Array.isArray(body)
-    || Object.keys(body).some((key) => !["message", "requestId"].includes(key))
+    || Object.keys(body).some((key) => !["message", "requestId", "contextId"].includes(key))
     || typeof body.message !== "string" || !body.message.trim() || body.message.length > 1000
-    || typeof body.requestId !== "string" || !UUID.test(body.requestId)) throw failure("INVALID_MESSAGE");
-  return { message: redact(body.message.trim()), requestId: body.requestId };
+    || typeof body.requestId !== "string" || !UUID.test(body.requestId)
+    || (body.contextId !== undefined && (typeof body.contextId !== "string" || !UUID.test(body.contextId)))) throw failure("INVALID_MESSAGE");
+  return { message: redact(body.message.trim()), requestId: body.requestId, ...(body.contextId ? { contextId: body.contextId } : {}) };
 }
 
 module.exports = { COOKIE, RETENTION_SECONDS, UUID, digest, equal, messageInput, redact, requireProxy, visitor };

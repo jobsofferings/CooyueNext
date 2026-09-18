@@ -43,11 +43,27 @@ function createTextReveal(onChange, { intervalMs = 20, reducedMotion = false, sc
   };
 }
 
-function chatHistory(history) {
-  return history.flatMap((turn, index) => [
-    { id: `history-${turn.createdAt}-${index}-user`, role: "user", content: turn.user },
-    { id: `history-${turn.createdAt}-${index}-assistant`, role: "assistant", content: turn.result.message, result: turn.result },
-  ]);
+function contextEntry(contextId) {
+  return { id: `context-${contextId}`, role: "assistant", kind: "context", contextId, content: "" };
 }
 
-module.exports = { createTextReveal, chatHistory };
+function chatHistory(history, currentContextId) {
+  const entries = [];
+  let previousContext;
+  for (const [index, turn] of history.entries()) {
+    if (index > 0 && turn.contextId !== previousContext) entries.push(contextEntry(turn.contextId));
+    entries.push({ id: `history-${turn.createdAt}-${index}-user`, role: "user", content: turn.user, contextId: turn.contextId },
+      { id: `history-${turn.createdAt}-${index}-assistant`, role: "assistant", content: turn.result.message, result: turn.result, contextId: turn.contextId });
+    previousContext = turn.contextId;
+  }
+  if (history.length && currentContextId && currentContextId !== previousContext) entries.push(contextEntry(currentContextId));
+  return entries;
+}
+
+function appendChatTurn(entries, user, assistant) {
+  const users = entries.filter((entry) => entry.role === "user");
+  const start = users.length >= 10 ? entries.findIndex((entry) => entry.id === users.at(-9).id) : 0;
+  return [...entries.slice(start), user, assistant];
+}
+
+module.exports = { createTextReveal, chatHistory, contextEntry, appendChatTurn };

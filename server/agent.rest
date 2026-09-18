@@ -1,6 +1,7 @@
 @siteUrl = http://localhost:3000
 @baseUrl = http://127.0.0.1:3001
 @sessionId = replace-with-session-id
+@contextId = replace-with-current-context-id
 @visitorCookie = replace-with-signed-cookie
 @adminSession = replace-with-management-session-cookie
 
@@ -17,7 +18,15 @@ Content-Type: application/json
 x-cooyue-agent: 1
 Cookie: cooyue_agent_visitor={{visitorCookie}}
 
-{"requestId":"360d0cab-af46-42ad-bf39-6c5f9a14dd53","message":"我要找用于甲烷巡检的手持设备，帮我对比候选"}
+{"requestId":"360d0cab-af46-42ad-bf39-6c5f9a14dd53","contextId":"{{contextId}}","message":"我要找用于甲烷巡检的手持设备，帮我对比候选"}
+
+### New context, preserving browser identity, history, retention and usage limits
+POST {{siteUrl}}/api/agent/sessions/{{sessionId}}/contexts
+Content-Type: application/json
+x-cooyue-agent: 1
+Cookie: cooyue_agent_visitor={{visitorCookie}}
+
+{"contextId":"{{contextId}}"}
 
 ### Same-browser history, no delete endpoint
 GET {{siteUrl}}/api/agent/sessions/{{sessionId}}

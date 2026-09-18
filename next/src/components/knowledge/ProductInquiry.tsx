@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
 import { knowledgeRequest, type InquiryDraft, type KnowledgeProduct } from '@/lib/knowledge-api'
+import { scrollChatTarget } from '@/lib/agent-scroll'
 import styles from './agent.module.css'
 
 export default function ProductInquiry({ locale, query, products, disabled, stale, onBusyChange }: {
@@ -20,6 +21,8 @@ export default function ProductInquiry({ locale, query, products, disabled, stal
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const controller = useRef<AbortController | null>(null)
+  const previewElement = useRef<HTMLDivElement | null>(null)
+  const successElement = useRef<HTMLParagraphElement | null>(null)
   const mounted = useRef(true)
   const notify = useRef(onBusyChange)
   notify.current = onBusyChange
@@ -34,6 +37,9 @@ export default function ProductInquiry({ locale, query, products, disabled, stal
 
   useEffect(() => { setDraft(null); setConsent(false); setSubmitted(false); setError('') }, [fingerprint, query])
   useEffect(() => { if (stale) { setDraft(null); setConsent(false) } }, [stale])
+  useEffect(() => {
+    if (submitted || draft) return scrollChatTarget(submitted ? successElement.current : previewElement.current)
+  }, [submitted, draft])
 
   async function run(operation: string, task: (signal: AbortSignal) => Promise<void>) {
     if (locked || controller.current) return
@@ -74,7 +80,7 @@ export default function ProductInquiry({ locale, query, products, disabled, stal
     <p className={styles.actionHint}>{chinese ? '仅在您预览、填写联系方式并确认后发送邮件，助手不会自动提交。' : 'Email is sent only after you preview it, provide contact details and confirm. The assistant never submits automatically.'}</p>
     <ul className={styles.inquiryProducts}>{products.map((product) => <li key={product.slug}>{product.name}</li>)}</ul>
     {error && <p role="alert" className={styles.error}>{error}</p>}
-    {submitted ? <p role="status" className={styles.success}>{chinese ? '询盘邮件发送成功，请静待工作人员与您联系。' : 'Your inquiry email was sent. Our team will contact you.'}</p> : <>
+    {submitted ? <p ref={successElement} tabIndex={-1} role="status" className={styles.success}>{chinese ? '询盘邮件发送成功，请静待工作人员与您联系。' : 'Your inquiry email was sent. Our team will contact you.'}</p> : <>
       <form className={styles.inquiryForm} onSubmit={preview}>
         <label htmlFor={`${prefix}-query`}>{chinese ? '本轮需求' : 'Requirements from this turn'}</label><p id={`${prefix}-query`}>{query}</p>
         <label htmlFor={`${prefix}-requirements`}>{chinese ? '补充需求与待确认问题' : 'Additional requirements and questions'}</label>
@@ -83,7 +89,7 @@ export default function ProductInquiry({ locale, query, products, disabled, stal
         <small id={`${prefix}-limit`}>{chinese ? '含本轮需求，手填内容最多 1000 字' : 'Up to 1,000 characters including this turn’s requirements'} · {contentLength}/1000</small>
         <button type="submit" className={styles.actionButton} disabled={locked || contentLength > 1000 || !query}>{busy === 'draft' ? chinese ? '正在生成预览…' : 'Preparing preview…' : chinese ? '预览询盘邮件' : 'Preview inquiry email'}</button>
       </form>
-      {draft && <div className={styles.inquiryPreview}>
+      {draft && <div ref={previewElement} tabIndex={-1} className={styles.inquiryPreview} data-inquiry-preview>
         <h4>{chinese ? '请核对邮件内容' : 'Review your email'}</h4><p>{draft.summary.query}</p>
         {draft.summary.requirements && <p>{draft.summary.requirements}</p>}
         <ul>{draft.summary.products.map((product) => <li key={product.slug}><Link href={`/${locale}/products/${product.slug}`} target="_blank" rel="noopener noreferrer">{product.name}</Link><span> · {product.categoryName}</span>{product.metrics.map((metric) => <small key={metric.label}>{metric.label}: {metric.value}</small>)}</li>)}</ul>

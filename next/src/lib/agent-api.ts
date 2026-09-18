@@ -10,7 +10,7 @@ export interface AgentResult {
   clarification: { question: string; remaining: number } | null
 }
 
-export interface AgentTurn { user: string; result: AgentResult; createdAt: string }
+export interface AgentTurn { user: string; result: AgentResult; createdAt: string; contextId?: string }
 
 export async function agentRequest<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`/api/agent/${path}`, {

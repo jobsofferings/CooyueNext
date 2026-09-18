@@ -48,7 +48,16 @@ function createRouters(dependencies = {}) {
     const identity = visitor(req, res, req.agentConfig, true);
     const store = storeOf(await resolvePool());
     const session = await store.session(identity, req.body.locale);
-    res.json({ ok: true, data: { id: session.id, locale: session.locale, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
+    res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
+  }));
+
+  publicRouter.post("/sessions/:id/contexts", rateLimit({ windowMs: 60000, limit: 10, standardHeaders: true, legacyHeaders: false,
+    message: { ok: false, error: "CONTEXT_RATE_LIMIT" } }), safe(async (req, res) => {
+    if (!UUID.test(req.params.id) || !req.body || Array.isArray(req.body) || Object.keys(req.body).length !== 1
+      || typeof req.body.contextId !== "string" || !UUID.test(req.body.contextId)) throw failure("INVALID_CONTEXT");
+    const identity = visitor(req, res, req.agentConfig);
+    const session = await storeOf(await resolvePool()).newContext(req.params.id, identity.hash, req.body.contextId);
+    res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
   }));
 
   publicRouter.get("/sessions/:id", safe(async (req, res) => {
@@ -61,9 +70,9 @@ function createRouters(dependencies = {}) {
       const products = turn.result.products.filter((product) => snapshot?.items.some((item) => item.key === `product:${product.id}` && item.card.version === product.version));
       const news = turn.result.news.filter((item) => snapshot?.items.some((entry) => entry.key === `news:${item.id}`));
       const changed = products.length !== turn.result.products.length || news.length !== turn.result.news.length;
-      return { ...turn, result: publicResult({ ...turn.result, products, news, message: changed ? (session.locale === "zh" ? "部分内容已更新或下架，请重新搜索。" : "Some content has changed. Please search again.") : turn.result.message }) };
+      return { ...turn, contextId: turn.contextId || session.id, result: publicResult({ ...turn.result, products, news, message: changed ? (session.locale === "zh" ? "部分内容已更新或下架，请重新搜索。" : "Some content has changed. Please search again.") : turn.result.message }) };
     });
-    res.json({ ok: true, data: { id: session.id, locale: session.locale, history, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
+    res.json({ ok: true, data: { id: session.id, locale: session.locale, contextId: session.context_id, history, expiresAt: session.expires_at, clarificationCount: session.clarification_count } });
   }));
 
   publicRouter.post("/sessions/:id/messages", safe(async (req, res) => {
@@ -114,6 +123,8 @@ function createRouters(dependencies = {}) {
       const pool = await trace.step("database_connect", () => resolvePool(), { signal: controller.signal, timeoutMs: 6000 });
       store = storeOf(pool);
       state = await trace.step("session_claim", () => store.begin(req.params.id, identity.hash, input, config), { signal: controller.signal, timeoutMs: 6000 });
+      metrics.contextId = state.session.context_id;
+      metrics.contextTurns = state.session.history.length;
       controller.signal.throwIfAborted();
       res.status(200).set({ "Content-Type": "text/event-stream; charset=utf-8", "Cache-Control": "no-store, no-transform", "Content-Encoding": "identity", "X-Accel-Buffering": "no", Connection: "keep-alive" });
       res.socket?.setNoDelay(true);

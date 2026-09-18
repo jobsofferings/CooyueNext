@@ -15,7 +15,7 @@ async function proxy(request: NextRequest, { params }: { params: { path: string[
   }
   const endpoint = params.path.join('/')
   const allowed = request.method === 'POST'
-    ? endpoint === 'sessions' || new RegExp(`^sessions/${uuid}/messages$`, 'i').test(endpoint)
+    ? endpoint === 'sessions' || new RegExp(`^sessions/${uuid}/(?:messages|contexts)$`, 'i').test(endpoint)
     : request.method === 'GET' && new RegExp(`^sessions/${uuid}$`, 'i').test(endpoint)
   if (!allowed) return fail('NOT_FOUND', 404)
   const origin = request.headers.get('origin')

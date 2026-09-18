@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import type { Locale } from '@/i18n-config'
 import type { ChatEntry } from '@/lib/agent-presentation'
+import { scrollChatTarget } from '@/lib/agent-scroll'
 import { knowledgeRequest, type KnowledgeProduct } from '@/lib/knowledge-api'
 import ProductCards from './ProductCards'
 import ProductComparison from './ProductComparison'
@@ -21,6 +22,8 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
   const [actions, setActions] = useState<Array<'compare' | 'inquiry'>>([])
   const [comparing, setComparing] = useState(false)
   const [error, setError] = useState('')
+  const [scrollRequest, setScrollRequest] = useState<{ action: 'compare' | 'inquiry' } | null>(null)
+  const followups = useRef<HTMLDivElement | null>(null)
   const controller = useRef<AbortController | null>(null)
   const mounted = useRef(true)
   const notify = useRef(onBusyChange)
@@ -36,7 +39,14 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
     return () => { mounted.current = false; if (controller.current) { controller.current.abort(); notify.current(false) } }
   }, [])
 
-  function show(action: 'compare' | 'inquiry') { setActions((previous) => previous.includes(action) ? previous : [...previous, action]) }
+  useEffect(() => {
+    if (scrollRequest) return scrollChatTarget(followups.current?.querySelector<HTMLElement>(`[data-chat-action="${scrollRequest.action}"]`) || null)
+  }, [scrollRequest, comparing])
+
+  function show(action: 'compare' | 'inquiry') {
+    setActions((previous) => previous.includes(action) ? previous : [...previous, action])
+    setScrollRequest({ action })
+  }
 
   function toggle(product: KnowledgeProduct) {
     if (locked) return
@@ -69,7 +79,7 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
         {active && <div className={styles.progress} role="status"><span className={styles.pulse} aria-hidden="true" />{phase}<span>{elapsed}s</span></div>}
         {entry.result && <div className={styles.results}>
           {entry.result.products.length > 0 && <><h3>{chinese ? '候选产品' : 'Candidate products'} · {entry.result.products.length}</h3><ProductCards products={entry.result.products} locale={locale} selected={selected} disabled={locked} onToggle={toggle} /></>}
-          {entry.result.news.length > 0 && <div className={styles.news}>{entry.result.news.map((item) => <article key={item.id}><h3><Link href={item.detailPath}>{item.title}</Link></h3><p>{item.description}</p></article>)}</div>}
+          {entry.result.news.length > 0 && <div className={styles.news}>{entry.result.news.map((item) => <article key={item.id}><h3><Link href={item.detailPath} target="_blank" rel="noopener noreferrer">{item.title}</Link></h3><p>{item.description}</p></article>)}</div>}
         </div>}
       </div>
       {Boolean(entry.result?.products.length) && <div className={styles.turnActions} data-message-actions role="group" aria-label={chinese ? '本轮产品操作' : 'Actions for this result'}>
@@ -81,8 +91,8 @@ export default function AgentReply({ entry, locale, active, phase, elapsed, disa
         </button>
         <span className={styles.selectionCount}>{chinese ? '本轮已选' : 'Selected'} {selected.length}/12 · {chinese ? '至少 2 款可对比' : 'Select 2+ to compare'}</span>
       </div>}
-      {actions.length > 0 && <div className={styles.followups} data-message-followups>{actions.map((action) => <section key={action} id={`${entry.id}-${action}`} className={styles.followup} data-chat-action={action} aria-labelledby={`${entry.id}-${action}-title`}>
-        <div className={styles.followupHeading}><span aria-hidden="true">↳</span><h3 id={`${entry.id}-${action}-title`}>{action === 'compare' ? chinese ? '产品对比' : 'Product comparison' : chinese ? '产品询盘' : 'Product inquiry'}</h3></div>
+      {actions.length > 0 && <div ref={followups} className={styles.followups} data-message-followups>{actions.map((action) => <section key={action} id={`${entry.id}-${action}`} className={styles.followup} data-chat-action={action} tabIndex={-1} aria-labelledby={`${entry.id}-${action}-title`}>
+        <div className={styles.followupHeading}><h3 id={`${entry.id}-${action}-title`}>{action === 'compare' ? chinese ? '产品对比' : 'Product comparison' : chinese ? '产品询盘' : 'Product inquiry'}</h3></div>
         {action === 'compare' ? <>
           {comparing && <p role="status" className={styles.actionHint}>{chinese ? '正在读取公开参数…' : 'Loading public specifications…'}</p>}
           {error && <p role="alert" className={styles.error}>{error}</p>}
