@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "test:rendering": "node --test tests/rendering-data.test.cjs",
-    "test:agent": "node --test tests/agent-*.test.cjs"
+    "test:agent": "node --test tests/agent-*.test.cjs",
+    "test:agent:browser": "node tests/agent-chat.browser.cjs"
   },
   "dependencies": {
     "@ag-ui/core": "0.0.59",

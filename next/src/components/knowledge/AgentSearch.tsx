@@ -7,15 +7,14 @@ import type { Locale } from '@/i18n-config'
 import { agentRequest, type AgentResult, type AgentTurn } from '@/lib/agent-api'
 import { consumeAgentStream, createAgentRequestId } from '@/lib/agent-stream'
 import { chatHistory, createTextReveal, type ChatEntry } from '@/lib/agent-presentation'
-import type { KnowledgeProduct } from '@/lib/knowledge-api'
-import ProductCards from './ProductCards'
+import AgentReply from './AgentReply'
 import '@copilotkit/react-core/v2/styles.css'
 import styles from './agent.module.css'
 
 interface ChatState {
   locale: Locale; entries: ChatEntry[]; busy: boolean; activeId: string; phase: string; elapsed: number
-  input: string; ready: boolean; error: string; disabled: boolean; selected: KnowledgeProduct[]
-  onInput: (value: string) => void; onSubmit: (event: FormEvent) => void; onRetry: () => void; onToggle: (product: KnowledgeProduct) => void
+  input: string; ready: boolean; error: string; disabled: boolean
+  onInput: (value: string) => void; onSubmit: (event: FormEvent) => void; onRetry: () => void; onActionBusy: (busy: boolean) => void
 }
 
 const ChatContext = createContext<ChatState | null>(null)
@@ -34,16 +33,11 @@ function ChatMessages() {
     </article>
     {state.entries.map((entry) => {
       const active = state.busy && entry.id === state.activeId
-      return <article key={entry.id} className={entry.role === 'user' ? styles.user : styles.assistant} data-role={entry.role} data-message-id={entry.id}>
-        {entry.role === 'assistant' && <span className={styles.avatar} aria-hidden="true">C</span>}
+      if (entry.role === 'assistant') return <AgentReply key={entry.id} entry={entry} locale={state.locale} active={active} phase={phase} elapsed={state.elapsed} disabled={state.disabled || state.busy} onBusyChange={state.onActionBusy} />
+      return <article key={entry.id} className={styles.user} data-role="user" data-message-id={entry.id}>
         <div className={styles.bubble}>
-          <span className={styles.speaker}>{entry.role === 'user' ? chinese ? '您' : 'You' : chinese ? '选型助手' : 'Assistant'}</span>
-          {entry.content && <p className={styles.messageText} data-stream-text>{entry.content}{active && <span className={styles.cursor} aria-hidden="true">▍</span>}</p>}
-          {active && <div className={styles.progress} role="status"><span className={styles.pulse} aria-hidden="true" />{phase}<span>{state.elapsed}s</span></div>}
-          {entry.result && <div className={styles.results}>
-            {entry.result.products.length > 0 && <><h3>{chinese ? '候选产品' : 'Candidate products'} · {entry.result.products.length}</h3><ProductCards products={entry.result.products} locale={state.locale} selected={state.selected} disabled={state.disabled || state.busy} onToggle={state.onToggle} /></>}
-            {entry.result.news.length > 0 && <div className={styles.news}>{entry.result.news.map((item) => <article key={item.id}><h3><Link href={item.detailPath}>{item.title}</Link></h3><p>{item.description}</p></article>)}</div>}
-          </div>}
+          <span className={styles.speaker}>{chinese ? '您' : 'You'}</span>
+          <p className={styles.messageText}>{entry.content}</p>
         </div>
       </article>
     })}
@@ -69,14 +63,12 @@ function ChatInput() {
   </div>
 }
 
-export default function AgentSearch({ locale, onResults, onBusyChange, disabled, selected, onToggle }: {
-  locale: Locale; onResults: (result: AgentResult) => void; onBusyChange: (busy: boolean) => void; disabled: boolean
-  selected: KnowledgeProduct[]; onToggle: (product: KnowledgeProduct) => void
-}) {
+export default function AgentSearch({ locale, initialQuery = '' }: { locale: Locale; initialQuery?: string }) {
   const chinese = locale === 'zh'
   const [sessionId, setSessionId] = useState('')
   const [entries, setEntries] = useState<ChatEntry[]>([])
-  const [input, setInput] = useState('')
+  const [input, setInput] = useState(initialQuery)
+  const [actionBusy, setActionBusy] = useState(false)
   const [busy, setBusy] = useState(false)
   const [phase, setPhase] = useState('')
   const [elapsed, setElapsed] = useState(0)
@@ -85,8 +77,18 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
   const [retry, setRetry] = useState(0)
   const controller = useRef<AbortController | null>(null)
   const mounted = useRef(true)
-  const callbacks = useRef({ onResults, onBusyChange })
-  callbacks.current = { onResults, onBusyChange }
+
+  useEffect(() => { setInput(initialQuery.slice(0, 1000)) }, [initialQuery])
+  useEffect(() => {
+    const externalSearch = (event: Event) => setInput(((event as CustomEvent<{ keywords?: string }>).detail?.keywords || '').slice(0, 1000))
+    const historySearch = () => {
+      const parameters = new URL(window.location.href).searchParams
+      setInput((parameters.get('keywords') || parameters.get('query') || '').slice(0, 1000))
+    }
+    window.addEventListener('cooyue:search-keywords', externalSearch)
+    window.addEventListener('popstate', historySearch)
+    return () => { window.removeEventListener('cooyue:search-keywords', externalSearch); window.removeEventListener('popstate', historySearch) }
+  }, [])
 
   useEffect(() => {
     mounted.current = true
@@ -98,10 +100,8 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
       const previous = await agentRequest<{ history: AgentTurn[] }>(`sessions/${session.id}`, undefined, abort.signal)
       if (abort.signal.aborted) return
       setSessionId(session.id); setEntries(chatHistory(previous.history))
-      const latest = previous.history.at(-1)?.result
-      if (latest) callbacks.current.onResults(latest)
     }).catch(() => {
-      if (!disposed) setError(chinese ? '暂时无法连接助手，请稍后重试。普通搜索仍可使用。' : 'Unable to connect. Please retry, or use keyword search below.')
+      if (!disposed) setError(chinese ? '暂时无法连接助手，请稍后重试。' : 'Unable to connect. Please retry shortly.')
     }).finally(() => window.clearTimeout(timeout))
     return () => { disposed = true; mounted.current = false; window.clearTimeout(timeout); abort.abort(); controller.current?.abort() }
   }, [locale, chinese, retry])
@@ -115,7 +115,7 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (busy || disabled || controller.current || !input.trim() || !sessionId) return
+    if (busy || actionBusy || controller.current || !input.trim() || !sessionId) return
     const message = input.trim()
     const requestId = createAgentRequestId()
     const assistantId = `${requestId}-assistant`
@@ -127,7 +127,6 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
     abort.signal.addEventListener('abort', reveal.cancel, { once: true })
     setEntries((previous) => [...previous.slice(-18), { id: `${requestId}-user`, role: 'user', content: message }, { id: assistantId, role: 'assistant', content: '' }])
     setInput(''); setBusy(true); setPhase('connecting'); setActiveId(assistantId); setElapsed(0); setError('')
-    callbacks.current.onBusyChange(true)
     let result: AgentResult | undefined
     try {
       const response = await fetch(`/api/agent/sessions/${sessionId}/messages`, {
@@ -142,7 +141,6 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
         if (name === 'results') {
           result = payload as AgentResult
           updateEntry({ result })
-          callbacks.current.onResults(result)
         }
       })
       window.clearTimeout(timeout)
@@ -150,7 +148,7 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
     } catch (failure) {
       reveal.cancel()
       if (mounted.current) {
-        setError(chinese ? '这次搜索未完成，请稍后重试。您也可以使用下方普通搜索。' : 'This search could not finish. Please retry or use keyword search below.')
+        setError(chinese ? '这次搜索未完成，请稍后重试。' : 'This search could not finish. Please retry shortly.')
         setInput(message)
         const detail = failure as { code?: string; phase?: string; runId?: string }
         console.warn('[agent:chat]', { requestId, code: detail.code || 'NETWORK_ERROR', phase: detail.phase, runId: detail.runId })
@@ -158,14 +156,14 @@ export default function AgentSearch({ locale, onResults, onBusyChange, disabled,
     } finally {
       window.clearTimeout(timeout); reveal.cancel(); controller.current = null
       abort.signal.removeEventListener('abort', reveal.cancel)
-      if (mounted.current) { setBusy(false); callbacks.current.onBusyChange(false) }
+      if (mounted.current) setBusy(false)
     }
   }
 
-  const state: ChatState = { locale, entries, busy, activeId, phase, elapsed, input, ready: Boolean(sessionId), error, disabled, selected,
-    onInput: setInput, onSubmit: submit, onRetry: () => setRetry((value) => value + 1), onToggle }
+  const state: ChatState = { locale, entries, busy, activeId, phase, elapsed, input, ready: Boolean(sessionId), error, disabled: actionBusy,
+    onInput: setInput, onSubmit: submit, onRetry: () => setRetry((value) => value + 1), onActionBusy: setActionBusy }
   return <section className={styles.panel} aria-labelledby="agent-search-title">
-    <header className={styles.heading}><div><span className={styles.eyebrow}>COOYUE ASSISTANT</span><h2 id="agent-search-title">{chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates'}</h2></div><span className={styles.readOnly}>{chinese ? '产品 · 资料' : 'Products · Guides'}</span></header>
+    <header className={styles.heading}><h1 id="agent-search-title">{chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates'}</h1><Link href={`/${locale}/products`}>{chinese ? '产品目录 ↗' : 'Product catalog ↗'}</Link></header>
     <ChatContext.Provider value={state}>
       <CopilotChatView className={styles.chat} messages={entries} isRunning={busy} autoScroll="pin-to-bottom" welcomeScreen={false}
         messageView={ChatMessages as unknown as typeof CopilotChatMessageView} input={ChatInput as unknown as typeof CopilotChatInput} />
