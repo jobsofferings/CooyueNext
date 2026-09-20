@@ -145,14 +145,11 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
     }
   }
 
-  return <section className={styles.panel} aria-labelledby="agent-search-title">
-    <header className={styles.heading}><h1 id="agent-search-title">{contexts.find((context) => context.id === contextId && context.turnCount)?.title || (chinese ? '聊聊您的选型需求' : 'Let’s find the right candidates')}</h1>
-      <button type="button" className={styles.newContext} onClick={() => void newContext()} disabled={!sessionId || creating || !contexts.find((context) => context.id === contextId)?.turnCount}
-        aria-label={chinese ? 'New · 开始新上下文' : 'New · Start a new context'} title={chinese ? '开始新上下文，不删除历史' : 'Start a new context without deleting history'}><span aria-hidden="true">＋</span>{creating ? '···' : 'New'}</button>
-    </header>
+  return <section className={styles.panel} data-agent-search aria-label={chinese ? '选型助手' : 'Product selection assistant'}>
     {error && <div className={styles.connectionError} role="alert">{error}{!sessionId && <button type="button" onClick={() => setRetry((value) => value + 1)}>{chinese ? '重新连接' : 'Reconnect'}</button>}</div>}
     <div className={styles.workspace}>
-      <AgentHistory locale={locale} contexts={contexts} activity={activity} activeId={contextId} disabled={!sessionId} onSelect={switchContext} />
+      <AgentHistory locale={locale} contexts={contexts} activity={activity} activeId={contextId} disabled={!sessionId} onSelect={switchContext}
+        creating={creating} newContextDisabled={!sessionId || creating || !contexts.find((context) => context.id === contextId)?.turnCount} onNewContext={() => void newContext()} />
       <div className={styles.conversations}>
         {(!sessionId || !cached) && <p className={styles.connecting} role="status">{chinese ? '正在连接助手…' : 'Connecting…'}</p>}
         {Object.entries(panes).filter(([id, pane]) => id === contextId || pane.visited).map(([id, pane]) => <div key={`${sessionId}-${id}`} hidden={id !== contextId} data-agent-context={id} data-agent-active={id === contextId}>

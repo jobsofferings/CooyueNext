@@ -141,12 +141,50 @@ async function verify(browser, mobile) {
     await page.waitForFunction((previous) => document.querySelector('[data-agent-active="true"]')?.dataset.agentContext !== previous, before)
     await ready()
   }
+  const fitsViewport = async () => {
+    await page.waitForFunction(() => {
+      const main = document.querySelector('main').getBoundingClientRect()
+      const header = document.querySelector('.main-header').getBoundingClientRect()
+      return Math.abs(main.bottom - window.innerHeight) <= 1 && Math.abs(main.top - header.bottom) <= 1
+    }, null, { timeout: 5000 })
+    const layout = await page.evaluate(() => {
+      const history = document.querySelector('aside[aria-label="历史会话"]')
+      const heading = history.querySelector('h2')
+      const title = (heading.getClientRects().length ? heading : history.querySelector('[aria-controls="agent-history-list"]')).getBoundingClientRect()
+      const button = history.querySelector('button[aria-label^="New"]')
+      const action = button.getBoundingClientRect()
+      const row = getComputedStyle(button.parentElement)
+      const composer = document.querySelector('#agent-message').closest('form').parentElement.getBoundingClientRect()
+      return { scrollY: window.scrollY, headerTop: document.querySelector('.main-header').getBoundingClientRect().top,
+        titleRight: title.right, actionLeft: action.left, centerDifference: Math.abs(title.top + title.height / 2 - action.top - action.height / 2),
+        display: row.display, justifyContent: row.justifyContent, composerBottom: composer.bottom, viewportHeight: window.innerHeight,
+        overflow: document.documentElement.scrollWidth > window.innerWidth }
+    })
+    assert.equal(layout.scrollY, 0, JSON.stringify(layout))
+    assert.equal(layout.headerTop, 0, JSON.stringify(layout))
+    assert.equal(layout.display, 'flex')
+    assert.equal(layout.justifyContent, 'space-between')
+    assert(layout.actionLeft > layout.titleRight, JSON.stringify(layout))
+    assert(layout.centerDifference <= 1, JSON.stringify(layout))
+    assert(layout.composerBottom <= layout.viewportHeight, JSON.stringify(layout))
+    assert.equal(layout.overflow, false)
+    assert.equal(await page.locator('main section > header').count(), 0)
+  }
   await page.goto(`${origin}/zh`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   assert.equal(await page.locator('.main-header .main-menu__search').getAttribute('href'), '/zh/search')
   assert.equal(await page.locator('.stricky-header .main-menu__search').getAttribute('href'), '/zh/search')
   await page.locator('.main-header .main-menu__search').click()
   await page.waitForURL('**/zh/search')
   await ready()
+  await fitsViewport()
+  const initialViewport = page.viewportSize()
+  for (const viewport of mobile ? [{ width: 768, height: 1024 }, { width: 390, height: 568 }]
+    : [{ width: 1280, height: 720 }, { width: 1440, height: 600 }]) {
+    await page.setViewportSize(viewport)
+    await fitsViewport()
+  }
+  await page.setViewportSize(initialViewport)
+  await fitsViewport()
   assert.equal(await page.locator('.search-popup, .search-toggler').count(), 0)
   await page.goto(`${origin}/zh/search?keywords=K10`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await ready()
@@ -399,13 +437,14 @@ async function verify(browser, mobile) {
   assert.equal(await chat.locator('table thead th').count(), 4)
   failSearch = true
   await send('故障测试')
-  assert.doesNotMatch(await page.locator('section[aria-labelledby="agent-search-title"]').getByRole('alert').innerText(), /AGENT_UPSTREAM_ERROR|普通搜索|下方/)
+  assert.doesNotMatch(await page.getByRole('region', { name: '选型助手', exact: true }).getByRole('alert').innerText(), /AGENT_UPSTREAM_ERROR|普通搜索|下方/)
   assert.deepEqual(errors, [])
   console.log(JSON.stringify({ mobile, passed: true, updatedComparison: true, updatedInquiry: true, consentReconfirmed: true,
     replySelectionsIndependent: true, historyCardsRestored: true, historyIsolatedAndSwitchable: true, summaryTitlesPersist: true,
     selectAllTwenty: true, menuOpensChat: true, newContextPreservesHistory: true, actionScrollPositioned: true,
     parallelConversations: true, backgroundComparisonPreservesFocus: true, nonBlockingSwitchMs: switchDuration, cachedSwitchesWithoutHistoryRequests: true, placeholderLighter: true, phoneAligned: true,
-    sendScrollsToBottom: true, streamedReplyStaysAtBottom: true, detailsOpenInNewTab: true, alignedWidth: true, overflow: false, mockedDeliveries: 1, realEmailsSent: 0 }))
+    sendScrollsToBottom: true, streamedReplyStaysAtBottom: true, detailsOpenInNewTab: true, alignedWidth: true,
+    viewportFitted: true, newContextBesideHistory: true, overflow: false, mockedDeliveries: 1, realEmailsSent: 0 }))
   await context.close()
 }
 

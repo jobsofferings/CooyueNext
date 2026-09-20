@@ -5,17 +5,22 @@ import type { Locale } from '@/i18n-config'
 import type { AgentContext } from '@/lib/agent-api'
 import styles from './agent.module.css'
 
-export default function AgentHistory({ locale, contexts, activity, activeId, disabled, onSelect }: {
+export default function AgentHistory({ locale, contexts, activity, activeId, disabled, onSelect, creating, newContextDisabled, onNewContext }: {
   locale: Locale; contexts: AgentContext[]; activity: Record<string, boolean>; activeId: string; disabled: boolean; onSelect: (id: string) => void
+  creating: boolean; newContextDisabled: boolean; onNewContext: () => void
 }) {
   const chinese = locale === 'zh'
   const [open, setOpen] = useState(false)
   useEffect(() => { setOpen(false) }, [activeId])
   return <aside className={styles.history} aria-label={chinese ? '历史会话' : 'Conversation history'}>
-    <h2>{chinese ? '历史会话' : 'Conversations'}</h2>
-    <button type="button" className={styles.historyToggle} aria-expanded={open} aria-controls="agent-history-list" onClick={() => setOpen(!open)}>
-      {chinese ? '历史会话' : 'Conversations'} <span>{contexts.filter((context) => context.turnCount).length} · {open ? '−' : '＋'}</span>
-    </button>
+    <div className={styles.historyHeader}>
+      <h2>{chinese ? '历史会话' : 'Conversations'}</h2>
+      <button type="button" className={styles.historyToggle} aria-expanded={open} aria-controls="agent-history-list" onClick={() => setOpen(!open)}>
+        {chinese ? '历史会话' : 'Conversations'} <span>{contexts.filter((context) => context.turnCount).length} · {open ? '−' : '＋'}</span>
+      </button>
+      <button type="button" className={styles.newContext} onClick={onNewContext} disabled={newContextDisabled}
+        aria-label={chinese ? 'New · 开始新上下文' : 'New · Start a new context'} title={chinese ? '开始新上下文，不删除历史' : 'Start a new context without deleting history'}><span aria-hidden="true">＋</span>{creating ? '···' : 'New'}</button>
+    </div>
     <nav id="agent-history-list" className={`${styles.historyList} ${open ? styles.historyListOpen : ''}`} aria-label={chinese ? '切换会话' : 'Switch conversation'}>
       {contexts.map((context) => <button key={context.id} type="button" className={styles.historyItem} data-history-context={context.id}
         aria-current={context.id === activeId ? 'true' : undefined} aria-label={context.title} title={context.title}

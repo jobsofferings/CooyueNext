@@ -18,7 +18,7 @@ function setup(context, reducedMotion = false) {
   const scroller = { parentElement: panel, overflowY: 'auto', scrollHeight: 2000, clientHeight: 600, scrollTop: 200,
     getBoundingClientRect: () => ({ top: 100 }), scrollTo: (options) => calls.push(options) }
   const content = { parentElement: scroller, overflowY: 'auto', scrollHeight: 2000, clientHeight: 2000 }
-  const target = { parentElement: content, isConnected: true, closest: (selector) => selector === '[hidden]' ? null : panel,
+  const target = { parentElement: content, isConnected: true, closest: (selector) => selector === '[data-agent-search]' ? panel : null,
     getBoundingClientRect: () => ({ top: 800 }), focus: (options) => calls.push({ focus: options }) }
   return { target, scroller, calls, flush: () => { context.mock.timers.tick(80); context.mock.timers.tick(16) } }
 }
@@ -36,6 +36,15 @@ test('short action content aligns at the maximum scroll position', (context) => 
   scrollChatTarget(target)
   flush()
   assert.deepEqual(calls.at(-1), { top: 400, behavior: 'smooth' })
+})
+
+test('removing the heading does not allow action scrolling outside the chat panel', (context) => {
+  const { target, scroller, calls, flush } = setup(context)
+  scroller.scrollHeight = scroller.clientHeight
+  scroller.parentElement.parentElement = { ...scroller, parentElement: null, scrollHeight: 3000 }
+  scrollChatTarget(target)
+  flush()
+  assert.deepEqual(calls, [])
 })
 
 test('sending reaches the latest bottom immediately without stealing focus', (context) => {

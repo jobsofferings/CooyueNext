@@ -4,7 +4,7 @@ function scrollChatTarget(target, { focus = true, bottom = false } = {}) {
   const timer = window.setTimeout(() => {
     frame = window.requestAnimationFrame(() => {
       if (!target.isConnected || target.closest('[hidden]')) return;
-      const panel = target.closest('section[aria-labelledby="agent-search-title"]');
+      const panel = target.closest('[data-agent-search]');
       let scroller = target.parentElement;
       while (scroller && scroller !== panel) {
         if (/(auto|scroll)/.test(window.getComputedStyle(scroller).overflowY) && scroller.scrollHeight > scroller.clientHeight) {
