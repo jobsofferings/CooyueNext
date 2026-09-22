@@ -29,7 +29,7 @@
 2. Keyword Search 使用现有中英文词汇/同义词特征；Embedding Search 使用 SDK 生成查询向量，与同模型、同内容版本的离线索引比较。
 3. 用 reciprocal rank fusion 合并两路候选。稠密向量与关键词向量不混存；不把相似度当作适用性证明。
 4. 气体适用性、气体设备形态和分辨率等硬条件由结构化审核资料验证；非气体产品的手持/固定形态可按公开描述的明确且不矛盾表述过滤，但不称为“已审核”。未知气体、未支持的范围/排除条件不能偷换成相关产品。实际执行的硬约束单独存储，防止模型重写查询后在后续轮次丢失。
-5. 不需要 pgvector 即可运行小目录版本：离线向量存于专用 JSONB 索引，应用内余弦评分。后续数据量增大再迁移 ANN；不在访客请求中批量向量化产品。
+5. 不需要 pgvector 即可运行小目录版本：离线向量存于专用 JSONB 索引，在 PostgreSQL 内计算余弦分数，仅将索引摘要和分数返回应用。后续数据量增大再迁移 ANN；不在访客请求中批量向量化产品。
 6. 没有配置 embedding、索引缺失/过期或上游失败时明确标记 keyword-only/degraded，不宣称是真正 Hybrid。不使用失效索引返回下架内容。
 7. 全部已发布、非样例的产品/分类可检索。专业能力有审核资料才确认；新闻来自与官网新闻页相同的 `productGuides`，不是 SEO 表或虚构新闻库。
 
@@ -76,6 +76,8 @@ SDK 使用 `openai`，支持自定义 baseURL；禁用自动重试，统一 Abor
 - 实际模型联调和正式数据索引需要用户配置供应商；本地使用 mock SDK/数据库测试不消耗真实模型额度、不发送邮件、不部署。
 
 ## 实施与运维命令
+
+独立豆包 embedding 的配置、向量版本和索引维护见 `docs/agent-embeddings.md`；不需要更换现有聊天模型或安装 pgvector。
 
 1. 服务端使用 Node.js 22+。`cd server && yarn install --frozen-lockfile` 安装 SDK 和测试依赖；迁移 `009_agent.sql` 随原有产品库初始化机制执行，新增独立 `agent` schema，不改业务表。
 2. 填入 `AGENT_BASE_URL`（完整的兼容 API 前缀）、`AGENT_API_KEY`、`AGENT_CHAT_MODEL`、`AGENT_EMBEDDING_MODEL`、`AGENT_EMBEDDING_DIMENSIONS`。分别生成至少 32 字符的 cookie/proxy 随机密钥；proxy 密钥配置在 Next 服务端与 Express 两侧。密钥不提交 Git、不发到浏览器。

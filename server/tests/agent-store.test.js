@@ -51,7 +51,10 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       await store.finish(session.id, state.runId, message.message, result, { durationMs: 100, totalTokens: 25 });
       await store.checkpoint(state.runId, { currentPhase: "outdated" });
       assert.equal((await store.detail(state.runId)).metrics.totalTokens, 25);
-      await store.checkpoint(state.runId, { durationMs: 100, totalTokens: 25, phases: [{ phase: "audit", status: "completed" }] }, "completed");
+      await store.checkpoint(state.runId, { durationMs: 100, totalTokens: 25, retrieval: "hybrid",
+        embedding: { status: "completed", provider: "ark", model: "test-embedding", dimensions: 2048, vectorMatches: 1,
+          totalTokens: 5, reason: "partial_or_stale_index", index: { valid: 1, eligible: 2 } },
+        phases: [{ phase: "audit", status: "completed" }] }, "completed");
       assert.equal((await store.detail(state.runId)).metrics.phases[0].status, "completed");
       const replay = await store.begin(session.id, identity.hash, message, config);
       assert.equal(replay.replay.id, state.runId);
@@ -90,10 +93,15 @@ test("isolated PostgreSQL migrations, session ownership, idempotency, budgets, h
       assert.equal(listing.summary.total, 13);
       assert.equal(listing.summary.tokens, "25");
       assert.equal(listing.summary.unknown_usage, 12);
+      assert.equal(listing.summary.hybrid_runs, 1);
+      assert.equal(listing.summary.embedding_degraded, 1);
+      assert.equal(listing.summary.embedding_tokens, "5");
       const detail = await store.detail(completedRun);
       assert.deepEqual(detail.result.productIds, ["pv400"]);
       assert.equal(detail.visitor_hash, undefined);
       assert.equal(detail.history, undefined);
+      assert.equal(detail.metrics.embedding.model, "test-embedding");
+      assert.deepEqual(detail.metrics.embedding.index, { valid: 1, eligible: 2 });
       const failed = await store.list({ status: "timeout", page: 1, pageSize: 20 });
       assert.equal(failed.rows.length, 1);
     });

@@ -26,7 +26,6 @@ export default function Home({ params: { lang } }: { params: { lang: Locale } })
                 <p className="main-slider__text">{copy.heroText}</p>
                 <div className="main-slider__btn-box">
                   <Link href={`/${lang}/products`} className="main-slider__btn thm-btn">{copy.browse}</Link>
-                  <Link href={`/${lang}/contact`} className="main-slider__btn thm-btn main-slider__btn--secondary">{copy.inquire}</Link>
                 </div>
               </div>
             </div>

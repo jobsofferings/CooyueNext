@@ -19,7 +19,7 @@
     "test:search": "node --test tests/catalog-search.test.js tests/knowledge.test.js tests/product-inquiry.test.js",
     "test:carousel": "node --test tests/imaging-kit-carousel.test.js",
     "verify:knowledge": "node scripts/verify-knowledge.js",
-    "test:agent": "node --test --test-concurrency=1 tests/agent.test.js tests/agent-store.test.js",
+    "test:agent": "node --test --test-concurrency=1 tests/agent.test.js tests/agent-embeddings.test.js tests/agent-store.test.js",
     "agent:index": "node scripts/agent.js index",
     "agent:cleanup": "node scripts/agent.js cleanup"
   },

@@ -5,6 +5,7 @@
 @historyContextId = replace-with-history-context-id
 @visitorCookie = replace-with-signed-cookie
 @adminSession = replace-with-management-session-cookie
+@runId = replace-with-run-id
 
 ### Browser-facing session (response sets an HttpOnly anonymous cookie)
 POST {{siteUrl}}/api/agent/sessions
@@ -55,6 +56,10 @@ GET {{siteUrl}}/api/agent-content?locale=zh
 
 ### Protected admin analytics
 GET {{baseUrl}}/api/agent/admin/runs?page=1&pageSize=20
+Cookie: cooyue_admin_session={{adminSession}}
+
+### Protected embedding details: metrics.embedding includes coverage, hits, scores, latency and safe errors; no raw vectors or credentials
+GET {{baseUrl}}/api/agent/admin/runs/{{runId}}
 Cookie: cooyue_admin_session={{adminSession}}
 
 ### Must reject anonymous access

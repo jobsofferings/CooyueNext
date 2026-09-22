@@ -3,8 +3,9 @@ const { Pool } = require("pg");
 const { buildPoolConfig } = require("../src/config/db");
 const { getConfig, validateConfig } = require("../src/modules/agent/config");
 const { createProvider } = require("../src/modules/agent/provider");
-const { loadContent, readOnly } = require("../src/modules/agent/content");
+const { loadContent } = require("../src/modules/agent/content");
 const { embeddingVersion } = require("../src/modules/agent/search");
+const { pendingVectorItems, readVectorIndex } = require("../src/modules/agent/vector-index");
 
 async function main() {
   const operation = process.argv[2];
@@ -29,13 +30,13 @@ async function main() {
     for (const locale of ["zh", "en"]) {
       const { items, newsUnavailable } = await loadContent(pool, config, locale, AbortSignal.timeout(15000));
       if (newsUnavailable) throw new Error("News source unavailable; start Next before indexing");
-      const stored = await readOnly(pool, async (client) => (await client.query("SELECT content_key, content_hash FROM agent.search_vectors WHERE locale=$1 AND model_version=$2", [locale, embeddingVersion(config)])).rows);
-      const pending = items.filter((item) => !stored.some((row) => row.content_key === item.key && row.content_hash === item.hash));
+      const stored = await readVectorIndex(pool, config, locale);
+      const pending = pendingVectorItems(items, stored, config.dimensions);
       console.log({ operation, locale, apply, total: items.length, pending: pending.length });
       if (!apply) continue;
       for (let offset = 0; offset < pending.length; offset += 16) {
         const batch = pending.slice(offset, offset + 16);
-        const { vectors } = await provider.embed(batch.map((item) => item.text), AbortSignal.timeout(config.timeoutMs));
+        const { vectors } = await provider.embed(batch.map((item) => item.text), AbortSignal.timeout(config.timeoutMs), { purpose: "document" });
         const client = await pool.connect();
         try {
           await client.query("BEGIN");
@@ -45,6 +46,7 @@ async function main() {
           await client.query("COMMIT");
         } catch (error) { await client.query("ROLLBACK"); throw error; }
         finally { client.release(); }
+        console.log({ operation, locale, indexed: Math.min(offset + batch.length, pending.length), pending: pending.length });
       }
       await pool.query("DELETE FROM agent.search_vectors WHERE locale=$1 AND (model_version <> $2 OR NOT(content_key = ANY($3::text[])))", [locale, embeddingVersion(config), items.map((item) => item.key)]);
     }

@@ -31,7 +31,18 @@ function content() {
 
 function readPool(rows = []) {
   const queries = [];
-  return { queries, async connect() { return { async query(sql) { queries.push(sql); return { rows }; }, release() {} }; } };
+  return { queries, async connect() { return { async query(sql, params) {
+    queries.push(sql);
+    if (sql.startsWith("WITH query_vector")) {
+      const vector = JSON.parse(params[2]);
+      const requested = JSON.parse(params[3]);
+      return { rows: rows.filter((row) => requested.some((item) => item.content_key === row.content_key && item.content_hash === row.content_hash))
+        .map((row) => ({ content_key: row.content_key, score: cosine(vector, row.embedding) })) };
+    }
+    if (sql.includes("jsonb_array_length")) return { rows: rows.map((row) => ({ content_key: row.content_key, content_hash: row.content_hash,
+      dimensions: row.embedding.length, valid: row.embedding.every(Number.isFinite) && row.embedding.some((value) => value !== 0) })) };
+    return { rows };
+  }, release() {} }; } };
 }
 
 test("configuration fails closed and rejects HTTP by default or credential-bearing model URLs", () => {

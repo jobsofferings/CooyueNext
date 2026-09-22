@@ -1,5 +1,6 @@
 const OpenAI = require("openai");
 const { failure } = require("./config");
+const { createEmbedder } = require("./embeddings");
 
 const SEARCH_TOOL = {
   type: "function",
@@ -127,16 +128,7 @@ Keep unsupported or ambiguous requirements intact, do not guess a gas or product
       if (!complete || !length) throw failure("INCOMPLETE_MODEL_RESPONSE", 502);
     },
 
-    async embed(texts, signal) {
-      if (!config.embeddingModel) throw failure("EMBEDDING_NOT_CONFIGURED", 503);
-      const response = await sdk.embeddings.create({ model: config.embeddingModel, input: texts, encoding_format: "float" }, { signal });
-      const entries = [...(response.data || [])].sort((left, right) => left.index - right.index);
-      if (entries.length !== texts.length || entries.some((entry, index) => entry.index !== index
-        || !Array.isArray(entry.embedding) || entry.embedding.length !== config.dimensions
-        || entry.embedding.some((number) => !Number.isFinite(number))
-        || !entry.embedding.some((number) => number !== 0))) throw failure("INVALID_EMBEDDING", 502);
-      return { vectors: entries.map((entry) => entry.embedding), usage: response.usage };
-    },
+    embed: createEmbedder(config, sdk),
   };
 }
 

@@ -3,6 +3,7 @@ const { searchPublicContent } = require("./search");
 const { redact } = require("./security");
 const { createTrace, diagnostic } = require("./trace");
 const { contextTitle } = require("./contexts");
+const { embeddingAudit } = require("./embeddings");
 
 function emptyMessage(locale) {
   return locale === "zh" ? "当前资料没有确认符合条件的产品" : "The current evidence does not confirm products matching these requirements.";
@@ -13,6 +14,7 @@ async function execute({ pool, config, session, message, signal, emit, provider 
   metrics.modelCalls = 0;
   metrics.toolCalls = 0;
   metrics.embeddingCalls = 0;
+  metrics.embedding = embeddingAudit(config);
   metrics.totalTokens = null;
   metrics.usageReports = 0;
   metrics.events = [];
@@ -40,11 +42,25 @@ async function execute({ pool, config, session, message, signal, emit, provider 
   const searchStarted = Date.now();
   const searchProvider = { ...provider, async embed(texts, phaseSignal) {
     metrics.embeddingCalls += 1;
-    return trace.step("embedding", (embeddingSignal) => provider.embed(texts, embeddingSignal), { signal: phaseSignal, timeoutMs: 4000 });
+    return trace.step("embedding", async (embeddingSignal, mark) => {
+      mark({ provider: config.embeddingProvider || "openai", model: config.embeddingModel, dimensions: config.dimensions, inputCount: texts.length });
+      const embedded = await provider.embed(texts, embeddingSignal);
+      mark({ vectorCount: embedded.vectors.length, dimensions: embedded.vectors[0]?.length, totalTokens: embedded.usage?.total_tokens ?? null });
+      return embedded;
+    }, { signal: phaseSignal, timeoutMs: 4000 });
   } };
   const previous = session.history.at(-1)?.result;
-  const result = await trace.step("search", (phaseSignal) => search({ pool, config, provider: searchProvider, input: selection.input, message,
-    previousQuery: previous?.query, previousConditions: previous?.constraints, locale: session.locale, signal: phaseSignal, onUsage: usage, trace }), { signal, timeoutMs: 12000 });
+  const result = await trace.step("search", async (phaseSignal, mark) => {
+    const found = await search({ pool, config, provider: searchProvider, input: selection.input, message,
+      previousQuery: previous?.query, previousConditions: previous?.constraints, locale: session.locale, signal: phaseSignal, onUsage: usage,
+      onEmbedding: (embedding) => { metrics.embedding = embedding; }, trace });
+    if (found.retrieval?.embedding) {
+      metrics.embedding = found.retrieval.embedding;
+      const { topMatches, ...summary } = found.retrieval.embedding;
+      mark({ retrieval: found.retrieval.mode, embedding: summary });
+    }
+    return found;
+  }, { signal, timeoutMs: 12000 });
   if (selection.fallback) result.retrieval = { ...result.retrieval, degraded: true, understandingFallback: true };
   if (!session.history.length) metrics.contextTitle = contextTitle(selection.input.title || result.query || message, session.locale);
   signal.throwIfAborted();

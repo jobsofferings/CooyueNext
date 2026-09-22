@@ -127,7 +127,10 @@ function createStore(pool) {
         count(*) FILTER (WHERE status = 'failed' OR status = 'timeout')::int AS failures,
         round(avg((metrics->>'durationMs')::numeric)) AS average_ms,
         coalesce(sum((metrics->>'totalTokens')::bigint), 0)::text AS tokens,
-        count(*) FILTER (WHERE metrics->>'totalTokens' IS NULL OR metrics->>'usageComplete' = 'false')::int AS unknown_usage
+        count(*) FILTER (WHERE metrics->>'totalTokens' IS NULL OR metrics->>'usageComplete' = 'false')::int AS unknown_usage,
+        count(*) FILTER (WHERE metrics->>'retrieval' = 'hybrid')::int AS hybrid_runs,
+        count(*) FILTER (WHERE metrics->'embedding'->>'reason' IN ('embedding_unavailable', 'index_unavailable', 'index_missing_or_stale', 'partial_or_stale_index'))::int AS embedding_degraded,
+        coalesce(sum((metrics->'embedding'->>'totalTokens')::bigint), 0)::text AS embedding_tokens
         FROM agent.runs WHERE created_at > now() - interval '30 days' AND ($1::text IS NULL OR status = $1)`, [filter])).rows[0];
       const rows = (await pool.query(`SELECT id, session_id, request_id, status, query_preview, model, metrics, error_code, created_at, finished_at
         FROM agent.runs WHERE created_at > now() - interval '30 days' AND ($1::text IS NULL OR status = $1)

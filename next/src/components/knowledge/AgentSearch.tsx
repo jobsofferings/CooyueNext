@@ -17,6 +17,9 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState('')
   const [retry, setRetry] = useState(0)
+  const [fullscreen, setFullscreen] = useState(false)
+  const panelRef = useRef<HTMLElement>(null)
+  const fullscreenButton = useRef<HTMLButtonElement>(null)
   const active = useRef('')
   const running = useRef<Record<string, boolean>>({})
   const revision = useRef(-1)
@@ -27,6 +30,37 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
   const selection = useRef(0)
   const query = useRef(initialQuery)
   query.current = initialQuery
+
+  useEffect(() => {
+    if (!fullscreen) return
+    const previousOverflow = [document.documentElement.style.overflow, document.body.style.overflow]
+    const background: HTMLElement[] = []
+    let current = panelRef.current
+    while (current && current !== document.body) {
+      for (const sibling of Array.from(current.parentElement?.children ?? [])) {
+        if (sibling instanceof HTMLElement && sibling !== current && !sibling.inert) {
+          background.push(sibling)
+          sibling.inert = true
+        }
+      }
+      current = current.parentElement
+    }
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setFullscreen(false)
+      fullscreenButton.current?.focus({ preventScroll: true })
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.documentElement.style.overflow = previousOverflow[0]
+      document.body.style.overflow = previousOverflow[1]
+      for (const element of background) element.inert = false
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [fullscreen])
 
   useEffect(() => {
     const id = active.current
@@ -145,12 +179,20 @@ export default function AgentSearch({ locale, initialQuery = '' }: { locale: Loc
     }
   }
 
-  return <section className={styles.panel} data-agent-search aria-label={chinese ? '选型助手' : 'Product selection assistant'}>
+  const fullscreenLabel = fullscreen ? chinese ? '退出全屏' : 'Exit fullscreen' : chinese ? '全屏聊天' : 'Fullscreen chat'
+
+  return <section ref={panelRef} className={`${styles.panel} ${fullscreen ? styles.panelFullscreen : ''}`} data-agent-search data-fullscreen={fullscreen} aria-label={chinese ? '选型助手' : 'Product selection assistant'}>
     {error && <div className={styles.connectionError} role="alert">{error}{!sessionId && <button type="button" onClick={() => setRetry((value) => value + 1)}>{chinese ? '重新连接' : 'Reconnect'}</button>}</div>}
     <div className={styles.workspace}>
       <AgentHistory locale={locale} contexts={contexts} activity={activity} activeId={contextId} disabled={!sessionId} onSelect={switchContext}
         creating={creating} newContextDisabled={!sessionId || creating || !contexts.find((context) => context.id === contextId)?.turnCount} onNewContext={() => void newContext()} />
       <div className={styles.conversations}>
+        <button ref={fullscreenButton} type="button" className={styles.fullscreenToggle} onClick={() => setFullscreen((previous) => !previous)}
+          aria-label={fullscreenLabel} title={fullscreenLabel} aria-pressed={fullscreen}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d={fullscreen ? 'M3 8h5V3m8 0v5h5M8 21v-5H3m13 5v-5h5' : 'M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5'} />
+          </svg>
+        </button>
         {(!sessionId || !cached) && <p className={styles.connecting} role="status">{chinese ? '正在连接助手…' : 'Connecting…'}</p>}
         {Object.entries(panes).filter(([id, pane]) => id === contextId || pane.visited).map(([id, pane]) => <div key={`${sessionId}-${id}`} hidden={id !== contextId} data-agent-context={id} data-agent-active={id === contextId}>
           <AgentConversation locale={locale} sessionId={sessionId} contextId={id} history={pane.history} initialQuery={pane.query}

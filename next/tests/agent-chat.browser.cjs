@@ -157,7 +157,8 @@ async function verify(browser, mobile) {
       const composer = document.querySelector('#agent-message').closest('form').parentElement.getBoundingClientRect()
       return { scrollY: window.scrollY, headerTop: document.querySelector('.main-header').getBoundingClientRect().top,
         titleRight: title.right, actionLeft: action.left, centerDifference: Math.abs(title.top + title.height / 2 - action.top - action.height / 2),
-        display: row.display, justifyContent: row.justifyContent, composerBottom: composer.bottom, viewportHeight: window.innerHeight,
+        display: row.display, justifyContent: row.justifyContent, newButtonHeight: action.height,
+        composerBottom: composer.bottom, viewportHeight: window.innerHeight,
         overflow: document.documentElement.scrollWidth > window.innerWidth }
     })
     assert.equal(layout.scrollY, 0, JSON.stringify(layout))
@@ -166,11 +167,69 @@ async function verify(browser, mobile) {
     assert.equal(layout.justifyContent, 'space-between')
     assert(layout.actionLeft > layout.titleRight, JSON.stringify(layout))
     assert(layout.centerDifference <= 1, JSON.stringify(layout))
+    assert.equal(layout.newButtonHeight, 28, JSON.stringify(layout))
     assert(layout.composerBottom <= layout.viewportHeight, JSON.stringify(layout))
     assert.equal(layout.overflow, false)
     assert.equal(await page.locator('main section > header').count(), 0)
   }
+  const verifyFullscreen = async () => {
+    const panel = page.locator('[data-agent-search]')
+    const message = page.locator('#agent-message')
+    const initialDraft = await message.inputValue()
+    const initialContext = await chat.getAttribute('data-agent-context')
+    const initialReads = historyReads
+    const viewport = page.viewportSize()
+    const scrollStyles = () => page.evaluate(() => [document.documentElement.style.overflow, document.body.style.overflow])
+    const previousOverflow = await scrollStyles()
+    const fullscreenFits = async () => {
+      await page.waitForFunction(() => {
+        const panel = document.querySelector('[data-agent-search]').getBoundingClientRect()
+        return panel.top === 0 && panel.left === 0 && Math.abs(panel.width - innerWidth) <= 1 && Math.abs(panel.height - innerHeight) <= 1
+      })
+      const layout = await page.getByRole('button', { name: '退出全屏', exact: true }).evaluate((button) => {
+        const control = button.getBoundingClientRect()
+        const chat = button.parentElement.getBoundingClientRect()
+        const composer = document.querySelector('#agent-message').closest('form').parentElement.getBoundingClientRect()
+        return { topGap: control.top - chat.top, rightGap: chat.right - control.right,
+          clickable: button.contains(document.elementFromPoint(control.left + control.width / 2, control.top + control.height / 2)),
+          composerBottom: composer.bottom, viewportHeight: innerHeight,
+          headerInert: Boolean(document.querySelector('.main-header').closest('[inert]')),
+          overflow: document.documentElement.scrollWidth > innerWidth }
+      })
+      assert.equal(layout.topGap, 12, JSON.stringify(layout))
+      assert.equal(layout.rightGap, 12, JSON.stringify(layout))
+      assert.equal(layout.clickable, true, JSON.stringify(layout))
+      assert.equal(layout.headerInert, true)
+      assert.equal(layout.overflow, false)
+      assert(layout.composerBottom <= layout.viewportHeight, JSON.stringify(layout))
+    }
+    await page.getByRole('button', { name: '全屏聊天', exact: true }).click()
+    assert.equal(await panel.getAttribute('data-fullscreen'), 'true')
+    assert.equal(await page.getByRole('button', { name: '退出全屏', exact: true }).getAttribute('aria-pressed'), 'true')
+    assert.deepEqual(await scrollStyles(), ['hidden', 'hidden'])
+    await fullscreenFits()
+    await page.setViewportSize(mobile ? { width: 844, height: 390 } : { width: 1280, height: 720 })
+    await fullscreenFits()
+    await page.setViewportSize(viewport)
+    await page.getByRole('button', { name: '退出全屏', exact: true }).click()
+    await fitsViewport()
+    assert.equal(await panel.getAttribute('data-fullscreen'), 'false')
+    assert.deepEqual(await scrollStyles(), previousOverflow)
+    await page.getByRole('button', { name: '全屏聊天', exact: true }).click()
+    await message.focus()
+    await page.keyboard.press('Escape')
+    await fitsViewport()
+    assert.equal(await panel.getAttribute('data-fullscreen'), 'false')
+    assert.equal(await page.getByRole('button', { name: '全屏聊天', exact: true }).evaluate((button) => button === document.activeElement), true)
+    assert.deepEqual(await scrollStyles(), previousOverflow)
+    assert.equal(await page.locator('.main-header').evaluate((header) => Boolean(header.closest('[inert]'))), false)
+    assert.equal(await message.inputValue(), initialDraft)
+    assert.equal(await chat.getAttribute('data-agent-context'), initialContext)
+    assert.equal(historyReads, initialReads)
+  }
   await page.goto(`${origin}/zh`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+  assert.equal(await page.locator('.main-slider__btn-box a').count(), 1)
+  assert.equal(await page.getByRole('link', { name: '邮件咨询需求', exact: true }).count(), 0)
   assert.equal(await page.locator('.main-header .main-menu__search').getAttribute('href'), '/zh/search')
   assert.equal(await page.locator('.stricky-header .main-menu__search').getAttribute('href'), '/zh/search')
   await page.locator('.main-header .main-menu__search').click()
@@ -189,6 +248,7 @@ async function verify(browser, mobile) {
   await page.goto(`${origin}/zh/search?keywords=K10`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await ready()
   assert.equal(await page.locator('#agent-message').inputValue(), 'K10')
+  await verifyFullscreen()
   const placeholder = await page.locator('#agent-message').evaluate((element) => ({ text: getComputedStyle(element).color,
     hint: getComputedStyle(element, '::placeholder').color, opacity: getComputedStyle(element, '::placeholder').opacity }))
   assert.equal(placeholder.hint, 'rgb(129, 144, 162)')
@@ -444,7 +504,8 @@ async function verify(browser, mobile) {
     selectAllTwenty: true, menuOpensChat: true, newContextPreservesHistory: true, actionScrollPositioned: true,
     parallelConversations: true, backgroundComparisonPreservesFocus: true, nonBlockingSwitchMs: switchDuration, cachedSwitchesWithoutHistoryRequests: true, placeholderLighter: true, phoneAligned: true,
     sendScrollsToBottom: true, streamedReplyStaysAtBottom: true, detailsOpenInNewTab: true, alignedWidth: true,
-    viewportFitted: true, newContextBesideHistory: true, overflow: false, mockedDeliveries: 1, realEmailsSent: 0 }))
+    viewportFitted: true, newContextBesideHistory: true, compactNewButton: true, homepageEmailButtonRemoved: true,
+    fullscreenPreservesDraftAndContext: true, fullscreenResizeAndEscape: true, overflow: false, mockedDeliveries: 1, realEmailsSent: 0 }))
   await context.close()
 }
 
